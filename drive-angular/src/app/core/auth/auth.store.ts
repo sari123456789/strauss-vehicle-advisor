@@ -1,1 +1,0 @@
-import {Injectable,inject,signal} from '@angular/core';import {DemoStorage} from '../storage/demo-storage';@Injectable({providedIn:'root'})export class AuthStore{private storage=inject(DemoStorage);readonly role=signal(this.storage.read('role',''));login(role:string){this.role.set(role);this.storage.save('role',role)}logout(){this.login('')}}

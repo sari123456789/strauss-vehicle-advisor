@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.angular/
-out-tsc/
-*.zip
-setup.py
-e2e/.results/
-e2e/visual/__diff__/
-playwright-report/
