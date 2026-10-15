@@ -1,0 +1,46 @@
+<header class="site-header">
+  <a class="brand" routerLink="/">
+    <span class="brand__mark">DRIVE</span>
+    <span class="brand__tag">יועץ הרכב שלך</span>
+  </a>
+
+  <nav class="site-nav" aria-label="ניווט ראשי">
+    @for (link of links(); track link.path) {
+      <a class="site-nav__link" [routerLink]="link.path" routerLinkActive="is-active" ariaCurrentWhenActive="page">{{ link.label }}</a>
+    }
+  </nav>
+
+  <div class="site-header__actions">
+    @if (signedIn()) {
+      <button type="button" class="btn btn--outline site-header__auth" (click)="signOut()">יציאה</button>
+    } @else {
+      <a class="btn btn--outline site-header__auth" routerLink="/sign-in">כניסה למערכת</a>
+    }
+    <button
+      type="button"
+      class="btn btn--ghost btn--icon site-header__menu"
+      aria-haspopup="dialog"
+      aria-label="תפריט ראשי"
+      (click)="openMenu($event.currentTarget)">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+        <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </button>
+  </div>
+</header>
+
+<dr-sheet #menu title="תפריט" placement="side">
+  <nav class="menu-nav" aria-label="ניווט ראשי">
+    <a class="menu-nav__link" routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{exact: true}" ariaCurrentWhenActive="page" (click)="closeMenu()">עמוד הבית</a>
+    @for (link of links(); track link.path) {
+      <a class="menu-nav__link" [routerLink]="link.path" routerLinkActive="is-active" ariaCurrentWhenActive="page" (click)="closeMenu()">{{ link.label }}</a>
+    }
+  </nav>
+  <div class="menu-actions">
+    @if (signedIn()) {
+      <button type="button" class="btn btn--outline" (click)="signOut()">יציאה</button>
+    } @else {
+      <a class="btn btn--primary" routerLink="/sign-in" (click)="closeMenu()">כניסה למערכת</a>
+    }
+  </div>
+</dr-sheet>

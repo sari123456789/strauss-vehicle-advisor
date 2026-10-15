@@ -1,0 +1,1 @@
+import {Injectable} from '@angular/core';@Injectable({providedIn:'root'}) export class DemoStorage{read<T>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem('drive.'+key)||'null')??fallback}catch{return fallback}}save(key:string,value:unknown){try{localStorage.setItem('drive.'+key,JSON.stringify(value))}catch{}}}

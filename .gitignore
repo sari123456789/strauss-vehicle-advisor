@@ -1,0 +1,32 @@
+# Angular
+node_modules/
+.angular/
+dist/
+out-tsc/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local files
+*.log
+.DS_Store
+Thumbs.db
+
+# Generated test output
+drive-angular/e2e/.results/
+drive-angular/e2e/visual/__diff__/
+playwright-report/
+test-results/
