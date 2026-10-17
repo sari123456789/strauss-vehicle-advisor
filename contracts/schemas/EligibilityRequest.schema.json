@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expectedCaseVersion": {
+      "minimum": 0,
+      "title": "Expectedcaseversion",
+      "type": "integer"
+    },
+    "optionKey": {
+      "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+      "title": "Optionkey",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expectedCaseVersion",
+    "optionKey"
+  ],
+  "title": "EligibilityRequest",
+  "type": "object"
+}

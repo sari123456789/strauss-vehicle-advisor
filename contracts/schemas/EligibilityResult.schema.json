@@ -1,0 +1,165 @@
+{
+  "$defs": {
+    "EligibilityReason": {
+      "enum": [
+        "group_own",
+        "group_lower",
+        "group_higher_than_entitlement",
+        "group_unknown",
+        "family_children_met",
+        "family_children_not_met",
+        "family_children_unknown",
+        "waiver_allowed_by_occupation",
+        "waiver_not_allowed_mandatory_car",
+        "occupation_unknown",
+        "occupation_not_in_table",
+        "occupation_group_conflict"
+      ],
+      "title": "EligibilityReason",
+      "type": "string"
+    },
+    "EligibilityStatus": {
+      "enum": [
+        "eligible",
+        "ineligible",
+        "needs_information"
+      ],
+      "title": "EligibilityStatus",
+      "type": "string"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/IssueCode"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldPath"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "requestId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requestid"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "IssueCode": {
+      "enum": [
+        "MISSING_INPUT",
+        "AMBIGUOUS_INPUT",
+        "INELIGIBLE",
+        "VEHICLE_NOT_FOUND",
+        "TAX_KEY_AMBIGUOUS",
+        "SOURCE_CONFLICT",
+        "STALE_REVISION",
+        "PENDING_REPRESENTATIVE",
+        "TOOL_UNAVAILABLE",
+        "UNSUPPORTED_INPUT"
+      ],
+      "title": "IssueCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "missingInformation": {
+      "items": {
+        "$ref": "#/$defs/Issue"
+      },
+      "title": "Missinginformation",
+      "type": "array"
+    },
+    "optionKey": {
+      "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+      "title": "Optionkey",
+      "type": "string"
+    },
+    "reasons": {
+      "items": {
+        "$ref": "#/$defs/EligibilityReason"
+      },
+      "title": "Reasons",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/EligibilityStatus"
+    }
+  },
+  "required": [
+    "optionKey",
+    "status"
+  ],
+  "title": "EligibilityResult",
+  "type": "object"
+}

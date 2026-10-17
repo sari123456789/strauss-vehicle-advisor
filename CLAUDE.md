@@ -11,7 +11,25 @@ Before planning or editing, read the relevant specifications in `docs/`:
 - `docs/integration-contracts.md` — cross-team interfaces and contract status (some DTO/SSE details still require approval).
 - `docs/frontend-handoff.md` — Angular implementation and UI handoff instructions.
 
-Also consult the supplied challenge PDF, business JSON, Excel catalogue/reference cases and tax-value CSV for source-specific rules. Keep these source files unchanged. English specifications are authoritative; Hebrew translations are for review only. Do not resolve conflicts by guessing: identify the exact conflicting sections and ask for a decision before implementing the affected behavior. Do not present proposals as approved requirements.
+Also consult the supplied challenge PDF, business JSON, Excel catalogue/reference cases and tax-value CSV in `data/source/` for source-specific rules. Keep these source files unchanged. English specifications are authoritative; Hebrew translations are for review only. Do not resolve conflicts by guessing: identify the exact conflicting sections and ask for a decision before implementing the affected behavior. Do not present proposals as approved requirements.
+
+## Challenge source files and encoding — mandatory
+
+Keep the original challenge files under `data/source/` (rename filenames for stable project paths **without altering their contents**):
+
+| Repository path | Source type | Required reading behavior |
+|---|---|---|
+| `data/source/challenge-instructions.pdf` | Challenge instructions (PDF) | Read with a PDF parser; no text-file encoding parameter. |
+| `data/source/business-rules.json` | Demo business rules (JSON) | Read with explicit `encoding="utf-8"`. |
+| `data/source/challenge-data.xlsx` | Catalogue, occupations, example employees and calculations (Excel) | Read via `openpyxl`; no text-file encoding parameter. |
+| `data/source/vehicle-tax-2026.csv` | Israel Tax Authority vehicle benefit dataset (CSV) | Read with **Windows-1255 (`cp1255`)** explicitly, never assume UTF-8. |
+
+- All Markdown specs, Python source, JSON files written by the project, and ordinary text/configuration files must be UTF-8. PostgreSQL text must support Hebrew with UTF-8 database encoding.
+- During CSV import, preserve Hebrew headers and source values, including meaningful whitespace and **leading zeros in identifier codes**. Normalize only as explicitly defined in the import contract; keep traceability to source data. Read code columns as strings, validate them, and convert numeric money fields explicitly to `Decimal` (never through binary float).
+- Validate the CSV's expected schema and official five-part vehicle lookup key: `(שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם)`. Fail explicitly on decoding errors, missing columns, invalid codes, duplicates, or ambiguous matches; never silently replace undecodable characters, skip bad records, or guess a vehicle key.
+- Preserve original source files as immutable inputs. Keep import/version metadata (including a SHA-256 content hash where appropriate) so calculations can be traced to the exact source version. Put reproducible generated artifacts under `data/processed/` where appropriate; do not manually edit originals to make tests pass.
+- Before committing original files to Git, verify permission to redistribute them and verify that they contain no real confidential employee or organizational data. Do not commit secrets or private payroll records.
+- Import/parsing of business sources belongs to **Business Infrastructure**. The AI Module must not parse the CSV/Excel directly or bypass Business Application to access imported business data.
 
 ## Fixed architecture — do not redesign
 

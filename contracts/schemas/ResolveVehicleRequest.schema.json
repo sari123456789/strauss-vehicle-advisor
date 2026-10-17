@@ -1,0 +1,153 @@
+{
+  "$defs": {
+    "ResolvePurpose": {
+      "enum": [
+        "current",
+        "alternative"
+      ],
+      "title": "ResolvePurpose",
+      "type": "string"
+    },
+    "VehicleQuery": {
+      "additionalProperties": false,
+      "properties": {
+        "commercialName": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Commercialname",
+          "type": "string"
+        },
+        "manufacturerCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{5}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturercode"
+        },
+        "modelCode": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{5}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Modelcode"
+        },
+        "registrationYear": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registrationyear"
+        }
+      },
+      "required": [
+        "commercialName"
+      ],
+      "title": "VehicleQuery",
+      "type": "object"
+    },
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "catalogueId": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Catalogueid"
+    },
+    "purpose": {
+      "$ref": "#/$defs/ResolvePurpose"
+    },
+    "query": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VehicleQuery"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "taxKey": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VehicleTaxKey"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "purpose"
+  ],
+  "title": "ResolveVehicleRequest",
+  "type": "object"
+}

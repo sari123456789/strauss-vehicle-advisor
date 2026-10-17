@@ -1,0 +1,8 @@
+{
+  "_meta": {"purpose": "Every tool on a foreign/unknown case returns NOT_FOUND (no existence disclosure, no data)."},
+  "*": {
+    "status": "error",
+    "traceId": "fixture-trace",
+    "error": {"code": "NOT_FOUND", "traceId": "fixture-trace"}
+  }
+}

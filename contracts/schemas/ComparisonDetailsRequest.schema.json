@@ -1,0 +1,15 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "runId": {
+      "format": "uuid",
+      "title": "Runid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "runId"
+  ],
+  "title": "ComparisonDetailsRequest",
+  "type": "object"
+}

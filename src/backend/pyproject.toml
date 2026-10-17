@@ -1,0 +1,66 @@
+[project]
+name = "strauss-vehicle-advisor-backend"
+version = "0.1.0"
+description = "Strauss Vehicle Advisor - Python backend (Business System + AI Engine modules, shared FastAPI boundary)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+    "openpyxl>=3.1",
+    "pypdf>=5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[tool.uv]
+# Only resolve package versions published at least two weeks before setup.
+exclude-newer = "2026-10-01T00:00:00Z"
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["../../tests"]
+pythonpath = [".", "../.."]
+addopts = "--import-mode=importlib -ra"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "db: real-PostgreSQL integration tests (separate *_test database; STRAUSS_REQUIRE_DB=1 makes them mandatory)",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Generic pydantic models deliberately use typing.Generic rather than PEP 695 parameters.
+ignore = ["UP046"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+warn_unused_configs = true
+ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+module = ["app.contracts.*", "app.domain.*", "app.business.*", "app.application.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+# openpyxl ships no type information; only the workbook importer uses it.
+module = ["openpyxl", "openpyxl.*"]
+ignore_missing_imports = true

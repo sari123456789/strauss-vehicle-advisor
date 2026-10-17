@@ -1,0 +1,408 @@
+{
+  "$defs": {
+    "EligibilityReason": {
+      "enum": [
+        "group_own",
+        "group_lower",
+        "group_higher_than_entitlement",
+        "group_unknown",
+        "family_children_met",
+        "family_children_not_met",
+        "family_children_unknown",
+        "waiver_allowed_by_occupation",
+        "waiver_not_allowed_mandatory_car",
+        "occupation_unknown",
+        "occupation_not_in_table",
+        "occupation_group_conflict"
+      ],
+      "title": "EligibilityReason",
+      "type": "string"
+    },
+    "EligibilityStatus": {
+      "enum": [
+        "eligible",
+        "ineligible",
+        "needs_information"
+      ],
+      "title": "EligibilityStatus",
+      "type": "string"
+    },
+    "EntitlementGroup": {
+      "description": "Source Hebrew group labels are preserved as values.",
+      "enum": [
+        "א",
+        "ב",
+        "ג",
+        "ד"
+      ],
+      "title": "EntitlementGroup",
+      "type": "string"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/IssueCode"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldPath"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "requestId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requestid"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "IssueCode": {
+      "enum": [
+        "MISSING_INPUT",
+        "AMBIGUOUS_INPUT",
+        "INELIGIBLE",
+        "VEHICLE_NOT_FOUND",
+        "TAX_KEY_AMBIGUOUS",
+        "SOURCE_CONFLICT",
+        "STALE_REVISION",
+        "PENDING_REPRESENTATIVE",
+        "TOOL_UNAVAILABLE",
+        "UNSUPPORTED_INPUT"
+      ],
+      "title": "IssueCode",
+      "type": "string"
+    },
+    "OptionCategory": {
+      "enum": [
+        "regular",
+        "family",
+        "waiver"
+      ],
+      "title": "OptionCategory",
+      "type": "string"
+    },
+    "OptionItem": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "category": {
+          "$ref": "#/$defs/OptionCategory"
+        },
+        "commercialName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commercialname"
+        },
+        "defaultParticipation": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Defaultparticipation"
+        },
+        "eligibility": {
+          "$ref": "#/$defs/EligibilityStatus"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntitlementGroup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "groupBudget": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Groupbudget"
+        },
+        "listPrice": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Listprice"
+        },
+        "manufacturerName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Manufacturername"
+        },
+        "monthlyCompanyCost": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Monthlycompanycost"
+        },
+        "optionKey": {
+          "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+          "title": "Optionkey",
+          "type": "string"
+        },
+        "propulsion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Propulsion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "reasons": {
+          "items": {
+            "$ref": "#/$defs/EligibilityReason"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "registrationYear": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registrationyear"
+        },
+        "track": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Track"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "valueOfUse": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valueofuse"
+        },
+        "waiverAllowance": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Waiverallowance"
+        }
+      },
+      "required": [
+        "optionKey",
+        "category",
+        "eligibility"
+      ],
+      "title": "OptionItem",
+      "type": "object"
+    },
+    "Propulsion": {
+      "enum": [
+        "petrol",
+        "hybrid",
+        "plug_in_hybrid",
+        "electric"
+      ],
+      "title": "Propulsion",
+      "type": "string"
+    },
+    "Track": {
+      "enum": [
+        "regular",
+        "family"
+      ],
+      "title": "Track",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "items": {
+        "$ref": "#/$defs/OptionItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "missingInformation": {
+      "items": {
+        "$ref": "#/$defs/Issue"
+      },
+      "title": "Missinginformation",
+      "type": "array"
+    },
+    "resultSetId": {
+      "format": "uuid",
+      "title": "Resultsetid",
+      "type": "string"
+    },
+    "scopeComplete": {
+      "title": "Scopecomplete",
+      "type": "boolean"
+    },
+    "uncheckedCategories": {
+      "items": {
+        "$ref": "#/$defs/OptionCategory"
+      },
+      "title": "Uncheckedcategories",
+      "type": "array"
+    }
+  },
+  "required": [
+    "resultSetId",
+    "items",
+    "scopeComplete"
+  ],
+  "title": "ListOptionsResult",
+  "type": "object"
+}

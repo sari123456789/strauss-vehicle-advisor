@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "catalogueId": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Catalogueid"
+    },
+    "effectiveDate": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Effectivedate"
+    },
+    "taxDatasetVersionId": {
+      "format": "uuid",
+      "title": "Taxdatasetversionid",
+      "type": "string"
+    },
+    "taxKey": {
+      "$ref": "#/$defs/VehicleTaxKey"
+    },
+    "valueOfUse": {
+      "maxLength": 40,
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "title": "Valueofuse",
+      "type": "string"
+    }
+  },
+  "required": [
+    "valueOfUse",
+    "taxKey",
+    "taxDatasetVersionId"
+  ],
+  "title": "TaxValueResult",
+  "type": "object"
+}

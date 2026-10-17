@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "calculationMonth": {
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+      "title": "Calculationmonth",
+      "type": "string"
+    },
+    "conversationId": {
+      "format": "uuid",
+      "title": "Conversationid",
+      "type": "string"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "conversationId",
+    "calculationMonth",
+    "operationId"
+  ],
+  "title": "CreateCaseCommand",
+  "type": "object"
+}

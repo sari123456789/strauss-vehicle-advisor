@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "EntitlementGroup": {
+      "description": "Source Hebrew group labels are preserved as values.",
+      "enum": [
+        "א",
+        "ב",
+        "ג",
+        "ד"
+      ],
+      "title": "EntitlementGroup",
+      "type": "string"
+    },
+    "OptionCategory": {
+      "enum": [
+        "regular",
+        "family",
+        "waiver"
+      ],
+      "title": "OptionCategory",
+      "type": "string"
+    },
+    "OptionFilters": {
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/EntitlementGroup"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Groups"
+        },
+        "propulsion": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Propulsion"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Propulsion"
+        }
+      },
+      "title": "OptionFilters",
+      "type": "object"
+    },
+    "Propulsion": {
+      "enum": [
+        "petrol",
+        "hybrid",
+        "plug_in_hybrid",
+        "electric"
+      ],
+      "title": "Propulsion",
+      "type": "string"
+    },
+    "ReadinessGoal": {
+      "enum": [
+        "list_regular",
+        "list_family",
+        "waiver_eligibility",
+        "calculate_net",
+        "compare_to_current"
+      ],
+      "title": "ReadinessGoal",
+      "type": "string"
+    },
+    "Selection": {
+      "additionalProperties": false,
+      "properties": {
+        "categories": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/OptionCategory"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Categories"
+        },
+        "filters": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptionFilters"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mode": {
+          "$ref": "#/$defs/SelectionMode"
+        },
+        "optionKeys": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              "maxItems": 30,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkeys"
+        },
+        "resultSetId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resultsetid"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "Selection",
+      "type": "object"
+    },
+    "SelectionMode": {
+      "enum": [
+        "explicit",
+        "result_set",
+        "all_eligible"
+      ],
+      "title": "SelectionMode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "expectedCaseVersion": {
+      "minimum": 0,
+      "title": "Expectedcaseversion",
+      "type": "integer"
+    },
+    "goal": {
+      "$ref": "#/$defs/ReadinessGoal"
+    },
+    "includeCurrent": {
+      "default": false,
+      "title": "Includecurrent",
+      "type": "boolean"
+    },
+    "selection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Selection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "goal",
+    "expectedCaseVersion"
+  ],
+  "title": "ReadinessRequest",
+  "type": "object"
+}

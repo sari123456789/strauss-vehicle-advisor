@@ -1,0 +1,641 @@
+{
+  "$defs": {
+    "Assumption": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "maxLength": 80,
+          "title": "Code",
+          "type": "string"
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Assumption",
+      "type": "object"
+    },
+    "BaselineResult": {
+      "additionalProperties": false,
+      "properties": {
+        "breakdown": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CalculationBreakdown"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "missingInformation": {
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "title": "Missinginformation",
+          "type": "array"
+        },
+        "net": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "status": {
+          "$ref": "#/$defs/ScenarioStatus"
+        },
+        "vehicle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "BaselineResult",
+      "type": "object"
+    },
+    "CalculationBreakdown": {
+      "additionalProperties": false,
+      "properties": {
+        "allowance": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "creditPointsCredit": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "earnedGross": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "electricGrossUp": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "familyGapContribution": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "groupBudget": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "healthInsurance": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "incomeTax": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "incomeTaxBeforeCredits": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "monthlyCompanyCost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "nationalInsurance": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "ordinaryParticipation": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "pensionCredit": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "pensionEmployee": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "studyFundEmployee": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "taxableBase": {
+          "$ref": "#/$defs/MoneyAmount"
+        },
+        "valueOfUse": {
+          "$ref": "#/$defs/MoneyAmount"
+        }
+      },
+      "required": [
+        "earnedGross",
+        "allowance",
+        "electricGrossUp",
+        "valueOfUse",
+        "taxableBase",
+        "pensionEmployee",
+        "studyFundEmployee",
+        "creditPointsCredit",
+        "pensionCredit",
+        "incomeTaxBeforeCredits",
+        "incomeTax",
+        "nationalInsurance",
+        "healthInsurance",
+        "ordinaryParticipation",
+        "familyGapContribution"
+      ],
+      "title": "CalculationBreakdown",
+      "type": "object"
+    },
+    "EligibilityReason": {
+      "enum": [
+        "group_own",
+        "group_lower",
+        "group_higher_than_entitlement",
+        "group_unknown",
+        "family_children_met",
+        "family_children_not_met",
+        "family_children_unknown",
+        "waiver_allowed_by_occupation",
+        "waiver_not_allowed_mandatory_car",
+        "occupation_unknown",
+        "occupation_not_in_table",
+        "occupation_group_conflict"
+      ],
+      "title": "EligibilityReason",
+      "type": "string"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "Freshness": {
+      "enum": [
+        "current",
+        "stale"
+      ],
+      "title": "Freshness",
+      "type": "string"
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/IssueCode"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldPath"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "requestId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requestid"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "IssueCode": {
+      "enum": [
+        "MISSING_INPUT",
+        "AMBIGUOUS_INPUT",
+        "INELIGIBLE",
+        "VEHICLE_NOT_FOUND",
+        "TAX_KEY_AMBIGUOUS",
+        "SOURCE_CONFLICT",
+        "STALE_REVISION",
+        "PENDING_REPRESENTATIVE",
+        "TOOL_UNAVAILABLE",
+        "UNSUPPORTED_INPUT"
+      ],
+      "title": "IssueCode",
+      "type": "string"
+    },
+    "MoneyAmount": {
+      "additionalProperties": false,
+      "properties": {
+        "display": {
+          "maxLength": 20,
+          "pattern": "^-?\\d+$",
+          "title": "Display",
+          "type": "string"
+        },
+        "raw": {
+          "maxLength": 40,
+          "pattern": "^-?\\d+(\\.\\d+)?$",
+          "title": "Raw",
+          "type": "string"
+        }
+      },
+      "required": [
+        "raw",
+        "display"
+      ],
+      "title": "MoneyAmount",
+      "type": "object"
+    },
+    "RunKind": {
+      "enum": [
+        "regular",
+        "hypothetical"
+      ],
+      "title": "RunKind",
+      "type": "string"
+    },
+    "ScenarioResult": {
+      "additionalProperties": false,
+      "properties": {
+        "alternativeId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternativeid"
+        },
+        "alternativeVersion": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternativeversion"
+        },
+        "breakdown": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CalculationBreakdown"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "eligibilityReasons": {
+          "items": {
+            "$ref": "#/$defs/EligibilityReason"
+          },
+          "title": "Eligibilityreasons",
+          "type": "array"
+        },
+        "missingInformation": {
+          "items": {
+            "$ref": "#/$defs/Issue"
+          },
+          "title": "Missinginformation",
+          "type": "array"
+        },
+        "net": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyAmount"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "optionKey": {
+          "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+          "title": "Optionkey",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ScenarioStatus"
+        },
+        "track": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Track"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "vehicle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "optionKey",
+        "status"
+      ],
+      "title": "ScenarioResult",
+      "type": "object"
+    },
+    "ScenarioStatus": {
+      "enum": [
+        "calculated",
+        "ineligible",
+        "needs_information",
+        "unsupported",
+        "failed"
+      ],
+      "title": "ScenarioStatus",
+      "type": "string"
+    },
+    "Track": {
+      "enum": [
+        "regular",
+        "family"
+      ],
+      "title": "Track",
+      "type": "string"
+    },
+    "VehicleSource": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "participationSource": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participationsource"
+        },
+        "taxKey": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleTaxKey"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "VehicleSource",
+      "type": "object"
+    },
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "alternatives": {
+      "items": {
+        "$ref": "#/$defs/ScenarioResult"
+      },
+      "title": "Alternatives",
+      "type": "array"
+    },
+    "assumptions": {
+      "items": {
+        "$ref": "#/$defs/Assumption"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "calculationMonth": {
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+      "title": "Calculationmonth",
+      "type": "string"
+    },
+    "caseVersionUsed": {
+      "minimum": 0,
+      "title": "Caseversionused",
+      "type": "integer"
+    },
+    "catalogueVersionId": {
+      "format": "uuid",
+      "title": "Catalogueversionid",
+      "type": "string"
+    },
+    "createdAt": {
+      "format": "date-time",
+      "title": "Createdat",
+      "type": "string"
+    },
+    "current": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BaselineResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "freshness": {
+      "$ref": "#/$defs/Freshness"
+    },
+    "kind": {
+      "$ref": "#/$defs/RunKind"
+    },
+    "profileVersionUsed": {
+      "minimum": 0,
+      "title": "Profileversionused",
+      "type": "integer"
+    },
+    "rulesSnapshotId": {
+      "format": "uuid",
+      "title": "Rulessnapshotid",
+      "type": "string"
+    },
+    "runId": {
+      "format": "uuid",
+      "title": "Runid",
+      "type": "string"
+    },
+    "taxDatasetVersionId": {
+      "format": "uuid",
+      "title": "Taxdatasetversionid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "runId",
+    "kind",
+    "calculationMonth",
+    "caseVersionUsed",
+    "profileVersionUsed",
+    "rulesSnapshotId",
+    "catalogueVersionId",
+    "taxDatasetVersionId",
+    "alternatives",
+    "freshness",
+    "createdAt"
+  ],
+  "title": "ComparisonResult",
+  "type": "object"
+}

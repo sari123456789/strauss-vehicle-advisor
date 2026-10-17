@@ -1,0 +1,20 @@
+{
+  "_meta": {"purpose": "Overrides over success.json: required salary facts are missing (never zero)."},
+  "check_calculation_readiness": {
+    "status": "needs_information",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "issues": [{"code": "MISSING_INPUT", "field": "payroll.bonusGross"}],
+    "data": {
+      "missingEmployeeFields": ["payroll.bonusGross"],
+      "baselineReady": false,
+      "scopeComplete": false
+    }
+  },
+  "compare_scenarios": {
+    "status": "needs_information",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "issues": [{"code": "MISSING_INPUT", "field": "payroll.bonusGross"}]
+  }
+}

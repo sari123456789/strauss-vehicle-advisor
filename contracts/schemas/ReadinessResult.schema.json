@@ -1,0 +1,162 @@
+{
+  "$defs": {
+    "BlockedScenario": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/FieldPath"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "optionKey": {
+          "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+          "title": "Optionkey",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/IssueCode"
+        }
+      },
+      "required": [
+        "optionKey",
+        "reason"
+      ],
+      "title": "BlockedScenario",
+      "type": "object"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "IssueCode": {
+      "enum": [
+        "MISSING_INPUT",
+        "AMBIGUOUS_INPUT",
+        "INELIGIBLE",
+        "VEHICLE_NOT_FOUND",
+        "TAX_KEY_AMBIGUOUS",
+        "SOURCE_CONFLICT",
+        "STALE_REVISION",
+        "PENDING_REPRESENTATIVE",
+        "TOOL_UNAVAILABLE",
+        "UNSUPPORTED_INPUT"
+      ],
+      "title": "IssueCode",
+      "type": "string"
+    },
+    "PendingRepresentativeField": {
+      "additionalProperties": false,
+      "properties": {
+        "fieldCode": {
+          "title": "Fieldcode",
+          "type": "string"
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        },
+        "requestId": {
+          "format": "uuid",
+          "title": "Requestid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requestId",
+        "fieldCode"
+      ],
+      "title": "PendingRepresentativeField",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ambiguousFields": {
+      "items": {
+        "$ref": "#/$defs/FieldPath"
+      },
+      "title": "Ambiguousfields",
+      "type": "array"
+    },
+    "baselineReady": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Baselineready"
+    },
+    "blockedScenarios": {
+      "items": {
+        "$ref": "#/$defs/BlockedScenario"
+      },
+      "title": "Blockedscenarios",
+      "type": "array"
+    },
+    "missingEmployeeFields": {
+      "items": {
+        "$ref": "#/$defs/FieldPath"
+      },
+      "title": "Missingemployeefields",
+      "type": "array"
+    },
+    "pendingRepresentativeFields": {
+      "items": {
+        "$ref": "#/$defs/PendingRepresentativeField"
+      },
+      "title": "Pendingrepresentativefields",
+      "type": "array"
+    },
+    "readyScenarioIds": {
+      "items": {
+        "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+        "type": "string"
+      },
+      "title": "Readyscenarioids",
+      "type": "array"
+    },
+    "scopeComplete": {
+      "title": "Scopecomplete",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "scopeComplete"
+  ],
+  "title": "ReadinessResult",
+  "type": "object"
+}

@@ -1,0 +1,303 @@
+{
+  "$defs": {
+    "EnvelopeStatus": {
+      "enum": [
+        "ok",
+        "partial",
+        "needs_information",
+        "error"
+      ],
+      "title": "EnvelopeStatus",
+      "type": "string"
+    },
+    "ErrorCode": {
+      "description": "Stable machine-readable failure codes. Never shown raw to employees.",
+      "enum": [
+        "MALFORMED_REQUEST",
+        "UNAUTHENTICATED",
+        "FORBIDDEN",
+        "NOT_FOUND",
+        "VERSION_CONFLICT",
+        "OPERATION_PAYLOAD_MISMATCH",
+        "INVALID_STATE_TRANSITION",
+        "INVALID_BUSINESS_INPUT",
+        "INPUT_OUT_OF_SUPPORTED_RANGE",
+        "GROSS_UP_NOT_CONVERGED",
+        "RATE_LIMITED",
+        "INFRA_UNAVAILABLE"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "safeDetails": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Safedetails",
+          "type": "object"
+        },
+        "traceId": {
+          "title": "Traceid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "traceId"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "Issue": {
+      "additionalProperties": false,
+      "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/IssueCode"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FieldPath"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "optionKey": {
+          "anyOf": [
+            {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optionkey"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "requestId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requestid"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
+    "IssueCode": {
+      "enum": [
+        "MISSING_INPUT",
+        "AMBIGUOUS_INPUT",
+        "INELIGIBLE",
+        "VEHICLE_NOT_FOUND",
+        "TAX_KEY_AMBIGUOUS",
+        "SOURCE_CONFLICT",
+        "STALE_REVISION",
+        "PENDING_REPRESENTATIVE",
+        "TOOL_UNAVAILABLE",
+        "UNSUPPORTED_INPUT"
+      ],
+      "title": "IssueCode",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "SourceVersions": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogueVersionId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueversionid"
+        },
+        "rulesSnapshotId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rulessnapshotid"
+        },
+        "taxDatasetVersionId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Taxdatasetversionid"
+        }
+      },
+      "title": "SourceVersions",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "caseVersion": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Caseversion"
+    },
+    "data": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonValue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generatedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generatedat"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/Issue"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "profileVersion": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Profileversion"
+    },
+    "sourceVersions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceVersions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "status": {
+      "$ref": "#/$defs/EnvelopeStatus"
+    },
+    "traceId": {
+      "title": "Traceid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "traceId"
+  ],
+  "title": "Envelope[JsonValue]",
+  "type": "object"
+}
