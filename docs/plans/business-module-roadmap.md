@@ -18,8 +18,8 @@ plan file `curious-inventing-stallman.md`, not in the repository), revised on 20
 | 3B | `IdentityService` + `AuthorizationPolicy` (revalidated actors), `EmployeeProfileService`, `CaseService` (create/context/actual vs hypothetical updates), alternatives helpers, freshness, contracts C1–C4 | Done (2026-10-18), awaiting review |
 | 4A | BL eligibility (group, family, waiver), `CatalogueService` + result sets, `ValuationService`, `check_eligibility`; contract changes G1–G5 (`get_representative_request`, `resolve_occupation`, `confirm_profile_fields`, `fieldsRequiringConfirmation`, typed `fieldCode`) | Accepted 2026-10-18; G1–G5 await AI-side compatibility confirmation |
 | 4B | `ReadinessService`, `ComparisonService`, run snapshots, details + freshness; six reference employees end to end | Implemented 2026-10-18 without contract changes, awaiting review; Q1 (`ReadinessRequest.kind`) paused for shared-contract approval |
-| 4C | `BusinessToolsFacade` (13 tools), envelope/error mapping, representative questions (employee side) | Implemented 2026-10-18 without contract changes, awaiting review (§17) |
-| 4D | FastAPI vertical slice, token authentication (B1), Problem Details, OpenAPI export + drift check; frontend verified against `origin/feature/frontend` first | Not started |
+| 4C | `BusinessToolsFacade` (13 tools), envelope/error mapping, representative questions (employee side) | Accepted 2026-10-18 (§17) |
+| 4D | FastAPI vertical slice, token authentication (B1), Problem Details, OpenAPI export + drift check; frontend verified against `origin/feature/frontend` first | Business-owned part implemented 2026-10-18 as isolated components (§18), awaiting review; shared `main`/`bootstrap`/`settings` integration and frontend check pending coordination |
 
 Each stage ends with its Definition of Done and a report; the next stage starts only after the
 owner's approval.

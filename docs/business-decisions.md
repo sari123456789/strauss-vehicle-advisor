@@ -565,3 +565,110 @@ no contract change; awaiting review. Q1 remains deferred.
 No responsibility is assigned to 4C. architecture.md ("D1 module isolation") and
 integration-contracts assign the Outbox and the feed to the representative-answer stage.
 Nothing was implemented.
+
+## 18. Step 4D (Business-owned part): HTTP API, authentication and sessions (2026-10-18)
+
+Status: implemented as **isolated Business components**, awaiting review. The shared
+`app/main.py`, `app/bootstrap.py` and `app/settings.py` are **not** changed; integration is the
+coordinated step described below. No shared contract or DTO was changed, and Q1 remains deferred.
+Not implemented: AI conversation endpoints, SSE, and workers.
+
+### What was added
+
+**Authentication (architecture §22):**
+- **Ports:** `application/ports/credentials.py` defines `PasswordHasher`, `AccessTokenCodec`,
+  `CredentialStore` and `RefreshSessionRepository`.
+- **Service:** `application/identity/auth_service.py`, `AuthService`, with `login`, `refresh`,
+  `logout` and `authenticate`.
+  - **Login:** a failure is a uniform `UNAUTHENTICATED`. An unknown login still pays the full hash
+    cost, and repeated failures are throttled (`RATE_LIMITED` with `Retry-After`, an in-process
+    window).
+  - **Access token:** 15 minutes. It carries only the subject and the session family; roles are
+    re-read from `auth.users` on every request, with `Origin.HTTP`.
+  - **Refresh token:** 8 hours and one-time use. Rotation happens under a row lock; reusing a
+    rotated token revokes the whole family. Logout revokes the family immediately.
+- **Operator path:** `application/identity/credential_admin.py`, `CredentialAdminService`. It
+  works only for the import operator from the CLI, and requires at least 12 characters.
+- **Infrastructure:** `infrastructure/security/password_hasher.py` (`hashlib.scrypt`, salted, with
+  constant-time verification) and `infrastructure/security/token_codec.py` (`Hs256TokenCodec`).
+  - The codec is standard library only: PyPI was not reachable (TLS interception,
+    `UnknownIssuer`), so PyJWT could not be added.
+  - It accepts a single fixed header, so `alg=none` and algorithm swaps are rejected. It uses a
+    constant-time signature compare, and checks `iss`, `aud`, `typ`, `exp` and `iat`.
+  - It requires a secret of at least 32 bytes. PyJWT can replace it behind the same port.
+- **Storage:** `repositories/credentials.py`, the ORM rows in `models/identity.py`, and a new
+  migration `0003_auth_credentials`.
+  - It adds `auth.credentials` and `auth.refresh_sessions` and is additive only: 0001/0002 are
+    unchanged.
+  - Only hashes are stored: scrypt for passwords, SHA-256 digests for refresh tokens.
+- **CLI:** `app/cli/set_password.py`. The password comes from `STRAUSS_NEW_PASSWORD` or a hidden
+  prompt, and is never printed. No password is in the repository.
+
+**Trusted context:** `CaseService.context_for_case(actor, case_id, trace_id) -> ToolContext`.
+- The actor comes only from the verified token. The case must be owned, else `NOT_FOUND`.
+- The conversation is taken from the stored case, so HTTP passes the same checks as the tools.
+
+**HTTP API** (`app/api/business/`), installed with `install_business_api(app, api)`:
+- **Routes:**
+  - `/api/v1/auth/{login,refresh,logout,me}` and `/api/v1/me/profile`;
+  - `/api/v1/cases/{caseId}`: `GET` and `PATCH`, plus `/profile-confirmations`, `/option-lists`,
+    `/vehicle-resolutions`, `/vehicle-tax-values`, `/eligibility-checks`,
+    `/occupation-resolutions`, `/readiness`, `/comparisons`, `/comparisons/{runId}`,
+    `/representative-requests` and `/representative-requests/{requestId}`.
+- **Facade integration:** each case route calls `BusinessToolsPort` (the 4C facade) with the
+  shared request DTOs unchanged. There is no case-creation route; cases come with
+  AI-owned conversations.
+- **Responses:** success is 200 with the contract `Envelope`, including missing information or
+  ineligibility. Errors are Problem Details (`application/problem+json`; provisional HTTP DTO):
+  `type`, `title`, `status`, `code`, `traceId`, `details`, `issues`.
+- **Status mapping:**
+
+  | Code | HTTP |
+  |---|---|
+  | `MALFORMED_REQUEST` | 400 |
+  | `UNAUTHENTICATED` | 401, with `WWW-Authenticate` |
+  | `FORBIDDEN` | 403 |
+  | `NOT_FOUND` | 404 |
+  | version, payload or state conflicts | 409 |
+  | invalid input or range | 422 |
+  | `RATE_LIMITED` | 429 |
+  | `INFRA_UNAVAILABLE` | 503 |
+  | `INFRA_UNAVAILABLE` with `reason=internal_error`, or anything unexpected | 500, no details |
+
+- **`BusinessRoute`:** scoped to the Business routers only.
+  - It sets a trace ID (from `X-Request-ID`, or generated) and echoes it.
+  - Validation errors list field locations and types, never the submitted values.
+  - It adds `Cache-Control: no-store`, `nosniff` and `no-referrer`.
+- **Cookies and CSRF:** the refresh cookie is `HttpOnly; Secure; SameSite=Strict;
+  Path=/api/v1/auth`. Refresh and logout require `X-CSRF-Protection: 1` and an allowed `Origin`,
+  when one is sent.
+- **OpenAPI:** `business_openapi()` builds the document. It is exported to
+  `contracts/openapi/business-api.json` by `tests/contract/business_openapi.py`; the API may be
+  imported only by `app.main`, so the exporter lives on the test side. `test_business_openapi.py`
+  fails on drift and checks that every non-auth route is bearer-protected.
+
+### Integration (coordinated change to shared files; not applied)
+
+1. **`settings.py`:**
+   - `auth_token_secret: SecretStr` (required, at least 32 bytes; startup fails without it
+     outside development);
+   - `auth_allowed_origins: list[str]`;
+   - `auth_cookie_secure: bool = True`.
+2. **`bootstrap.py`:** build
+   `AuthService(uow, ScryptPasswordHasher(), Hs256TokenCodec(secret, issuer=..., audience=...), clock)`
+   and `BusinessApi(auth=..., tools=services.tools, cases=services.cases,
+   profiles=services.profiles, http=HttpConfig(...))`.
+3. **`main.py`:**
+   - `install_business_api(app, business_api)`;
+   - `CORSMiddleware` for the Angular origin, with credentials and the `X-CSRF-Protection`
+     header;
+   - dispose the engine on shutdown.
+4. **Deployment:** add `uvicorn` as a dependency, run behind HTTPS, and limit request sizes at
+   the proxy.
+
+### Open items for joint review
+- The HTTP route names and the Problem Details shape (D4D-1/3).
+- SSE authentication (EventSource cannot send `Authorization`, D4D-7).
+- The ownership of `main.py` / `bootstrap.py` (D4D-8).
+- The `origin/feature/frontend` check (D4D-9, needs approval for a read-only Git command).
+- The throttle is in-process (single API instance in the MVP).

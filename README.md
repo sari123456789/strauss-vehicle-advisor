@@ -28,6 +28,10 @@ frontend is developed on the `feature/frontend` branch.
   current vs alternatives, partial results, immutable run snapshots, freshness on read). See §16.
 - Step 4C: `BusinessToolsFacade` (the 13 canonical tools as contract Envelopes) and employee-side
   representative questions. See §17.
+- Step 4D (Business part): authentication (login/refresh/logout, rotating refresh sessions),
+  Business HTTP routes over the tools facade, Problem Details, OpenAPI export
+  (`contracts/openapi/business-api.json`). Not yet wired into `app.main`. See §18.
+  Set a demo password: `.venv\Scripts\python.exe -m app.cli.set_password --login e001`.
 
 ## Layout
 

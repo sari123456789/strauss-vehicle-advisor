@@ -14,7 +14,7 @@ case come from the server-built `ToolContext`.
 
 from dataclasses import replace
 from datetime import date
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from app.business.application.cases.changes import (
     FactChange,
@@ -136,6 +136,26 @@ class CaseService:
                 )
                 await uow.commit()
                 return result
+
+    # --- HTTP context (4D) --------------------------------------------------------------
+
+    async def context_for_case(self, actor: ActorRef, case_id: UUID, trace_id: str) -> ToolContext:
+        """Trusted `ToolContext` for an authenticated HTTP request on `case_id` (Step 4D).
+
+        The actor comes from the verified access token (never from the request body); the case
+        must be the revalidated employee's own (`NOT_FOUND` otherwise), and its conversation is
+        taken from the stored case - so HTTP calls pass exactly the checks tool calls pass.
+        """
+        with translate_errors():
+            async with self._unit_of_work() as uow:
+                case = await self._policy.owned_case(uow, actor, case_id)
+                current = await self._policy.employee(uow, actor)
+        return ToolContext(
+            actor=current,
+            conversation_id=case.conversation_id,
+            case_id=case.case_id,
+            trace_id=trace_id,
+        )
 
     # --- read --------------------------------------------------------------------------
 

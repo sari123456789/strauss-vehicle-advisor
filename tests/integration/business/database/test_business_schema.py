@@ -66,7 +66,7 @@ def test_schema_contents_and_downgrade_keeps_reference_data_identical(
     run(components.service.run(IMPORT_OPERATOR))
     tables, auth, functions = _business_objects(clean_database)
     assert tables == set(TABLES) | set(CASE_TABLES)
-    assert auth == {"users"}
+    assert auth == {"users", "credentials", "refresh_sessions"}  # 0003 (Step 4D)
     assert functions == FUNCTIONS
     before = _reference_checksums(clean_database)
     assert before["value_of_use"][0] == 77_988
@@ -85,7 +85,7 @@ def test_schema_contents_and_downgrade_keeps_reference_data_identical(
     assert _reference_checksums(clean_database) == before
     assert sql(clean_database, lineage) == [(1,)]
     assert sql(clean_database, "SELECT version_num FROM public.alembic_version") == [
-        ("0002_business_cases",)
+        ("0003_auth_credentials",)
     ]
 
 
@@ -102,4 +102,21 @@ def test_check_constraint_names_are_readable(clean_database: str) -> None:
         "ck_employee_profiles_version",
         "ck_employee_profiles_fields",
         "ck_employee_profiles_origin",
+    }
+
+
+def test_auth_check_constraint_names_have_one_prefix(clean_database: str) -> None:
+    names = {
+        r[0]
+        for r in sql(
+            clean_database,
+            "SELECT conname FROM pg_constraint WHERE contype = 'c' "
+            "AND connamespace = 'auth'::regnamespace "
+            "AND (conname LIKE '%credentials%' OR conname LIKE '%refresh_sessions%')",
+        )
+    }
+    assert names == {
+        "ck_credentials_password_hash",
+        "ck_refresh_sessions_token_hash",
+        "ck_refresh_sessions_expiry",
     }

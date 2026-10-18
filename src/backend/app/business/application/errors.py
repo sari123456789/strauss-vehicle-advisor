@@ -79,6 +79,12 @@ class InvalidStateTransition(BusinessError):
     code = ErrorCode.INVALID_STATE_TRANSITION
 
 
+class RateLimited(BusinessError):
+    """Too many attempts; `safe_details.retryAfterSeconds` says when to try again."""
+
+    code = ErrorCode.RATE_LIMITED
+
+
 class InfrastructureUnavailable(BusinessError):
     code = ErrorCode.INFRA_UNAVAILABLE
 
