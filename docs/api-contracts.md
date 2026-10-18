@@ -14,10 +14,12 @@ override any of them. Do not change a shared contract unilaterally.
 |---|---|---|
 | Pydantic contracts (tools + future HTTP DTOs) | `src/backend/app/contracts/` | Shared |
 | Tool Protocol | `app/contracts/business_port.py` → `BusinessToolsPort` | Shared |
-| Case-in-caller-transaction Protocol | `app/contracts/case_lifecycle.py` → `CaseLifecyclePort` | Shared |
-| Unit of Work / durable input ports | `app/application/ports/{unit_of_work,input_queue}.py` | Business (Application-owned ports) |
+| Case-creation Protocol (Business owns its transaction, C1) | `app/contracts/case_lifecycle.py` → `CaseLifecyclePort` | Shared |
+| Business event feed (provisional, C4) | `app/contracts/business_events.py` → `BusinessEventFeed`, `BusinessEvent` | Shared |
+| Business Unit of Work port | `app/business/application/ports/unit_of_work.py` | Business |
+| Durable input queue (provisional, C3) | `app/ai/application/ports/input_queue.py` → `DurableInputQueue` | AI |
 | Fixture-backed fake | `tests/fakes/fake_business_port.py` + `tests/fakes/fixtures/*.json` | Shared |
-| In-memory UoW / queue fakes | `tests/fakes/fake_unit_of_work.py`, `fake_input_queue.py` | Shared |
+| In-memory AI-side queue fakes | `tests/fakes/ai/fake_unit_of_work.py`, `fake_input_queue.py` | AI |
 | Exported JSON Schemas (for Angular, until full OpenAPI) | `contracts/schemas/*.schema.json` | Generated |
 
 Regenerate schemas with `uv run python -m app.cli.export_contract_schemas`; the test suite fails on drift.
@@ -107,23 +109,33 @@ Not approved v1 operations (rejected by the contract): `confirm`, `reset`, `acce
 | `alternativeIds` with `waiver` | `optionKeys` (`vehicle:CAR-xx`, `waiver`) resolved to persisted alternative IDs |
 | `strauss-architecture-en*.md`, `strauss-agent-spec*.md`, `INTEGRATION_CONTRACTS.md`, `CLAUDE_FRONTEND_HANDOFF*.md` (references inside documents) | `docs/architecture.md`, `docs/agent-spec.md`, `docs/integration-contracts.md`, `docs/frontend-handoff.md` |
 
-## 6. Transaction boundaries (D4)
+## 6. Transaction boundaries (decision D1, contracts C1-C4)
 
-**Conversation + case creation (future, AI-owned orchestration):**
-1. AI conversation service opens a `UnitOfWork` (from the bootstrap-provided factory).
-2. Calls `CaseLifecyclePort.create_case_for_conversation(uow, actor, CreateCaseCommand)` — writes the
-   business case, copies the latest actual profile values and `salaryProfileVersionUsed`, **does not
-   commit**.
-3. Writes its own conversation row through its own store bound to the same transaction.
-4. Commits once. Retries with the same `operationId` return the same pair.
+No database transaction or session is shared between modules. Each module owns its own Unit of
+Work and database identity (separate least-privilege logins; provisioning is deferred, D8).
+Cross-module consistency is eventual and recoverable; nothing is described as cross-module atomic.
 
-**Representative answer (Business, Phase 6):** in one Unit of Work — authorization/state checks, answer,
-applicable case mutation, version increments, audit entry, and
-`uow.input_queue.enqueue_representative_answered(RepresentativeAnsweredEvent)`. No LLM or graph execution
-inside the transaction. The `agent.inputs` implementation of `DurableInputQueue` is AI-owned.
+**Conversation + case creation (AI-coordinated, recoverable):**
+1. AI records its conversation as `initializing` (AI transaction).
+2. AI calls `CaseLifecyclePort.create_case_for_conversation(actor, CreateCaseCommand)`. Business
+   authorizes the revalidated actor, creates the case (copy of the latest actual profile and
+   `salaryProfileVersionUsed`) and **commits its own transaction**; it returns `Envelope[CreateCaseResult]`.
+   Idempotent by (actor, conversationId, operationId): a retry returns the same case (`created=false`);
+   a changed payload is `OPERATION_PAYLOAD_MISMATCH`; another owner's conversation is `NOT_FOUND`.
+3. AI activates its conversation with the case ID (AI transaction).
+Failure windows: after 1 (no case) or after 2 (case, conversation still `initializing`) the AI
+worker repeats step 2 with the same operation ID and continues. A case without a conversation
+remains only if the AI never retries; it has no access path. Recovery is to be proven by tests
+when the AI module is built.
 
-`DurableInputQueue` semantics: same `eventId` + same payload → `duplicate`; same `eventId` + different
-payload → `InputPayloadMismatchError`; staged events become visible only on commit.
+**Representative answer (Business, later stage, not implemented):** one Business transaction stores
+authorization/state checks, the answer, the case mutation, version increments, the audit entry and a
+`business.integration_outbox` row. The AI worker pulls events through `BusinessEventFeed`
+(capability injected only into the worker), enqueues each into its own `DurableInputQueue`
+deduplicated by `eventId`, then acknowledges. At-least-once delivery, idempotent consumption.
+
+`DurableInputQueue` semantics (AI-owned, provisional): same `eventId` + same payload → `duplicate`;
+same `eventId` + different payload → `InputPayloadMismatchError`.
 
 ## 7. Using the fake (AI developer)
 

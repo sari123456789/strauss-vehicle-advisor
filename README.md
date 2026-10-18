@@ -12,6 +12,15 @@ frontend is developed on the `feature/frontend` branch.
 - Step 1: Domain + deterministic Business Logic (payroll, gross-up, benefits, comparisons).
 - Step 2: source importers (CSV cp1255, workbook, PDF integrity) and immutable reference-data
   persistence (Alembic, `business` schema, append-only releases). See `docs/business-decisions.md` §9.
+- Package-layout refactor: two modules `app/business` and `app/ai` (skeleton), shared `app/api`
+  and `app/contracts`; no behavior change. See `docs/business-decisions.md` §12.
+- Step 3A: persistence foundation — migration `0002_business_cases` (`auth.users`, profiles,
+  cases, alternatives, operations, result sets, comparison runs, representative requests),
+  repositories, `SqlUnitOfWork`, optimistic versions, idempotency, demo seed. See §13 and
+  `docs/plans/business-module-roadmap.md`.
+- Step 3B: Business Application services — revalidated identity, authorization policy, employee
+  profile and case services (actual vs hypothetical updates, idempotency, optimistic versions),
+  contract changes C1–C4 (decision D1). See `docs/business-decisions.md` §14.
 
 ## Layout
 
@@ -26,6 +35,26 @@ src/backend/              Python backend (package `app`); Alembic migrations in 
 tests/                    architecture, contract, unit and API tests
 compose.yaml              local PostgreSQL
 ```
+
+Backend package (`src/backend/app/`):
+
+```
+api/                      shared FastAPI boundary (outside both modules)
+business/                 Business Module
+  application/              use cases, authorization, Application-owned ports
+  bl/                       deterministic Business Logic (payroll, gross-up, benefits, comparisons)
+  domain/                   Domain / Core
+  infrastructure/           PostgreSQL persistence and source imports
+ai/                       AI Engine Module (skeleton; owned by the AI developer)
+  application/  workflow/  tools/  infrastructure/
+contracts/                shared integration contracts (Pydantic DTOs, Protocols)
+cli/                      entry points (import_data, export_contract_schemas)
+bootstrap.py main.py settings.py runtime.py   composition root and startup only
+```
+
+Tests mirror it: `tests/unit/business/{application,bl,domain,infrastructure}`,
+`tests/integration/business/database`, `tests/architecture` (import boundaries, layout, cycles,
+port implementations, authorization-context signatures).
 
 ## Local setup (Windows / PowerShell)
 
@@ -59,12 +88,35 @@ reference data is immutable (UPDATE/DELETE/TRUNCATE are rejected by the database
 is the latest row of `business.reference_releases`. Any change to `data/rules/derived-demo-policy.json`
 must bump `derivedPolicyVersion` and add a `revisions` entry, otherwise publication is rejected.
 
+## Demo accounts and profiles (Step 3A)
+
+After the import, seed the fictional reference employees (E-001…E-006) and two staff accounts:
+
+```powershell
+.venv\Scripts\python.exe -m app.cli.seed_demo --dry-run    # validate; writes nothing
+.venv\Scripts\python.exe -m app.cli.seed_demo              # create missing accounts/profiles
+```
+
+The seed reads names and payroll values from the workbook and the explicit mapping in
+`data/demo/demo-accounts.json`. Re-running creates nothing and never overwrites a profile.
+Seeded facts are usable for the demo but not employee-confirmed (`lastConfirmedAt` is null); the
+demo origin is recorded internally. Accounts have no passwords (authentication is Step 3B).
+
+## Challenge source files on another machine
+
+`data/source/` is never committed (redistribution not approved). On a new machine, obtain the four
+files through the approved channel and place them under `data/source/` with the names in
+`CLAUDE.md`; `python -m app.cli.import_data --dry-run` verifies them against
+`data/source-manifest.json` (SHA-256 and size). Tests marked `sources` skip with an explicit
+reason when the files are missing; set `STRAUSS_REQUIRE_SOURCES=1` to make them mandatory.
+
 ## Checks
 
 ```powershell
 cd src/backend
 py -m uv run pytest                                  # DB tests are skipped if PostgreSQL is down
 $env:STRAUSS_REQUIRE_DB = "1"; py -m uv run pytest   # mandatory: DB tests must run and pass
+$env:STRAUSS_REQUIRE_SOURCES = "1"                    # also require the data/source/ files
 py -m uv run ruff check app ../../tests migrations --config pyproject.toml
 py -m uv run ruff format --check app ../../tests migrations --config pyproject.toml
 py -m uv run mypy app migrations

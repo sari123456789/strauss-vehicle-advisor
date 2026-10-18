@@ -161,3 +161,21 @@ These are contract-design questions, not permission to override earlier approved
 5. Pending representative response does not prevent new messages/new tasks; ready alternatives appear immediately, and later answer updates the correct calculation without hijacking the current topic.
 6. All expected failures become natural Hebrew messages; no raw HTTP status is visible in the UI.
 7. Historical messages, snapshots and previous results remain unchanged after real profile updates and delayed answers.
+
+
+## Approved implementation update — 2026-10-18: backend package layout
+
+**Decision authority:** project owner, 2026-10-18. Package paths only; ownership, tool names, contracts and business behavior are unchanged.
+
+The ownership paths in Section 2 map to the repository layout as follows: agent developer `app/agent/**` → `app/ai/**`; services/tools developer `app/application/**`, `app/business/**`, `app/domain/**`, `app/infrastructure/**` → `app/business/**` (with layers `application/`, `bl/`, `domain/`, `infrastructure/`); joint ownership of canonical DTO contracts → `app/contracts/**`, plus `app/api/**`, `app/bootstrap.py`, `app/main.py`, `app/settings.py` and `app/runtime.py`. The AI module does not import `app.business`; agent tools receive the business tool port (`app.contracts.business_port.BusinessToolsPort`) through dependency injection. See `architecture.md`, "Approved implementation update — 2026-10-18: backend package layout".
+
+
+## Approved implementation update — 2026-10-18: D1 module isolation (contracts C1–C4)
+
+**Decision authority:** project owner, 2026-10-18. Replaces the shared-transaction assumptions of this document and of `architecture.md` §3, §18, §19 and §21 (see `architecture.md`, "Approved implementation update — 2026-10-18: D1 module isolation and consistency model").
+
+- Business and AI have separate least-privilege database identities and their own Units of Work; no transaction handle, session or credential is shared or exposed to model-controlled code.
+- `CaseLifecyclePort.create_case_for_conversation(actor, command) -> Envelope[CreateCaseResult]` (C1): Business owns and commits its transaction; idempotent by actor, conversation and operation ID; recoverable coordination instead of atomic creation.
+- Business `UnitOfWork` carries no AI input queue (C2); `DurableInputQueue` is AI-internal and provisional (C3).
+- `BusinessEventFeed` / `BusinessEvent` (C4) are provisional shared contracts for at-least-once delivery from the Business Outbox; not implemented yet.
+- Still provisional until the AI developer starts: C3/C4 shapes, AI conversation statuses, HTTP DTOs and SSE.
