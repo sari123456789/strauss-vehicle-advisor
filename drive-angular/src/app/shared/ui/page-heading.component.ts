@@ -1,0 +1,1 @@
+import {Component,input} from '@angular/core';@Component({selector:'drive-heading',standalone:true,template:'<div class="heading"><span class="eyebrow">{{eyebrow()}}</span><h1>{{title()}}</h1><p>{{subtitle()}}</p></div>'})export class PageHeadingComponent{title=input('');subtitle=input('');eyebrow=input('DRIVE / הבחירה שלך')}

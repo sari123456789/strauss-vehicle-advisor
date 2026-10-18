@@ -1,0 +1,141 @@
+@use '../../../../styles/breakpoints' as bp;
+
+.sheet {
+  // Reset UA dialog box; the panel provides the visuals so backdrop clicks hit the <dialog>.
+  padding: 0;
+  border: 0;
+  margin: 0;
+  max-width: none;
+  max-height: none;
+  background: transparent;
+  color: var(--text);
+  overflow: visible;
+}
+
+.sheet::backdrop {
+  background: #000000a6;
+}
+
+.sheet__panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 12px;
+  padding-inline: 20px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sheet__close {
+  flex: none;
+}
+
+.sheet__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  overflow-wrap: anywhere;
+}
+
+.sheet__handle {
+  display: none;
+}
+
+// Bottom sheet (phones, or forced).
+@mixin bottom {
+  inset: auto 0 0 0;
+  width: 100%;
+
+  .sheet__panel {
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 0;
+    animation: sheet-up 0.22s ease-out;
+  }
+
+  .sheet__handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 8px auto 0;
+    border-radius: 2px;
+    background: var(--border-strong);
+  }
+}
+
+// Side drawer from the inline-start edge (right in RTL).
+@mixin side {
+  inset-block: 0;
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  height: 100%;
+  width: min(420px, 90vw);
+
+  .sheet__panel {
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    border-block: 0;
+    border-inline-start: 0;
+    padding-top: env(safe-area-inset-top);
+    animation: sheet-in 0.22s ease-out;
+  }
+}
+
+.sheet {
+  @include bottom;
+
+  @include bp.md {
+    @include side;
+  }
+}
+
+.sheet.sheet--bottom {
+  @include bottom;
+}
+
+.sheet.sheet--side {
+  @include side;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@include bp.reduced-motion {
+  .sheet__panel {
+    animation: none !important;
+  }
+}
