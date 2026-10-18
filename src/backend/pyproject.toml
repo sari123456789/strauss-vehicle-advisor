@@ -12,6 +12,10 @@ dependencies = [
     "alembic>=1.13",
     "openpyxl>=3.1",
     "pypdf>=5",
+    "langgraph>=1.2",
+    "google-genai>=1.0",
+    "python-dotenv>=1.0",
+    "langgraph-checkpoint-postgres==3.1.2",
 ]
 
 [dependency-groups]
@@ -37,6 +41,7 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "db: real-PostgreSQL integration tests (separate *_test database; STRAUSS_REQUIRE_DB=1 makes them mandatory)",
     "sources: needs the challenge files under data/source/ (STRAUSS_REQUIRE_SOURCES=1 makes them mandatory)",
+    "llm_live: one real free-tier LLM request (opt-in: STRAUSS_AI_LIVE_LLM=1 and a configured profile)",
 ]
 
 [tool.ruff]
@@ -63,6 +68,7 @@ module = [
     "app.business.domain.*",
     "app.business.bl.*",
     "app.business.application.*",
+    "app.ai.*",
 ]
 strict = true
 
