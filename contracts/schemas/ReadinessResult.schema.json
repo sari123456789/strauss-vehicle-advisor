@@ -69,8 +69,7 @@
       "additionalProperties": false,
       "properties": {
         "fieldCode": {
-          "title": "Fieldcode",
-          "type": "string"
+          "$ref": "#/$defs/RepresentativeFieldCode"
         },
         "optionKey": {
           "anyOf": [
@@ -97,6 +96,18 @@
       ],
       "title": "PendingRepresentativeField",
       "type": "object"
+    },
+    "RepresentativeFieldCode": {
+      "description": "Server-recognized facts a representative may supply (provisional allowlist).",
+      "enum": [
+        "alternative.participation",
+        "occupation.waiverPolicy",
+        "employee.entitlementGroup",
+        "currentArrangement.propulsion",
+        "currentArrangement.vehicle"
+      ],
+      "title": "RepresentativeFieldCode",
+      "type": "string"
     }
   },
   "additionalProperties": false,

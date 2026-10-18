@@ -1,0 +1,5739 @@
+{
+  "components": {
+    "schemas": {
+      "ActorView": {
+        "additionalProperties": false,
+        "properties": {
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "subjectId": {
+            "format": "uuid",
+            "title": "Subjectid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subjectId",
+          "roles"
+        ],
+        "title": "ActorView",
+        "type": "object"
+      },
+      "AlternativeView": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "alternativeId": {
+            "format": "uuid",
+            "title": "Alternativeid",
+            "type": "string"
+          },
+          "alternativeVersion": {
+            "minimum": 0.0,
+            "title": "Alternativeversion",
+            "type": "integer"
+          },
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          },
+          "track": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Track"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "alternativeId",
+          "alternativeVersion",
+          "optionKey",
+          "active"
+        ],
+        "title": "AlternativeView",
+        "type": "object"
+      },
+      "AnswerApplication": {
+        "enum": [
+          "applied",
+          "not_applicable"
+        ],
+        "title": "AnswerApplication",
+        "type": "string"
+      },
+      "AnswerOutcome": {
+        "enum": [
+          "answered",
+          "cannot_determine"
+        ],
+        "title": "AnswerOutcome",
+        "type": "string"
+      },
+      "AnswerView": {
+        "additionalProperties": false,
+        "properties": {
+          "answeredAt": {
+            "format": "date-time",
+            "title": "Answeredat",
+            "type": "string"
+          },
+          "application": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerApplication"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "effectiveFrom": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectivefrom"
+          },
+          "effectiveTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveto"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AnswerOutcome"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "const": "ILS",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "outcome",
+          "answeredAt"
+        ],
+        "title": "AnswerView",
+        "type": "object"
+      },
+      "ArrangementKind": {
+        "enum": [
+          "company_car",
+          "allowance",
+          "no_car_no_allowance"
+        ],
+        "title": "ArrangementKind",
+        "type": "string"
+      },
+      "Assumption": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 80,
+            "title": "Code",
+            "type": "string"
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Assumption",
+        "type": "object"
+      },
+      "BaselineResult": {
+        "additionalProperties": false,
+        "properties": {
+          "breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalculationBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "net": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ScenarioStatus"
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "BaselineResult",
+        "type": "object"
+      },
+      "BlockedScenario": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/IssueCode"
+          }
+        },
+        "required": [
+          "optionKey",
+          "reason"
+        ],
+        "title": "BlockedScenario",
+        "type": "object"
+      },
+      "CalculationBreakdown": {
+        "additionalProperties": false,
+        "properties": {
+          "allowance": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "creditPointsCredit": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "earnedGross": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "electricGrossUp": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "familyGapContribution": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "groupBudget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "healthInsurance": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "incomeTax": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "incomeTaxBeforeCredits": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "monthlyCompanyCost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nationalInsurance": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "ordinaryParticipation": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "pensionCredit": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "pensionEmployee": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "studyFundEmployee": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "taxableBase": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          },
+          "valueOfUse": {
+            "$ref": "#/components/schemas/MoneyAmount"
+          }
+        },
+        "required": [
+          "earnedGross",
+          "allowance",
+          "electricGrossUp",
+          "valueOfUse",
+          "taxableBase",
+          "pensionEmployee",
+          "studyFundEmployee",
+          "creditPointsCredit",
+          "pensionCredit",
+          "incomeTaxBeforeCredits",
+          "incomeTax",
+          "nationalInsurance",
+          "healthInsurance",
+          "ordinaryParticipation",
+          "familyGapContribution"
+        ],
+        "title": "CalculationBreakdown",
+        "type": "object"
+      },
+      "CaseContext": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/AlternativeView"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "calculationMonth": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "title": "Calculationmonth",
+            "type": "string"
+          },
+          "caseId": {
+            "format": "uuid",
+            "title": "Caseid",
+            "type": "string"
+          },
+          "caseVersion": {
+            "minimum": 0.0,
+            "title": "Caseversion",
+            "type": "integer"
+          },
+          "conversationId": {
+            "format": "uuid",
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "fieldsRequiringConfirmation": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Fieldsrequiringconfirmation",
+            "type": "array"
+          },
+          "hypotheticalOverrides": {
+            "items": {
+              "$ref": "#/components/schemas/HypotheticalOverride"
+            },
+            "title": "Hypotheticaloverrides",
+            "type": "array"
+          },
+          "latestProfileVersion": {
+            "minimum": 0.0,
+            "title": "Latestprofileversion",
+            "type": "integer"
+          },
+          "openRequests": {
+            "items": {
+              "$ref": "#/components/schemas/OpenRequestSummary"
+            },
+            "title": "Openrequests",
+            "type": "array"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/EmployeeProfileView"
+          },
+          "profileMismatch": {
+            "title": "Profilemismatch",
+            "type": "boolean"
+          },
+          "recentRuns": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "Recentruns",
+            "type": "array"
+          },
+          "referenceDate": {
+            "format": "date",
+            "title": "Referencedate",
+            "type": "string"
+          },
+          "salaryProfileVersionUsed": {
+            "minimum": 0.0,
+            "title": "Salaryprofileversionused",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "caseId",
+          "conversationId",
+          "caseVersion",
+          "calculationMonth",
+          "referenceDate",
+          "profile",
+          "salaryProfileVersionUsed",
+          "latestProfileVersion",
+          "profileMismatch"
+        ],
+        "title": "CaseContext",
+        "type": "object"
+      },
+      "ClearChange": {
+        "additionalProperties": false,
+        "description": "Marks the field unknown (`status=missing`). Never sets zero.",
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "op": {
+            "const": "clear",
+            "title": "Op",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "field"
+        ],
+        "title": "ClearChange",
+        "type": "object"
+      },
+      "CompareRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "expectedProfileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedprofileversion"
+          },
+          "includeCurrent": {
+            "title": "Includecurrent",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RunKind"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/Selection"
+          }
+        },
+        "required": [
+          "selection",
+          "includeCurrent",
+          "kind",
+          "expectedCaseVersion",
+          "operationId"
+        ],
+        "title": "CompareRequest",
+        "type": "object"
+      },
+      "ComparisonDetails": {
+        "additionalProperties": false,
+        "properties": {
+          "inputSnapshot": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Inputsnapshot",
+            "type": "object"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ComparisonResult"
+          }
+        },
+        "required": [
+          "result",
+          "inputSnapshot"
+        ],
+        "title": "ComparisonDetails",
+        "type": "object"
+      },
+      "ComparisonResult": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioResult"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "assumptions": {
+            "items": {
+              "$ref": "#/components/schemas/Assumption"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "calculationMonth": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "title": "Calculationmonth",
+            "type": "string"
+          },
+          "caseVersionUsed": {
+            "minimum": 0.0,
+            "title": "Caseversionused",
+            "type": "integer"
+          },
+          "catalogueVersionId": {
+            "format": "uuid",
+            "title": "Catalogueversionid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BaselineResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RunKind"
+          },
+          "profileVersionUsed": {
+            "minimum": 0.0,
+            "title": "Profileversionused",
+            "type": "integer"
+          },
+          "rulesSnapshotId": {
+            "format": "uuid",
+            "title": "Rulessnapshotid",
+            "type": "string"
+          },
+          "runId": {
+            "format": "uuid",
+            "title": "Runid",
+            "type": "string"
+          },
+          "taxDatasetVersionId": {
+            "format": "uuid",
+            "title": "Taxdatasetversionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "runId",
+          "kind",
+          "calculationMonth",
+          "caseVersionUsed",
+          "profileVersionUsed",
+          "rulesSnapshotId",
+          "catalogueVersionId",
+          "taxDatasetVersionId",
+          "alternatives",
+          "freshness",
+          "createdAt"
+        ],
+        "title": "ComparisonResult",
+        "type": "object"
+      },
+      "ConfirmProfileFieldsRequest": {
+        "additionalProperties": false,
+        "description": "`confirm_profile_fields` (G3): the employee confirms that stored *actual* values are\nstill correct. Values never change; only confirmation metadata and revisions do. Separate\nfrom `update_conversation_inputs` (an unchanged `set` is never a confirmation).",
+        "properties": {
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "expectedProfileVersion": {
+            "minimum": 0.0,
+            "title": "Expectedprofileversion",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          }
+        },
+        "required": [
+          "expectedCaseVersion",
+          "expectedProfileVersion",
+          "operationId",
+          "fields"
+        ],
+        "title": "ConfirmProfileFieldsRequest",
+        "type": "object"
+      },
+      "ConfirmProfileFieldsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmedFields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Confirmedfields",
+            "type": "array"
+          },
+          "newCaseVersion": {
+            "minimum": 0.0,
+            "title": "Newcaseversion",
+            "type": "integer"
+          },
+          "newProfileVersion": {
+            "minimum": 0.0,
+            "title": "Newprofileversion",
+            "type": "integer"
+          },
+          "notConfirmable": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Notconfirmable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "confirmedFields",
+          "newCaseVersion",
+          "newProfileVersion"
+        ],
+        "title": "ConfirmProfileFieldsResult",
+        "type": "object"
+      },
+      "CreateQuestionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "idempotencyKey": {
+            "format": "uuid",
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "questionText": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Questiontext",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fieldCode",
+          "questionText",
+          "idempotencyKey",
+          "expectedCaseVersion"
+        ],
+        "title": "CreateQuestionRequest",
+        "type": "object"
+      },
+      "CreateQuestionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestStatus"
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "created"
+        ],
+        "title": "CreateQuestionResult",
+        "type": "object"
+      },
+      "CurrentArrangementView": {
+        "additionalProperties": false,
+        "description": "Last-reported current arrangement; each element carries its own status.",
+        "properties": {
+          "allowance": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "familyDeduction": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "familyDeductionIncludedInParticipation": {
+            "$ref": "#/components/schemas/ProfileField_bool_"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ProfileField_ArrangementKind_"
+          },
+          "participation": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "propulsion": {
+            "$ref": "#/components/schemas/ProfileField_Propulsion_"
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/ProfileField_VehicleRef_"
+          }
+        },
+        "required": [
+          "kind",
+          "vehicle",
+          "propulsion",
+          "participation",
+          "familyDeduction",
+          "familyDeductionIncludedInParticipation",
+          "allowance"
+        ],
+        "title": "CurrentArrangementView",
+        "type": "object"
+      },
+      "EligibilityReason": {
+        "enum": [
+          "group_own",
+          "group_lower",
+          "group_higher_than_entitlement",
+          "group_unknown",
+          "family_children_met",
+          "family_children_not_met",
+          "family_children_unknown",
+          "waiver_allowed_by_occupation",
+          "waiver_not_allowed_mandatory_car",
+          "occupation_unknown",
+          "occupation_not_in_table",
+          "occupation_group_conflict"
+        ],
+        "title": "EligibilityReason",
+        "type": "string"
+      },
+      "EligibilityRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedCaseVersion",
+          "optionKey"
+        ],
+        "title": "EligibilityRequest",
+        "type": "object"
+      },
+      "EligibilityResult": {
+        "additionalProperties": false,
+        "properties": {
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/EligibilityReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EligibilityStatus"
+          }
+        },
+        "required": [
+          "optionKey",
+          "status"
+        ],
+        "title": "EligibilityResult",
+        "type": "object"
+      },
+      "EligibilityStatus": {
+        "enum": [
+          "eligible",
+          "ineligible",
+          "needs_information"
+        ],
+        "title": "EligibilityStatus",
+        "type": "string"
+      },
+      "EmployeeProfileView": {
+        "additionalProperties": false,
+        "properties": {
+          "baseGross": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "bonusGross": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "commissionsGross": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+          },
+          "creditPoints": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____3"
+          },
+          "currentArrangement": {
+            "$ref": "#/components/schemas/CurrentArrangementView"
+          },
+          "entitlementGroup": {
+            "$ref": "#/components/schemas/ProfileField_EntitlementGroup_"
+          },
+          "occupationId": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____4"
+          },
+          "pensionEmployeeRate": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2"
+          },
+          "profileVersion": {
+            "minimum": 0.0,
+            "title": "Profileversion",
+            "type": "integer"
+          },
+          "qualifyingChildrenCount": {
+            "$ref": "#/components/schemas/ProfileField_Annotated_int__FieldInfo_annotation_NoneType__required_True__metadata__Ge_ge_0___Le_le_100_____"
+          },
+          "studyFundEmployeeRate": {
+            "$ref": "#/components/schemas/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2"
+          }
+        },
+        "required": [
+          "profileVersion",
+          "baseGross",
+          "commissionsGross",
+          "bonusGross",
+          "pensionEmployeeRate",
+          "studyFundEmployeeRate",
+          "creditPoints",
+          "occupationId",
+          "entitlementGroup",
+          "qualifyingChildrenCount",
+          "currentArrangement"
+        ],
+        "title": "EmployeeProfileView",
+        "type": "object"
+      },
+      "EntitlementGroup": {
+        "description": "Source Hebrew group labels are preserved as values.",
+        "enum": [
+          "א",
+          "ב",
+          "ג",
+          "ד"
+        ],
+        "title": "EntitlementGroup",
+        "type": "string"
+      },
+      "EnvelopeStatus": {
+        "enum": [
+          "ok",
+          "partial",
+          "needs_information",
+          "error"
+        ],
+        "title": "EnvelopeStatus",
+        "type": "string"
+      },
+      "Envelope_CaseContext_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaseContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[CaseContext]",
+        "type": "object"
+      },
+      "Envelope_ComparisonDetails_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ComparisonDetails]",
+        "type": "object"
+      },
+      "Envelope_ComparisonResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ComparisonResult]",
+        "type": "object"
+      },
+      "Envelope_ConfirmProfileFieldsResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfirmProfileFieldsResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ConfirmProfileFieldsResult]",
+        "type": "object"
+      },
+      "Envelope_CreateQuestionResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CreateQuestionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[CreateQuestionResult]",
+        "type": "object"
+      },
+      "Envelope_EligibilityResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EligibilityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[EligibilityResult]",
+        "type": "object"
+      },
+      "Envelope_EmployeeProfileView_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeProfileView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[EmployeeProfileView]",
+        "type": "object"
+      },
+      "Envelope_ListOptionsResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ListOptionsResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ListOptionsResult]",
+        "type": "object"
+      },
+      "Envelope_ReadinessResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadinessResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ReadinessResult]",
+        "type": "object"
+      },
+      "Envelope_RequestStatusView_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestStatusView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[RequestStatusView]",
+        "type": "object"
+      },
+      "Envelope_ResolveOccupationResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolveOccupationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ResolveOccupationResult]",
+        "type": "object"
+      },
+      "Envelope_ResolveVehicleResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResolveVehicleResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ResolveVehicleResult]",
+        "type": "object"
+      },
+      "Envelope_TaxValueResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaxValueResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[TaxValueResult]",
+        "type": "object"
+      },
+      "Envelope_UpdateInputsResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdateInputsResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[UpdateInputsResult]",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "description": "Stable machine-readable failure codes. Never shown raw to employees.",
+        "enum": [
+          "MALFORMED_REQUEST",
+          "UNAUTHENTICATED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "VERSION_CONFLICT",
+          "OPERATION_PAYLOAD_MISMATCH",
+          "INVALID_STATE_TRANSITION",
+          "INVALID_BUSINESS_INPUT",
+          "INPUT_OUT_OF_SUPPORTED_RANGE",
+          "GROSS_UP_NOT_CONVERGED",
+          "RATE_LIMITED",
+          "INFRA_UNAVAILABLE"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "safeDetails": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Safedetails",
+            "type": "object"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "traceId"
+        ],
+        "title": "ErrorInfo",
+        "type": "object"
+      },
+      "FieldPath": {
+        "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+        "enum": [
+          "payroll.baseGross",
+          "payroll.commissionsGross",
+          "payroll.bonusGross",
+          "payroll.pensionEmployeeRate",
+          "payroll.studyFundEmployeeRate",
+          "payroll.creditPoints",
+          "employee.occupationId",
+          "employee.entitlementGroup",
+          "employee.qualifyingChildrenCount",
+          "currentArrangement.kind",
+          "currentArrangement.vehicle",
+          "currentArrangement.propulsion",
+          "currentArrangement.participation",
+          "currentArrangement.familyDeduction",
+          "currentArrangement.familyDeductionIncludedInParticipation",
+          "currentArrangement.allowance"
+        ],
+        "title": "FieldPath",
+        "type": "string"
+      },
+      "FieldStatus": {
+        "enum": [
+          "missing",
+          "needs_clarification",
+          "usable"
+        ],
+        "title": "FieldStatus",
+        "type": "string"
+      },
+      "Freshness": {
+        "enum": [
+          "current",
+          "stale"
+        ],
+        "title": "Freshness",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HypotheticalOverride": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleRef"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "HypotheticalOverride",
+        "type": "object"
+      },
+      "Issue": {
+        "additionalProperties": false,
+        "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/IssueCode"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldPath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requestId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestid"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Issue",
+        "type": "object"
+      },
+      "IssueCode": {
+        "enum": [
+          "MISSING_INPUT",
+          "AMBIGUOUS_INPUT",
+          "INELIGIBLE",
+          "VEHICLE_NOT_FOUND",
+          "TAX_KEY_AMBIGUOUS",
+          "SOURCE_CONFLICT",
+          "STALE_REVISION",
+          "PENDING_REPRESENTATIVE",
+          "TOOL_UNAVAILABLE",
+          "UNSUPPORTED_INPUT"
+        ],
+        "title": "IssueCode",
+        "type": "string"
+      },
+      "JsonValue": {},
+      "ListOptionsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/OptionCategory"
+            },
+            "minItems": 1,
+            "title": "Categories",
+            "type": "array"
+          },
+          "expectedCaseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedcaseversion"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/OptionFilters"
+          }
+        },
+        "title": "ListOptionsRequest",
+        "type": "object"
+      },
+      "ListOptionsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OptionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "resultSetId": {
+            "format": "uuid",
+            "title": "Resultsetid",
+            "type": "string"
+          },
+          "scopeComplete": {
+            "title": "Scopecomplete",
+            "type": "boolean"
+          },
+          "uncheckedCategories": {
+            "items": {
+              "$ref": "#/components/schemas/OptionCategory"
+            },
+            "title": "Uncheckedcategories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "resultSetId",
+          "items",
+          "scopeComplete"
+        ],
+        "title": "ListOptionsResult",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "login": {
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Login",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "MoneyAmount": {
+        "additionalProperties": false,
+        "properties": {
+          "display": {
+            "maxLength": 20,
+            "pattern": "^-?\\d+$",
+            "title": "Display",
+            "type": "string"
+          },
+          "raw": {
+            "maxLength": 40,
+            "pattern": "^-?\\d+(\\.\\d+)?$",
+            "title": "Raw",
+            "type": "string"
+          }
+        },
+        "required": [
+          "raw",
+          "display"
+        ],
+        "title": "MoneyAmount",
+        "type": "object"
+      },
+      "OccupationCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "nameHe": {
+            "title": "Namehe",
+            "type": "string"
+          },
+          "occupationId": {
+            "pattern": "^OCC-[A-Z0-9-]{2,40}$",
+            "title": "Occupationid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "occupationId",
+          "nameHe"
+        ],
+        "title": "OccupationCandidate",
+        "type": "object"
+      },
+      "OpenRequestSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestStatus"
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "fieldCode"
+        ],
+        "title": "OpenRequestSummary",
+        "type": "object"
+      },
+      "OptionCategory": {
+        "enum": [
+          "regular",
+          "family",
+          "waiver"
+        ],
+        "title": "OptionCategory",
+        "type": "string"
+      },
+      "OptionFilters": {
+        "additionalProperties": false,
+        "properties": {
+          "groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EntitlementGroup"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groups"
+          },
+          "propulsion": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Propulsion"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Propulsion"
+          }
+        },
+        "title": "OptionFilters",
+        "type": "object"
+      },
+      "OptionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/OptionCategory"
+          },
+          "commercialName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commercialname"
+          },
+          "defaultParticipation": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultparticipation"
+          },
+          "eligibility": {
+            "$ref": "#/components/schemas/EligibilityStatus"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntitlementGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "groupBudget": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupbudget"
+          },
+          "listPrice": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listprice"
+          },
+          "manufacturerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturername"
+          },
+          "monthlyCompanyCost": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthlycompanycost"
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          },
+          "propulsion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Propulsion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/EligibilityReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "registrationYear": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationyear"
+          },
+          "track": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Track"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "valueOfUse": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valueofuse"
+          },
+          "waiverAllowance": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiverallowance"
+          }
+        },
+        "required": [
+          "optionKey",
+          "category",
+          "eligibility"
+        ],
+        "title": "OptionItem",
+        "type": "object"
+      },
+      "PendingRepresentativeField": {
+        "additionalProperties": false,
+        "properties": {
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "fieldCode"
+        ],
+        "title": "PendingRepresentativeField",
+        "type": "object"
+      },
+      "ProfileField_Annotated_int__FieldInfo_annotation_NoneType__required_True__metadata__Ge_ge_0___Le_le_100_____": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Annotated[int, FieldInfo(annotation=NoneType, required=True, metadata=[Ge(ge=0), Le(le=100)])]]",
+        "type": "object"
+      },
+      "ProfileField_ArrangementKind_": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArrangementKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[ArrangementKind]",
+        "type": "object"
+      },
+      "ProfileField_EntitlementGroup_": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntitlementGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[EntitlementGroup]",
+        "type": "object"
+      },
+      "ProfileField_Propulsion_": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Propulsion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Propulsion]",
+        "type": "object"
+      },
+      "ProfileField_VehicleRef_": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[VehicleRef]",
+        "type": "object"
+      },
+      "ProfileField_bool_": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[bool]",
+        "type": "object"
+      },
+      "Propulsion": {
+        "enum": [
+          "petrol",
+          "hybrid",
+          "plug_in_hybrid",
+          "electric"
+        ],
+        "title": "Propulsion",
+        "type": "string"
+      },
+      "ReadinessGoal": {
+        "enum": [
+          "list_regular",
+          "list_family",
+          "waiver_eligibility",
+          "calculate_net",
+          "compare_to_current"
+        ],
+        "title": "ReadinessGoal",
+        "type": "string"
+      },
+      "ReadinessRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/ReadinessGoal"
+          },
+          "includeCurrent": {
+            "default": false,
+            "title": "Includecurrent",
+            "type": "boolean"
+          },
+          "selection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Selection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "goal",
+          "expectedCaseVersion"
+        ],
+        "title": "ReadinessRequest",
+        "type": "object"
+      },
+      "ReadinessResult": {
+        "additionalProperties": false,
+        "properties": {
+          "ambiguousFields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Ambiguousfields",
+            "type": "array"
+          },
+          "baselineReady": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baselineready"
+          },
+          "blockedScenarios": {
+            "items": {
+              "$ref": "#/components/schemas/BlockedScenario"
+            },
+            "title": "Blockedscenarios",
+            "type": "array"
+          },
+          "missingEmployeeFields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Missingemployeefields",
+            "type": "array"
+          },
+          "pendingRepresentativeFields": {
+            "items": {
+              "$ref": "#/components/schemas/PendingRepresentativeField"
+            },
+            "title": "Pendingrepresentativefields",
+            "type": "array"
+          },
+          "readyScenarioIds": {
+            "items": {
+              "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+              "type": "string"
+            },
+            "title": "Readyscenarioids",
+            "type": "array"
+          },
+          "scopeComplete": {
+            "title": "Scopecomplete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scopeComplete"
+        ],
+        "title": "ReadinessResult",
+        "type": "object"
+      },
+      "RepresentativeFieldCode": {
+        "description": "Server-recognized facts a representative may supply (provisional allowlist).",
+        "enum": [
+          "alternative.participation",
+          "occupation.waiverPolicy",
+          "employee.entitlementGroup",
+          "currentArrangement.propulsion",
+          "currentArrangement.vehicle"
+        ],
+        "title": "RepresentativeFieldCode",
+        "type": "string"
+      },
+      "RequestStatus": {
+        "enum": [
+          "open",
+          "answered",
+          "cannot_determine",
+          "cancelled"
+        ],
+        "title": "RequestStatus",
+        "type": "string"
+      },
+      "RequestStatusView": {
+        "additionalProperties": false,
+        "description": "Employee/agent-facing status of one request.",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestStatus"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "fieldCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "RequestStatusView",
+        "type": "object"
+      },
+      "ResolveOccupationRequest": {
+        "additionalProperties": false,
+        "description": "`resolve_occupation` (G2). Without a query, every official occupation is returned.",
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          }
+        },
+        "title": "ResolveOccupationRequest",
+        "type": "object"
+      },
+      "ResolveOccupationResult": {
+        "additionalProperties": false,
+        "description": "`resolved` only for an official ID or an exact normalized official name; otherwise\ncandidates for clarification (`ambiguous`) or `not_found`. Never a guessed or new ID.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/OccupationCandidate"
+            },
+            "maxItems": 20,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResolveStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ResolveOccupationResult",
+        "type": "object"
+      },
+      "ResolvePurpose": {
+        "enum": [
+          "current",
+          "alternative"
+        ],
+        "title": "ResolvePurpose",
+        "type": "string"
+      },
+      "ResolveStatus": {
+        "enum": [
+          "resolved",
+          "ambiguous",
+          "not_found"
+        ],
+        "title": "ResolveStatus",
+        "type": "string"
+      },
+      "ResolveVehicleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/ResolvePurpose"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleQuery"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "taxKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleTaxKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "purpose"
+        ],
+        "title": "ResolveVehicleRequest",
+        "type": "object"
+      },
+      "ResolveVehicleResult": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/VehicleCandidate"
+            },
+            "maxItems": 20,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ResolveStatus"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ResolveVehicleResult",
+        "type": "object"
+      },
+      "Role": {
+        "enum": [
+          "employee",
+          "representative",
+          "import_operator"
+        ],
+        "title": "Role",
+        "type": "string"
+      },
+      "RunKind": {
+        "enum": [
+          "regular",
+          "hypothetical"
+        ],
+        "title": "RunKind",
+        "type": "string"
+      },
+      "RunSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RunKind"
+          },
+          "runId": {
+            "format": "uuid",
+            "title": "Runid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "runId",
+          "kind",
+          "createdAt",
+          "freshness"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "ScenarioResult": {
+        "additionalProperties": false,
+        "properties": {
+          "alternativeId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternativeid"
+          },
+          "alternativeVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternativeversion"
+          },
+          "breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalculationBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligibilityReasons": {
+            "items": {
+              "$ref": "#/components/schemas/EligibilityReason"
+            },
+            "title": "Eligibilityreasons",
+            "type": "array"
+          },
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "net": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optionKey": {
+            "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+            "title": "Optionkey",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ScenarioStatus"
+          },
+          "track": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Track"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "optionKey",
+          "status"
+        ],
+        "title": "ScenarioResult",
+        "type": "object"
+      },
+      "ScenarioStatus": {
+        "enum": [
+          "calculated",
+          "ineligible",
+          "needs_information",
+          "unsupported",
+          "failed"
+        ],
+        "title": "ScenarioStatus",
+        "type": "string"
+      },
+      "Selection": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OptionCategory"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categories"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptionFilters"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SelectionMode"
+          },
+          "optionKeys": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                  "type": "string"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkeys"
+          },
+          "resultSetId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resultsetid"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "Selection",
+        "type": "object"
+      },
+      "SelectionMode": {
+        "enum": [
+          "explicit",
+          "result_set",
+          "all_eligible"
+        ],
+        "title": "SelectionMode",
+        "type": "string"
+      },
+      "SessionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "accessToken": {
+            "title": "Accesstoken",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/ActorView"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "tokenType": {
+            "const": "Bearer",
+            "default": "Bearer",
+            "title": "Tokentype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresAt",
+          "actor"
+        ],
+        "title": "SessionResponse",
+        "type": "object"
+      },
+      "SetChange": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "op": {
+            "const": "set",
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleRef"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "op",
+          "field",
+          "value"
+        ],
+        "title": "SetChange",
+        "type": "object"
+      },
+      "SourceType": {
+        "description": "Provenance of a value. `document_confirmed` is future-only and deliberately absent.",
+        "enum": [
+          "employee",
+          "catalogue",
+          "rules",
+          "tax_dataset",
+          "representative"
+        ],
+        "title": "SourceType",
+        "type": "string"
+      },
+      "SourceVersions": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueVersionId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueversionid"
+          },
+          "rulesSnapshotId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rulessnapshotid"
+          },
+          "taxDatasetVersionId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxdatasetversionid"
+          }
+        },
+        "title": "SourceVersions",
+        "type": "object"
+      },
+      "TaxValueRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "taxKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleTaxKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "TaxValueRequest",
+        "type": "object"
+      },
+      "TaxValueResult": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "effectiveDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectivedate"
+          },
+          "taxDatasetVersionId": {
+            "format": "uuid",
+            "title": "Taxdatasetversionid",
+            "type": "string"
+          },
+          "taxKey": {
+            "$ref": "#/components/schemas/VehicleTaxKey"
+          },
+          "valueOfUse": {
+            "maxLength": 40,
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "title": "Valueofuse",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valueOfUse",
+          "taxKey",
+          "taxDatasetVersionId"
+        ],
+        "title": "TaxValueResult",
+        "type": "object"
+      },
+      "Track": {
+        "enum": [
+          "regular",
+          "family"
+        ],
+        "title": "Track",
+        "type": "string"
+      },
+      "UpdateInputsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "clear": "#/components/schemas/ClearChange",
+                  "set": "#/components/schemas/SetChange"
+                },
+                "propertyName": "op"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SetChange"
+                },
+                {
+                  "$ref": "#/components/schemas/ClearChange"
+                }
+              ]
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          },
+          "expectedCaseVersion": {
+            "minimum": 0.0,
+            "title": "Expectedcaseversion",
+            "type": "integer"
+          },
+          "expectedProfileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedprofileversion"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/UpdateMode"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          }
+        },
+        "required": [
+          "mode",
+          "expectedCaseVersion",
+          "operationId",
+          "changes"
+        ],
+        "title": "UpdateInputsRequest",
+        "type": "object"
+      },
+      "UpdateInputsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptedFields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Acceptedfields",
+            "type": "array"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "newCaseVersion": {
+            "minimum": 0.0,
+            "title": "Newcaseversion",
+            "type": "integer"
+          },
+          "newProfileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newprofileversion"
+          },
+          "staleRunIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Stalerunids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acceptedFields",
+          "newCaseVersion"
+        ],
+        "title": "UpdateInputsResult",
+        "type": "object"
+      },
+      "UpdateMode": {
+        "enum": [
+          "actual_update",
+          "hypothetical"
+        ],
+        "title": "UpdateMode",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VehicleCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "commercialName": {
+            "title": "Commercialname",
+            "type": "string"
+          },
+          "manufacturerName": {
+            "title": "Manufacturername",
+            "type": "string"
+          },
+          "modelDescription": {
+            "title": "Modeldescription",
+            "type": "string"
+          },
+          "taxKey": {
+            "$ref": "#/components/schemas/VehicleTaxKey"
+          },
+          "valueOfUse": {
+            "maxLength": 40,
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "title": "Valueofuse",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxKey",
+          "manufacturerName",
+          "commercialName",
+          "modelDescription",
+          "valueOfUse"
+        ],
+        "title": "VehicleCandidate",
+        "type": "object"
+      },
+      "VehicleQuery": {
+        "additionalProperties": false,
+        "properties": {
+          "commercialName": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Commercialname",
+            "type": "string"
+          },
+          "manufacturerCode": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{5}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturercode"
+          },
+          "modelCode": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{5}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelcode"
+          },
+          "registrationYear": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationyear"
+          }
+        },
+        "required": [
+          "commercialName"
+        ],
+        "title": "VehicleQuery",
+        "type": "object"
+      },
+      "VehicleRef": {
+        "additionalProperties": false,
+        "description": "Exactly one of a catalogue identifier or a complete official tax key.",
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "taxKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleTaxKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "VehicleRef",
+        "type": "object"
+      },
+      "VehicleSource": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "participationSource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participationsource"
+          },
+          "taxKey": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleTaxKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "VehicleSource",
+        "type": "object"
+      },
+      "VehicleTaxKey": {
+        "additionalProperties": false,
+        "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+        "properties": {
+          "manufacturerCode": {
+            "pattern": "^\\d{5}$",
+            "title": "Manufacturercode",
+            "type": "string"
+          },
+          "modelCode": {
+            "pattern": "^\\d{5}$",
+            "title": "Modelcode",
+            "type": "string"
+          },
+          "registrationYear": {
+            "pattern": "^\\d{4}$",
+            "title": "Registrationyear",
+            "type": "string"
+          },
+          "taxYear": {
+            "pattern": "^\\d{4}$",
+            "title": "Taxyear",
+            "type": "string"
+          },
+          "vehicleTypeCode": {
+            "pattern": "^\\d$",
+            "title": "Vehicletypecode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxYear",
+          "registrationYear",
+          "vehicleTypeCode",
+          "manufacturerCode",
+          "modelCode"
+        ],
+        "title": "VehicleTaxKey",
+        "type": "object"
+      },
+      "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Annotated[str, StringConstraints]]",
+        "type": "object"
+      },
+      "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(0(\\.\\d+)?|1(\\.0+)?)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Annotated[str, StringConstraints]]",
+        "type": "object"
+      },
+      "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____3": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Annotated[str, StringConstraints]]",
+        "type": "object"
+      },
+      "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____4": {
+        "additionalProperties": false,
+        "properties": {
+          "lastConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastconfirmedat"
+          },
+          "revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceMessageId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcemessageid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FieldStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^OCC-[A-Z0-9-]{2,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ProfileField[Annotated[str, StringConstraints]]",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "description": "Access token from /api/v1/auth/login",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Strauss Vehicle Advisor - Business API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}": {
+      "get": {
+        "operationId": "get_case_api_v1_cases__caseId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CaseContext_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Case",
+        "tags": [
+          "cases"
+        ]
+      },
+      "patch": {
+        "operationId": "update_case_api_v1_cases__caseId__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInputsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_UpdateInputsResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Case",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/comparisons": {
+      "post": {
+        "operationId": "compare_api_v1_cases__caseId__comparisons_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ComparisonResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/comparisons/{runId}": {
+      "get": {
+        "operationId": "comparison_details_api_v1_cases__caseId__comparisons__runId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Runid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ComparisonDetails_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Comparison Details",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/eligibility-checks": {
+      "post": {
+        "operationId": "check_eligibility_api_v1_cases__caseId__eligibility_checks_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EligibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_EligibilityResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Eligibility",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/occupation-resolutions": {
+      "post": {
+        "operationId": "resolve_occupation_api_v1_cases__caseId__occupation_resolutions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveOccupationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ResolveOccupationResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Occupation",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/option-lists": {
+      "post": {
+        "operationId": "list_options_api_v1_cases__caseId__option_lists_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListOptionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ListOptionsResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Options",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/profile-confirmations": {
+      "post": {
+        "operationId": "confirm_fields_api_v1_cases__caseId__profile_confirmations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmProfileFieldsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConfirmProfileFieldsResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Fields",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/readiness": {
+      "post": {
+        "operationId": "readiness_api_v1_cases__caseId__readiness_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadinessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReadinessResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Readiness",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/representative-requests": {
+      "post": {
+        "operationId": "create_question_api_v1_cases__caseId__representative_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuestionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_CreateQuestionResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Question",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/representative-requests/{requestId}": {
+      "get": {
+        "operationId": "get_request_api_v1_cases__caseId__representative_requests__requestId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Requestid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RequestStatusView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Request",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/vehicle-resolutions": {
+      "post": {
+        "operationId": "resolve_vehicle_api_v1_cases__caseId__vehicle_resolutions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveVehicleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ResolveVehicleResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Vehicle",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/vehicle-tax-values": {
+      "post": {
+        "operationId": "tax_value_api_v1_cases__caseId__vehicle_tax_values_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Caseid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxValueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TaxValueResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Tax Value",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/me/profile": {
+      "get": {
+        "operationId": "my_profile_api_v1_me_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_EmployeeProfileView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Profile",
+        "tags": [
+          "profile"
+        ]
+      }
+    }
+  }
+}

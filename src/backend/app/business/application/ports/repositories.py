@@ -106,6 +106,13 @@ class EmployeeProfileRepository(Protocol):
 
     async def get_origin(self, employee_id: UUID) -> JsonObject | None: ...
 
+    async def lock(self, employee_id: UUID) -> EmployeeProfile | None:
+        """Read the profile row `FOR UPDATE` (held until the Unit of Work ends).
+
+        Lock order for calculations is fixed - operation claim, then profile, then case - the
+        same order as every profile + case write, so no lock cycle can occur."""
+        ...
+
 
 @runtime_checkable
 class CaseRepository(Protocol):
@@ -120,6 +127,10 @@ class CaseRepository(Protocol):
         ...
 
     async def update(self, case: ComparisonCase) -> ComparisonCase: ...
+
+    async def lock(self, case_id: UUID, *, owner_subject_id: UUID) -> ComparisonCase | None:
+        """Owner-scoped read `FOR UPDATE`; taken after the profile lock (see profiles)."""
+        ...
 
 
 @runtime_checkable
@@ -151,6 +162,14 @@ class OptionResultSetRepository(Protocol):
     async def add(self, record: OptionResultSetRecord) -> None: ...
 
     async def get(self, case_id: UUID, result_set_id: UUID) -> OptionResultSetRecord | None: ...
+
+    async def add_or_get_identical(
+        self, record: OptionResultSetRecord
+    ) -> tuple[OptionResultSetRecord, bool]:
+        """Store the set unless the case already has one with the same `inputFingerprint`
+        (in `record.request`); returns (stored set, created). Concurrent identical calls create
+        one set (decision A12: retries do not multiply result sets; no public operation ID)."""
+        ...
 
 
 @runtime_checkable

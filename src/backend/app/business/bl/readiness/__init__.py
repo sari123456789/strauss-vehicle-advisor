@@ -1,0 +1,1 @@
+"""Calculation readiness (pure)."""

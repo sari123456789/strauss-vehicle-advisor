@@ -67,6 +67,15 @@ class SqlCaseRepository:
     async def get(self, case_id: UUID, *, owner_subject_id: UUID) -> ComparisonCase | None:
         return await self._one(CASES.c.id == case_id, CASES.c.owner_subject_id == owner_subject_id)
 
+    async def lock(self, case_id: UUID, *, owner_subject_id: UUID) -> ComparisonCase | None:
+        statement = (
+            select(CASES)
+            .where(CASES.c.id == case_id, CASES.c.owner_subject_id == owner_subject_id)
+            .with_for_update()
+        )
+        row = (await self._session.execute(statement)).first()
+        return None if row is None else _case(row)
+
     async def get_by_conversation(
         self, conversation_id: UUID, *, owner_subject_id: UUID
     ) -> ComparisonCase | None:

@@ -1,4 +1,4 @@
-"""Wiring of the Step 3B Application services over a test database (real PostgreSQL)."""
+"""Wiring of the Step 3B/4A Application services over a test database (real PostgreSQL)."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -9,9 +9,17 @@ from uuid import UUID, uuid4
 
 from app.business.application.cases.case_service import CaseService
 from app.business.application.cases.lifecycle_adapter import CaseLifecycleAdapter
+from app.business.application.comparisons.comparison_service import ComparisonService
+from app.business.application.comparisons.readiness_service import ReadinessService
 from app.business.application.identity.authorization import AuthorizationPolicy
 from app.business.application.identity.identity_service import IdentityService
+from app.business.application.occupations.occupation_service import OccupationService
 from app.business.application.profiles.profile_service import EmployeeProfileService
+from app.business.application.representatives.request_service import (
+    RepresentativeRequestService,
+)
+from app.business.application.vehicles.catalogue_service import CatalogueService
+from app.business.application.vehicles.valuation_service import ValuationService
 from app.business.infrastructure.clock import SystemClock
 from app.contracts.case_inputs import UpdateInputsRequest
 from app.contracts.case_lifecycle import CreateCaseCommand, CreateCaseResult
@@ -31,6 +39,12 @@ class Services:
     profiles: EmployeeProfileService
     cases: CaseService
     lifecycle: CaseLifecycleAdapter
+    catalogue: CatalogueService
+    valuation: ValuationService
+    occupations: OccupationService
+    requests: RepresentativeRequestService
+    readiness: ReadinessService
+    comparisons: ComparisonService
 
 
 @asynccontextmanager
@@ -40,7 +54,19 @@ async def services(url: str) -> AsyncIterator[Services]:
         policy = AuthorizationPolicy()
         profiles = EmployeeProfileService(p.uow, policy, clock)
         cases = CaseService(p.uow, policy, profiles, p.reference, clock)
-        yield Services(p, IdentityService(p.uow), profiles, cases, CaseLifecycleAdapter(cases))
+        yield Services(
+            p,
+            IdentityService(p.uow),
+            profiles,
+            cases,
+            CaseLifecycleAdapter(cases),
+            CatalogueService(p.uow, policy, p.reference, clock),
+            ValuationService(p.uow, policy, p.reference),
+            OccupationService(p.uow, policy, p.reference),
+            RepresentativeRequestService(p.uow, policy),
+            ReadinessService(p.uow, policy, p.reference, clock),
+            ComparisonService(p.uow, policy, p.reference, clock),
+        )
 
 
 def actor(subject_id: UUID, *roles: Role, origin: Origin = Origin.AGENT) -> ActorRef:

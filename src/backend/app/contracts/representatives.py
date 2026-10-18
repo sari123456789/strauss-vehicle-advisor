@@ -82,6 +82,12 @@ class AnswerView(ContractModel):
     application: AnswerApplication | None = None
 
 
+class RepresentativeRequestLookup(ContractModel):
+    """`get_representative_request` (G1): one request of the server-bound case."""
+
+    request_id: UUID
+
+
 class RequestStatusView(ContractModel):
     """Employee/agent-facing status of one request."""
 

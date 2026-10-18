@@ -38,8 +38,11 @@ def test_contracts_are_marked_provisional() -> None:
     assert CONTRACT_STATUS == "provisional"
 
 
-def test_canonical_tool_names_match_agent_spec_section_7() -> None:
+def test_canonical_tool_names_match_agent_spec_section_7_and_g1_g3() -> None:
     assert set(CANONICAL_TOOL_NAMES) == {
+        "get_representative_request",  # G1 (architecture §15)
+        "resolve_occupation",  # G2
+        "confirm_profile_fields",  # G3
         "get_conversation_context",
         "update_conversation_inputs",
         "list_eligible_options",

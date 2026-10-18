@@ -10,11 +10,23 @@ from pathlib import Path
 
 from app.business.application.cases.case_service import CaseService
 from app.business.application.cases.lifecycle_adapter import CaseLifecycleAdapter
+from app.business.application.comparisons.comparison_service import ComparisonService
+from app.business.application.comparisons.readiness_service import ReadinessService
 from app.business.application.identity.authorization import AuthorizationPolicy
 from app.business.application.identity.identity_service import IdentityService
 from app.business.application.imports.import_service import ImportReferenceDataService
+from app.business.application.occupations.occupation_service import OccupationService
 from app.business.application.profiles.profile_service import EmployeeProfileService
+from app.business.application.representatives.question_service import (
+    RepresentativeQuestionService,
+)
+from app.business.application.representatives.request_service import (
+    RepresentativeRequestService,
+)
 from app.business.application.seeding.demo_seed_service import DemoSeedService
+from app.business.application.tools_facade import BusinessToolsFacade
+from app.business.application.vehicles.catalogue_service import CatalogueService
+from app.business.application.vehicles.valuation_service import ValuationService
 from app.business.infrastructure.clock import SystemClock
 from app.business.infrastructure.database.engine import (
     AsyncEngine,
@@ -130,21 +142,53 @@ class BusinessServices:
     profiles: EmployeeProfileService
     cases: CaseService
     lifecycle: CaseLifecycleAdapter
+    catalogue: CatalogueService
+    valuation: ValuationService
+    occupations: OccupationService
+    representative_requests: RepresentativeRequestService
+    representative_questions: RepresentativeQuestionService
+    readiness: ReadinessService
+    comparisons: ComparisonService
+    tools: BusinessToolsFacade
+    """`BusinessToolsPort` for the AI tool adapter (injected through the shared contract only)."""
 
 
 def build_business_services(settings: Settings) -> BusinessServices:
     persistence = build_business_persistence(settings)
+    uow, reference = persistence.unit_of_work, persistence.reference_data
     clock = SystemClock()
     policy = AuthorizationPolicy()
-    profiles = EmployeeProfileService(persistence.unit_of_work, policy, clock)
-    cases = CaseService(
-        persistence.unit_of_work, policy, profiles, persistence.reference_data, clock
-    )
+    profiles = EmployeeProfileService(uow, policy, clock)
+    cases = CaseService(uow, policy, profiles, reference, clock)
+    catalogue = CatalogueService(uow, policy, reference, clock)
+    valuation = ValuationService(uow, policy, reference)
+    occupations = OccupationService(uow, policy, reference)
+    requests = RepresentativeRequestService(uow, policy)
+    questions = RepresentativeQuestionService(uow, policy, reference, clock)
+    readiness = ReadinessService(uow, policy, reference, clock)
+    comparisons = ComparisonService(uow, policy, reference, clock)
     return BusinessServices(
         engine=persistence.engine,
-        identity=IdentityService(persistence.unit_of_work),
+        identity=IdentityService(uow),
         authorization=policy,
         profiles=profiles,
         cases=cases,
         lifecycle=CaseLifecycleAdapter(cases),
+        catalogue=catalogue,
+        valuation=valuation,
+        occupations=occupations,
+        representative_requests=requests,
+        representative_questions=questions,
+        readiness=readiness,
+        comparisons=comparisons,
+        tools=BusinessToolsFacade(
+            cases=cases,
+            catalogue=catalogue,
+            valuation=valuation,
+            occupations=occupations,
+            readiness=readiness,
+            comparisons=comparisons,
+            questions=questions,
+            requests=requests,
+        ),
     )
