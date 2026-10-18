@@ -1,0 +1,38 @@
+{
+  "_meta": {"purpose": "Overrides: optimistic version conflict (reload and reconcile; never last-write-wins) and a stale historical result."},
+  "update_conversation_inputs": {
+    "status": "error",
+    "traceId": "fixture-trace",
+    "error": {"code": "VERSION_CONFLICT", "traceId": "fixture-trace", "safeDetails": {"entity": "employee_profile"}},
+    "issues": [{"code": "STALE_REVISION"}]
+  },
+  "compare_scenarios": {
+    "status": "error",
+    "traceId": "fixture-trace",
+    "error": {"code": "VERSION_CONFLICT", "traceId": "fixture-trace", "safeDetails": {"entity": "case"}},
+    "issues": [{"code": "STALE_REVISION"}]
+  },
+  "get_comparison_details": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "issues": [{"code": "STALE_REVISION"}],
+    "data": {
+      "result": {
+        "runId": "c0000000-0000-4000-8000-000000000010",
+        "kind": "regular",
+        "calculationMonth": "2026-11",
+        "caseVersionUsed": 3,
+        "profileVersionUsed": 5,
+        "rulesSnapshotId": "c0000000-0000-4000-8000-000000000020",
+        "catalogueVersionId": "c0000000-0000-4000-8000-000000000021",
+        "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022",
+        "alternatives": [
+          {"optionKey": "vehicle:CAR-14", "status": "ineligible", "eligibilityReasons": ["group_higher_than_entitlement"]}
+        ],
+        "freshness": "stale",
+        "createdAt": "2026-10-15T08:05:00Z"
+      },
+      "inputSnapshot": {"note": "shape finalized in Phase 3"}
+    }
+  }
+}

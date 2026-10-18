@@ -1,0 +1,36 @@
+{
+  "$defs": {
+    "RequestStatus": {
+      "enum": [
+        "open",
+        "answered",
+        "cannot_determine",
+        "cancelled"
+      ],
+      "title": "RequestStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "created": {
+      "title": "Created",
+      "type": "boolean"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RequestStatus"
+    }
+  },
+  "required": [
+    "requestId",
+    "status",
+    "created"
+  ],
+  "title": "CreateQuestionResult",
+  "type": "object"
+}

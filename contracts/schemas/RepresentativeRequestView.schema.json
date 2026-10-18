@@ -1,0 +1,159 @@
+{
+  "$defs": {
+    "EntitlementGroup": {
+      "description": "Source Hebrew group labels are preserved as values.",
+      "enum": [
+        "א",
+        "ב",
+        "ג",
+        "ד"
+      ],
+      "title": "EntitlementGroup",
+      "type": "string"
+    },
+    "ExpectedValueType": {
+      "enum": [
+        "money",
+        "entitlement_group",
+        "propulsion",
+        "tax_key",
+        "boolean"
+      ],
+      "title": "ExpectedValueType",
+      "type": "string"
+    },
+    "RepresentativeFieldCode": {
+      "description": "Server-recognized facts a representative may supply (provisional allowlist).",
+      "enum": [
+        "alternative.participation",
+        "occupation.waiverPolicy",
+        "employee.entitlementGroup",
+        "currentArrangement.propulsion",
+        "currentArrangement.vehicle"
+      ],
+      "title": "RepresentativeFieldCode",
+      "type": "string"
+    },
+    "RequestStatus": {
+      "enum": [
+        "open",
+        "answered",
+        "cannot_determine",
+        "cancelled"
+      ],
+      "title": "RequestStatus",
+      "type": "string"
+    },
+    "VehicleContext": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "commercialName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commercialname"
+        },
+        "registrationYear": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Registrationyear"
+        }
+      },
+      "title": "VehicleContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Representative-visible, minimal context only (no employee profile or salary).",
+  "properties": {
+    "createdAt": {
+      "format": "date-time",
+      "title": "Createdat",
+      "type": "string"
+    },
+    "entitlementGroup": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EntitlementGroup"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "expectedValueType": {
+      "$ref": "#/$defs/ExpectedValueType"
+    },
+    "fieldCode": {
+      "$ref": "#/$defs/RepresentativeFieldCode"
+    },
+    "questionText": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Questiontext",
+      "type": "string"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "requestVersion": {
+      "minimum": 0,
+      "title": "Requestversion",
+      "type": "integer"
+    },
+    "status": {
+      "$ref": "#/$defs/RequestStatus"
+    },
+    "vehicle": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VehicleContext"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "requestId",
+    "requestVersion",
+    "status",
+    "fieldCode",
+    "expectedValueType",
+    "questionText",
+    "createdAt"
+  ],
+  "title": "RepresentativeRequestView",
+  "type": "object"
+}

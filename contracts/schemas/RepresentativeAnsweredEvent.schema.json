@@ -1,0 +1,65 @@
+{
+  "additionalProperties": false,
+  "description": "Internal Application-to-AI durable input (not a webhook). Schema version 1.",
+  "properties": {
+    "alternativeId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Alternativeid"
+    },
+    "caseId": {
+      "format": "uuid",
+      "title": "Caseid",
+      "type": "string"
+    },
+    "caseVersionAfter": {
+      "minimum": 0,
+      "title": "Caseversionafter",
+      "type": "integer"
+    },
+    "eventId": {
+      "format": "uuid",
+      "title": "Eventid",
+      "type": "string"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "requestVersion": {
+      "minimum": 0,
+      "title": "Requestversion",
+      "type": "integer"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "default": 1,
+      "title": "Schemaversion",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "eventId",
+    "occurredAt",
+    "requestId",
+    "caseId",
+    "requestVersion",
+    "caseVersionAfter"
+  ],
+  "title": "RepresentativeAnsweredEvent",
+  "type": "object"
+}

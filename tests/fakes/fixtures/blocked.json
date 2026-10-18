@@ -1,0 +1,86 @@
+{
+  "_meta": {"purpose": "Overrides: partial results - one alternative ready, one ineligible, one pending a representative. The conversation is never blocked."},
+  "check_calculation_readiness": {
+    "status": "partial",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "issues": [
+      {"code": "INELIGIBLE", "optionKey": "vehicle:CAR-14", "reason": "group_higher_than_entitlement"},
+      {"code": "PENDING_REPRESENTATIVE", "optionKey": "vehicle:CAR-11", "requestId": "c0000000-0000-4000-8000-000000000050"}
+    ],
+    "data": {
+      "readyScenarioIds": ["vehicle:CAR-10"],
+      "pendingRepresentativeFields": [
+        {"requestId": "c0000000-0000-4000-8000-000000000050", "fieldCode": "alternative.participation", "optionKey": "vehicle:CAR-11"}
+      ],
+      "blockedScenarios": [
+        {"optionKey": "vehicle:CAR-14", "reason": "INELIGIBLE"},
+        {"optionKey": "vehicle:CAR-11", "reason": "PENDING_REPRESENTATIVE"}
+      ],
+      "baselineReady": false,
+      "scopeComplete": true
+    }
+  },
+  "compare_scenarios": {
+    "status": "partial",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "profileVersion": 5,
+    "issues": [
+      {"code": "MISSING_INPUT", "field": "currentArrangement.participation"},
+      {"code": "PENDING_REPRESENTATIVE", "optionKey": "vehicle:CAR-11", "requestId": "c0000000-0000-4000-8000-000000000050"}
+    ],
+    "data": {
+      "runId": "c0000000-0000-4000-8000-000000000011",
+      "kind": "regular",
+      "calculationMonth": "2026-11",
+      "caseVersionUsed": 3,
+      "profileVersionUsed": 5,
+      "rulesSnapshotId": "c0000000-0000-4000-8000-000000000020",
+      "catalogueVersionId": "c0000000-0000-4000-8000-000000000021",
+      "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022",
+      "current": {
+        "status": "needs_information",
+        "missingInformation": [{"code": "MISSING_INPUT", "field": "currentArrangement.participation"}]
+      },
+      "alternatives": [
+        {
+          "optionKey": "vehicle:CAR-10",
+          "alternativeId": "c0000000-0000-4000-8000-000000000040",
+          "alternativeVersion": 1,
+          "track": "regular",
+          "status": "calculated",
+          "eligibilityReasons": ["group_own"],
+          "net": {"raw": "11692.817000", "display": "11693"},
+          "delta": null,
+          "breakdown": {
+            "earnedGross": {"raw": "18500.000000", "display": "18500"},
+            "allowance": {"raw": "0.000000", "display": "0"},
+            "electricGrossUp": {"raw": "439.908499", "display": "440"},
+            "valueOfUse": {"raw": "3130.000000", "display": "3130"},
+            "taxableBase": {"raw": "22069.908499", "display": "22070"},
+            "pensionEmployee": {"raw": "1110.000000", "display": "1110"},
+            "studyFundEmployee": {"raw": "462.500000", "display": "463"},
+            "creditPointsCredit": {"raw": "665.500000", "display": "666"},
+            "pensionCredit": {"raw": "232.750000", "display": "233"},
+            "incomeTaxBeforeCredits": {"raw": "4181.171635", "display": "4181"},
+            "incomeTax": {"raw": "3282.921635", "display": "3283"},
+            "nationalInsurance": {"raw": "1096.582395", "display": "1097"},
+            "healthInsurance": {"raw": "995.087469", "display": "995"},
+            "ordinaryParticipation": {"raw": "300.000000", "display": "300"},
+            "familyGapContribution": {"raw": "0.000000", "display": "0"}
+          }
+        },
+        {"optionKey": "vehicle:CAR-14", "status": "ineligible", "eligibilityReasons": ["group_higher_than_entitlement"]},
+        {
+          "optionKey": "vehicle:CAR-11",
+          "status": "needs_information",
+          "eligibilityReasons": ["group_own"],
+          "missingInformation": [{"code": "PENDING_REPRESENTATIVE", "optionKey": "vehicle:CAR-11", "requestId": "c0000000-0000-4000-8000-000000000050"}]
+        }
+      ],
+      "freshness": "current",
+      "createdAt": "2026-10-15T08:10:00Z"
+    }
+  }
+}

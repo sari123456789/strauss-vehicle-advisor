@@ -1,0 +1,1032 @@
+{
+  "$defs": {
+    "ArrangementKind": {
+      "enum": [
+        "company_car",
+        "allowance",
+        "no_car_no_allowance"
+      ],
+      "title": "ArrangementKind",
+      "type": "string"
+    },
+    "CurrentArrangementView": {
+      "additionalProperties": false,
+      "description": "Last-reported current arrangement; each element carries its own status.",
+      "properties": {
+        "allowance": {
+          "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+        },
+        "familyDeduction": {
+          "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+        },
+        "familyDeductionIncludedInParticipation": {
+          "$ref": "#/$defs/ProfileField_bool_"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProfileField_ArrangementKind_"
+        },
+        "participation": {
+          "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+        },
+        "propulsion": {
+          "$ref": "#/$defs/ProfileField_Propulsion_"
+        },
+        "vehicle": {
+          "$ref": "#/$defs/ProfileField_VehicleRef_"
+        }
+      },
+      "required": [
+        "kind",
+        "vehicle",
+        "propulsion",
+        "participation",
+        "familyDeduction",
+        "familyDeductionIncludedInParticipation",
+        "allowance"
+      ],
+      "title": "CurrentArrangementView",
+      "type": "object"
+    },
+    "EntitlementGroup": {
+      "description": "Source Hebrew group labels are preserved as values.",
+      "enum": [
+        "א",
+        "ב",
+        "ג",
+        "ד"
+      ],
+      "title": "EntitlementGroup",
+      "type": "string"
+    },
+    "FieldStatus": {
+      "enum": [
+        "missing",
+        "needs_clarification",
+        "usable"
+      ],
+      "title": "FieldStatus",
+      "type": "string"
+    },
+    "ProfileField_Annotated_int__FieldInfo_annotation_NoneType__required_True__metadata__Ge_ge_0___Le_le_100_____": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Annotated[int, FieldInfo(annotation=NoneType, required=True, metadata=[Ge(ge=0), Le(le=100)])]]",
+      "type": "object"
+    },
+    "ProfileField_ArrangementKind_": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArrangementKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[ArrangementKind]",
+      "type": "object"
+    },
+    "ProfileField_EntitlementGroup_": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntitlementGroup"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[EntitlementGroup]",
+      "type": "object"
+    },
+    "ProfileField_Propulsion_": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Propulsion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Propulsion]",
+      "type": "object"
+    },
+    "ProfileField_VehicleRef_": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[VehicleRef]",
+      "type": "object"
+    },
+    "ProfileField_bool_": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[bool]",
+      "type": "object"
+    },
+    "Propulsion": {
+      "enum": [
+        "petrol",
+        "hybrid",
+        "plug_in_hybrid",
+        "electric"
+      ],
+      "title": "Propulsion",
+      "type": "string"
+    },
+    "SourceType": {
+      "description": "Provenance of a value. `document_confirmed` is future-only and deliberately absent.",
+      "enum": [
+        "employee",
+        "catalogue",
+        "rules",
+        "tax_dataset",
+        "representative"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    },
+    "VehicleRef": {
+      "additionalProperties": false,
+      "description": "Exactly one of a catalogue identifier or a complete official tax key.",
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "taxKey": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleTaxKey"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "VehicleRef",
+      "type": "object"
+    },
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    },
+    "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 40,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Annotated[str, StringConstraints]]",
+      "type": "object"
+    },
+    "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "pattern": "^(0(\\.\\d+)?|1(\\.0+)?)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Annotated[str, StringConstraints]]",
+      "type": "object"
+    },
+    "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____3": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 10,
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Annotated[str, StringConstraints]]",
+      "type": "object"
+    },
+    "app__contracts__profile__ProfileField_Annotated_str__StringConstraints____4": {
+      "additionalProperties": false,
+      "properties": {
+        "lastConfirmedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastconfirmedat"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceType"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sourceMessageId": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcemessageid"
+        },
+        "status": {
+          "$ref": "#/$defs/FieldStatus"
+        },
+        "updatedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatedat"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "pattern": "^OCC-[A-Z0-9-]{2,40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ProfileField[Annotated[str, StringConstraints]]",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "baseGross": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+    },
+    "bonusGross": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+    },
+    "commissionsGross": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____1"
+    },
+    "creditPoints": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____3"
+    },
+    "currentArrangement": {
+      "$ref": "#/$defs/CurrentArrangementView"
+    },
+    "entitlementGroup": {
+      "$ref": "#/$defs/ProfileField_EntitlementGroup_"
+    },
+    "occupationId": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____4"
+    },
+    "pensionEmployeeRate": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2"
+    },
+    "profileVersion": {
+      "minimum": 0,
+      "title": "Profileversion",
+      "type": "integer"
+    },
+    "qualifyingChildrenCount": {
+      "$ref": "#/$defs/ProfileField_Annotated_int__FieldInfo_annotation_NoneType__required_True__metadata__Ge_ge_0___Le_le_100_____"
+    },
+    "studyFundEmployeeRate": {
+      "$ref": "#/$defs/app__contracts__profile__ProfileField_Annotated_str__StringConstraints____2"
+    }
+  },
+  "required": [
+    "profileVersion",
+    "baseGross",
+    "commissionsGross",
+    "bonusGross",
+    "pensionEmployeeRate",
+    "studyFundEmployeeRate",
+    "creditPoints",
+    "occupationId",
+    "entitlementGroup",
+    "qualifyingChildrenCount",
+    "currentArrangement"
+  ],
+  "title": "EmployeeProfileView",
+  "type": "object"
+}

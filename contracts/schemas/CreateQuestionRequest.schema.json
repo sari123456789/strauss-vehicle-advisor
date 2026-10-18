@@ -1,0 +1,59 @@
+{
+  "$defs": {
+    "RepresentativeFieldCode": {
+      "description": "Server-recognized facts a representative may supply (provisional allowlist).",
+      "enum": [
+        "alternative.participation",
+        "occupation.waiverPolicy",
+        "employee.entitlementGroup",
+        "currentArrangement.propulsion",
+        "currentArrangement.vehicle"
+      ],
+      "title": "RepresentativeFieldCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "expectedCaseVersion": {
+      "minimum": 0,
+      "title": "Expectedcaseversion",
+      "type": "integer"
+    },
+    "fieldCode": {
+      "$ref": "#/$defs/RepresentativeFieldCode"
+    },
+    "idempotencyKey": {
+      "format": "uuid",
+      "title": "Idempotencykey",
+      "type": "string"
+    },
+    "optionKey": {
+      "anyOf": [
+        {
+          "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Optionkey"
+    },
+    "questionText": {
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Questiontext",
+      "type": "string"
+    }
+  },
+  "required": [
+    "fieldCode",
+    "questionText",
+    "idempotencyKey",
+    "expectedCaseVersion"
+  ],
+  "title": "CreateQuestionRequest",
+  "type": "object"
+}

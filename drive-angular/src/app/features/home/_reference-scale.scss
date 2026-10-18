@@ -1,5 +1,0 @@
-// Desktop homepage geometry is specified in brown-reference.png pixels (1586px wide) and scales
-// with the width of the nearest inline-size container (the homepage host).
-@function u($px) {
-  @return calc(#{$px} * 100cqi / 1586);
-}

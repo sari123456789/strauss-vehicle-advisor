@@ -1,0 +1,220 @@
+{
+  "_meta": {
+    "purpose": "Contract fixture for the provisional BusinessToolsPort fake. NOT engine output.",
+    "basis": "Workbook employee E-001 (fictional) and the independently reproduced reference values; raw amounts shown to 6 decimals for the fixture only.",
+    "contractVersion": "0.1.0"
+  },
+  "get_conversation_context": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "profileVersion": 5,
+    "data": {
+      "caseId": "c0000000-0000-4000-8000-000000000001",
+      "conversationId": "c0000000-0000-4000-8000-000000000002",
+      "caseVersion": 3,
+      "calculationMonth": "2026-11",
+      "referenceDate": "2026-11-01",
+      "profile": {
+        "profileVersion": 5,
+        "baseGross": {"value": "18500.00", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "commissionsGross": {"value": "0.00", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "bonusGross": {"value": "0.00", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "pensionEmployeeRate": {"value": "0.06", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "studyFundEmployeeRate": {"value": "0.025", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "creditPoints": {"value": "2.75", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "occupationId": {"value": "OCC-PRODUCT-MGR", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "entitlementGroup": {"value": "ג", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "qualifyingChildrenCount": {"value": 2, "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+        "currentArrangement": {
+          "kind": {"value": "company_car", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+          "vehicle": {"value": {"catalogueId": "CAR-09"}, "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+          "propulsion": {"value": "hybrid", "status": "usable", "source": "catalogue", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+          "participation": {"value": "300.00", "status": "usable", "source": "employee", "updatedAt": "2026-10-15T08:00:00Z", "revision": 1},
+          "familyDeduction": {"status": "missing"},
+          "familyDeductionIncludedInParticipation": {"status": "missing"},
+          "allowance": {"status": "missing"}
+        }
+      },
+      "salaryProfileVersionUsed": 5,
+      "latestProfileVersion": 5,
+      "profileMismatch": false,
+      "alternatives": [
+        {"alternativeId": "c0000000-0000-4000-8000-000000000040", "alternativeVersion": 1, "optionKey": "vehicle:CAR-10", "catalogueId": "CAR-10", "track": "regular", "active": true}
+      ],
+      "openRequests": [],
+      "recentRuns": [
+        {"runId": "c0000000-0000-4000-8000-000000000010", "kind": "regular", "createdAt": "2026-10-15T08:05:00Z", "freshness": "current"}
+      ]
+    }
+  },
+  "update_conversation_inputs": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 4,
+    "profileVersion": 6,
+    "data": {
+      "acceptedFields": ["payroll.bonusGross"],
+      "newCaseVersion": 4,
+      "newProfileVersion": 6,
+      "staleRunIds": ["c0000000-0000-4000-8000-000000000010"]
+    }
+  },
+  "list_eligible_options": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "data": {
+      "resultSetId": "c0000000-0000-4000-8000-000000000030",
+      "items": [
+        {"optionKey": "vehicle:CAR-10", "category": "regular", "catalogueId": "CAR-10", "track": "regular", "group": "ג", "manufacturerName": "בי ווי די", "commercialName": "ATTO 3", "registrationYear": "2025", "propulsion": "electric", "listPrice": "177500", "valueOfUse": "3130", "monthlyCompanyCost": "4100", "groupBudget": "4500", "defaultParticipation": "300", "eligibility": "eligible", "reasons": ["group_own"]},
+        {"optionKey": "vehicle:CAR-06", "category": "regular", "catalogueId": "CAR-06", "track": "regular", "group": "ב", "manufacturerName": "מ.ג סין", "commercialName": "MG4", "registrationYear": "2025", "propulsion": "electric", "listPrice": "150000", "valueOfUse": "2430", "monthlyCompanyCost": "3550", "groupBudget": "4500", "defaultParticipation": "250", "eligibility": "eligible", "reasons": ["group_lower"]}
+      ],
+      "uncheckedCategories": [],
+      "scopeComplete": true
+    }
+  },
+  "resolve_vehicle": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "data": {
+      "status": "resolved",
+      "candidates": [
+        {"taxKey": {"taxYear": "2026", "registrationYear": "2025", "vehicleTypeCode": "1", "manufacturerCode": "01014", "modelCode": "00003"}, "manufacturerName": "בי ווי די", "commercialName": "ATTO 3", "modelDescription": "SC2E-SC2E01", "valueOfUse": "3130", "catalogueId": "CAR-10"}
+      ]
+    }
+  },
+  "get_vehicle_tax_value": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "data": {
+      "valueOfUse": "3130",
+      "taxKey": {"taxYear": "2026", "registrationYear": "2025", "vehicleTypeCode": "1", "manufacturerCode": "01014", "modelCode": "00003"},
+      "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022",
+      "effectiveDate": "2025-01-01",
+      "catalogueId": "CAR-10"
+    }
+  },
+  "check_eligibility": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "data": {"optionKey": "vehicle:CAR-10", "status": "eligible", "reasons": ["group_own"]}
+  },
+  "check_calculation_readiness": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "data": {
+      "readyScenarioIds": ["vehicle:CAR-10"],
+      "baselineReady": true,
+      "scopeComplete": true
+    }
+  },
+  "compare_scenarios": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "profileVersion": 5,
+    "sourceVersions": {
+      "rulesSnapshotId": "c0000000-0000-4000-8000-000000000020",
+      "catalogueVersionId": "c0000000-0000-4000-8000-000000000021",
+      "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022"
+    },
+    "data": {
+      "runId": "c0000000-0000-4000-8000-000000000010",
+      "kind": "regular",
+      "calculationMonth": "2026-11",
+      "caseVersionUsed": 3,
+      "profileVersionUsed": 5,
+      "rulesSnapshotId": "c0000000-0000-4000-8000-000000000020",
+      "catalogueVersionId": "c0000000-0000-4000-8000-000000000021",
+      "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022",
+      "current": {
+        "status": "calculated",
+        "net": {"raw": "11031.819000", "display": "11032"},
+        "vehicle": {"catalogueId": "CAR-09", "participationSource": "employee_reported"},
+        "breakdown": {
+          "earnedGross": {"raw": "18500.000000", "display": "18500"},
+          "allowance": {"raw": "0.000000", "display": "0"},
+          "electricGrossUp": {"raw": "0.000000", "display": "0"},
+          "valueOfUse": {"raw": "4070.000000", "display": "4070"},
+          "taxableBase": {"raw": "22570.000000", "display": "22570"},
+          "pensionEmployee": {"raw": "1110.000000", "display": "1110"},
+          "studyFundEmployee": {"raw": "462.500000", "display": "463"},
+          "creditPointsCredit": {"raw": "665.500000", "display": "666"},
+          "pensionCredit": {"raw": "232.750000", "display": "233"},
+          "incomeTaxBeforeCredits": {"raw": "4341.400000", "display": "4341"},
+          "incomeTax": {"raw": "3443.150000", "display": "3443"},
+          "nationalInsurance": {"raw": "1131.588800", "display": "1132"},
+          "healthInsurance": {"raw": "1020.942200", "display": "1021"},
+          "ordinaryParticipation": {"raw": "300.000000", "display": "300"},
+          "familyGapContribution": {"raw": "0.000000", "display": "0"}
+        }
+      },
+      "alternatives": [
+        {
+          "optionKey": "vehicle:CAR-10",
+          "alternativeId": "c0000000-0000-4000-8000-000000000040",
+          "alternativeVersion": 1,
+          "track": "regular",
+          "status": "calculated",
+          "eligibilityReasons": ["group_own"],
+          "net": {"raw": "11692.817000", "display": "11693"},
+          "delta": {"raw": "660.998000", "display": "661"},
+          "vehicle": {"catalogueId": "CAR-10", "taxKey": {"taxYear": "2026", "registrationYear": "2025", "vehicleTypeCode": "1", "manufacturerCode": "01014", "modelCode": "00003"}, "participationSource": "catalogue_default"},
+          "breakdown": {
+            "earnedGross": {"raw": "18500.000000", "display": "18500"},
+            "allowance": {"raw": "0.000000", "display": "0"},
+            "electricGrossUp": {"raw": "439.908499", "display": "440"},
+            "valueOfUse": {"raw": "3130.000000", "display": "3130"},
+            "taxableBase": {"raw": "22069.908499", "display": "22070"},
+            "pensionEmployee": {"raw": "1110.000000", "display": "1110"},
+            "studyFundEmployee": {"raw": "462.500000", "display": "463"},
+            "creditPointsCredit": {"raw": "665.500000", "display": "666"},
+            "pensionCredit": {"raw": "232.750000", "display": "233"},
+            "incomeTaxBeforeCredits": {"raw": "4181.171635", "display": "4181"},
+            "incomeTax": {"raw": "3282.921635", "display": "3283"},
+            "nationalInsurance": {"raw": "1096.582395", "display": "1097"},
+            "healthInsurance": {"raw": "995.087469", "display": "995"},
+            "ordinaryParticipation": {"raw": "300.000000", "display": "300"},
+            "familyGapContribution": {"raw": "0.000000", "display": "0"},
+            "monthlyCompanyCost": {"raw": "4100", "display": "4100"},
+            "groupBudget": {"raw": "4500", "display": "4500"}
+          }
+        }
+      ],
+      "assumptions": [{"code": "demo_policy.payroll_tables_2025_vehicle_data_2026"}],
+      "freshness": "current",
+      "createdAt": "2026-10-15T08:05:00Z"
+    }
+  },
+  "create_representative_question": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "data": {"requestId": "c0000000-0000-4000-8000-000000000050", "status": "open", "created": true}
+  },
+  "get_comparison_details": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "data": {
+      "result": {
+        "runId": "c0000000-0000-4000-8000-000000000010",
+        "kind": "regular",
+        "calculationMonth": "2026-11",
+        "caseVersionUsed": 3,
+        "profileVersionUsed": 5,
+        "rulesSnapshotId": "c0000000-0000-4000-8000-000000000020",
+        "catalogueVersionId": "c0000000-0000-4000-8000-000000000021",
+        "taxDatasetVersionId": "c0000000-0000-4000-8000-000000000022",
+        "alternatives": [
+          {"optionKey": "vehicle:CAR-14", "status": "ineligible", "eligibilityReasons": ["group_higher_than_entitlement"]}
+        ],
+        "freshness": "current",
+        "createdAt": "2026-10-15T08:05:00Z"
+      },
+      "inputSnapshot": {"note": "shape finalized in Phase 3"}
+    }
+  }
+}

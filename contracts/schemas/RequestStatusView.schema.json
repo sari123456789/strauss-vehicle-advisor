@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "AnswerApplication": {
+      "enum": [
+        "applied",
+        "not_applicable"
+      ],
+      "title": "AnswerApplication",
+      "type": "string"
+    },
+    "AnswerOutcome": {
+      "enum": [
+        "answered",
+        "cannot_determine"
+      ],
+      "title": "AnswerOutcome",
+      "type": "string"
+    },
+    "AnswerView": {
+      "additionalProperties": false,
+      "properties": {
+        "answeredAt": {
+          "format": "date-time",
+          "title": "Answeredat",
+          "type": "string"
+        },
+        "application": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnswerApplication"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "effectiveFrom": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effectivefrom"
+        },
+        "effectiveTo": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effectiveto"
+        },
+        "outcome": {
+          "$ref": "#/$defs/AnswerOutcome"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "const": "ILS",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "outcome",
+        "answeredAt"
+      ],
+      "title": "AnswerView",
+      "type": "object"
+    },
+    "RepresentativeFieldCode": {
+      "description": "Server-recognized facts a representative may supply (provisional allowlist).",
+      "enum": [
+        "alternative.participation",
+        "occupation.waiverPolicy",
+        "employee.entitlementGroup",
+        "currentArrangement.propulsion",
+        "currentArrangement.vehicle"
+      ],
+      "title": "RepresentativeFieldCode",
+      "type": "string"
+    },
+    "RequestStatus": {
+      "enum": [
+        "open",
+        "answered",
+        "cannot_determine",
+        "cancelled"
+      ],
+      "title": "RequestStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Employee/agent-facing status of one request.",
+  "properties": {
+    "answer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AnswerView"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "createdAt": {
+      "format": "date-time",
+      "title": "Createdat",
+      "type": "string"
+    },
+    "fieldCode": {
+      "$ref": "#/$defs/RepresentativeFieldCode"
+    },
+    "optionKey": {
+      "anyOf": [
+        {
+          "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Optionkey"
+    },
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RequestStatus"
+    },
+    "updatedAt": {
+      "format": "date-time",
+      "title": "Updatedat",
+      "type": "string"
+    }
+  },
+  "required": [
+    "requestId",
+    "status",
+    "fieldCode",
+    "createdAt",
+    "updatedAt"
+  ],
+  "title": "RequestStatusView",
+  "type": "object"
+}

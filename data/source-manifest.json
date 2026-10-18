@@ -1,0 +1,71 @@
+{
+  "manifestVersion": 1,
+  "normalizedAt": "2026-10-15",
+  "note": "Byte-for-byte copies of the supplied challenge files under stable paths. Originals are kept unchanged in data/src/. Never edit files under data/source/.",
+  "sources": [
+    {
+      "path": "data/source/challenge-instructions.pdf",
+      "originalPath": "data/src/הנחיות האתגר - שטראוס (PDF) .pdf",
+      "kind": "challenge_instructions_pdf",
+      "readWith": "PDF parser (no text encoding)",
+      "sizeBytes": 437919,
+      "sha256": "a4e5f3d7fb608af93dea0494f7ae947254125a0f4c07eee430984c3365361238"
+    },
+    {
+      "path": "data/source/business-rules.json",
+      "originalPath": "data/src/קובץ הכללים לדוגמה - תקציבים, מסלולים, שיטת הנטו (JSON).json",
+      "kind": "business_rules_json",
+      "readWith": "utf-8",
+      "suppliedVersion": "mock-2026-10-12",
+      "sizeBytes": 3521,
+      "sha256": "3ca0ac970581301fe176dcbb0646c9ca40109356b2b94c21c352608a83b43eec"
+    },
+    {
+      "path": "data/source/challenge-data.xlsx",
+      "originalPath": "data/src/נתוני האתגר - כללים, קטלוג רכבים, עיסוקים, 6 עובדים לדוגמה וחישובים (Excel).xlsx",
+      "kind": "challenge_workbook_xlsx",
+      "readWith": "openpyxl (no text encoding)",
+      "sizeBytes": 14615,
+      "sha256": "708cc4de3dd62aec25f157b3a66bd86be149258472dab8856393bc1852682dfa"
+    },
+    {
+      "path": "data/source/vehicle-tax-2026.csv",
+      "originalPath": "data/src/מאגר שווי שימוש ברכב 2026 - הקובץ המורחב של רשות המסים (CSV, 77,988 רשומות).csv",
+      "kind": "vehicle_tax_dataset_csv",
+      "readWith": "cp1255 (strict)",
+      "sizeBytes": 19653228,
+      "sha256": "fa101574386b582d98b06ddd671590ab894d680c152b5fe828e5172e186f939b"
+    }
+  ],
+  "documentsNote": "Project-maintained documentation copies, unlike the immutable challenge sources above. sha256 is the reviewed baseline of the approved version on main (LF line endings, enforced by .gitattributes); a doc change must be reviewed and recorded here. originalSha256/originalPath record the supplied edition for provenance only (the original copies are not committed).",
+  "documents": [
+    {
+      "path": "docs/architecture.md",
+      "sha256": "8194e0f9c83b1f80ab9d803979b85de39362772b4b08b28c28c787c0da58a057",
+      "originalPath": "docs/strauss-architecture-en-modules-final.md",
+      "originalSha256": "03bfe680d43415a8fc8d095df6609e1df8daafd6f726c44a2dcacea911afda2b",
+      "revisionNote": "Internal references renamed to repository file names (main b5e8334)."
+    },
+    {
+      "path": "docs/agent-spec.md",
+      "sha256": "f053a9b448a4b1513cf2fc460e568792f97b81b8e7641fd275c9ffbe9be4fd2f",
+      "originalPath": "docs/strauss-agent-spec-clean.md",
+      "originalSha256": "f053a9b448a4b1513cf2fc460e568792f97b81b8e7641fd275c9ffbe9be4fd2f",
+      "revisionNote": "Identical to the supplied edition."
+    },
+    {
+      "path": "docs/integration-contracts.md",
+      "sha256": "cea9a7a6a3bb7624b628c8f58c2dfb0731b34d822e3d230af43c43c458a3aa4c",
+      "originalPath": "docs/INTEGRATION_CONTRACTS-modules-final.md",
+      "originalSha256": "3a4416706419fa41cc42859bcac82d2c5aca15e1c251be16bc56633d23747deb",
+      "revisionNote": "Internal references renamed to repository file names (main b5e8334)."
+    },
+    {
+      "path": "docs/frontend-handoff.md",
+      "sha256": "acb31212adb409951bd01930d6a08b4b3251d597737f46ea29b3b5ac14a80b40",
+      "originalPath": "docs/CLAUDE_FRONTEND_HANDOFF-modules-final.md",
+      "originalSha256": "8fb84b90cd56fdac036663c84cdebe7acf5acf12920c6d7963aab5f110481bcf",
+      "revisionNote": "Internal references renamed to repository file names (main b5e8334)."
+    }
+  ]
+}

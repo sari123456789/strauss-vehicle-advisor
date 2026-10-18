@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "EntitlementGroup": {
+      "description": "Source Hebrew group labels are preserved as values.",
+      "enum": [
+        "א",
+        "ב",
+        "ג",
+        "ד"
+      ],
+      "title": "EntitlementGroup",
+      "type": "string"
+    },
+    "OptionCategory": {
+      "enum": [
+        "regular",
+        "family",
+        "waiver"
+      ],
+      "title": "OptionCategory",
+      "type": "string"
+    },
+    "OptionFilters": {
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/EntitlementGroup"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Groups"
+        },
+        "propulsion": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Propulsion"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Propulsion"
+        }
+      },
+      "title": "OptionFilters",
+      "type": "object"
+    },
+    "Propulsion": {
+      "enum": [
+        "petrol",
+        "hybrid",
+        "plug_in_hybrid",
+        "electric"
+      ],
+      "title": "Propulsion",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "categories": {
+      "items": {
+        "$ref": "#/$defs/OptionCategory"
+      },
+      "minItems": 1,
+      "title": "Categories",
+      "type": "array"
+    },
+    "expectedCaseVersion": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expectedcaseversion"
+    },
+    "filters": {
+      "$ref": "#/$defs/OptionFilters"
+    }
+  },
+  "title": "ListOptionsRequest",
+  "type": "object"
+}

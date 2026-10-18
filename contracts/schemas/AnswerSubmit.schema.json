@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "AnswerOutcome": {
+      "enum": [
+        "answered",
+        "cannot_determine"
+      ],
+      "title": "AnswerOutcome",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "effectiveFrom": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Effectivefrom"
+    },
+    "effectiveTo": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Effectiveto"
+    },
+    "expectedRequestVersion": {
+      "minimum": 0,
+      "title": "Expectedrequestversion",
+      "type": "integer"
+    },
+    "note": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Note"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/AnswerOutcome"
+    },
+    "unit": {
+      "anyOf": [
+        {
+          "const": "ILS",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unit"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    }
+  },
+  "required": [
+    "operationId",
+    "expectedRequestVersion",
+    "outcome"
+  ],
+  "title": "AnswerSubmit",
+  "type": "object"
+}

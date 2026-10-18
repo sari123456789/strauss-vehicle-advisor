@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "caseId": {
+      "format": "uuid",
+      "title": "Caseid",
+      "type": "string"
+    },
+    "caseVersion": {
+      "minimum": 0,
+      "title": "Caseversion",
+      "type": "integer"
+    },
+    "created": {
+      "title": "Created",
+      "type": "boolean"
+    },
+    "salaryProfileVersionUsed": {
+      "minimum": 0,
+      "title": "Salaryprofileversionused",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "caseId",
+    "caseVersion",
+    "salaryProfileVersionUsed",
+    "created"
+  ],
+  "title": "CreateCaseResult",
+  "type": "object"
+}

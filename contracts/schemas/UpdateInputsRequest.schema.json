@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "ClearChange": {
+      "additionalProperties": false,
+      "description": "Marks the field unknown (`status=missing`). Never sets zero.",
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/FieldPath"
+        },
+        "op": {
+          "const": "clear",
+          "title": "Op",
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "field"
+      ],
+      "title": "ClearChange",
+      "type": "object"
+    },
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    },
+    "SetChange": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/FieldPath"
+        },
+        "op": {
+          "const": "set",
+          "title": "Op",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleRef"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "op",
+        "field",
+        "value"
+      ],
+      "title": "SetChange",
+      "type": "object"
+    },
+    "UpdateMode": {
+      "enum": [
+        "actual_update",
+        "hypothetical"
+      ],
+      "title": "UpdateMode",
+      "type": "string"
+    },
+    "VehicleRef": {
+      "additionalProperties": false,
+      "description": "Exactly one of a catalogue identifier or a complete official tax key.",
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "taxKey": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VehicleTaxKey"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "VehicleRef",
+      "type": "object"
+    },
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "changes": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "clear": "#/$defs/ClearChange",
+            "set": "#/$defs/SetChange"
+          },
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/SetChange"
+          },
+          {
+            "$ref": "#/$defs/ClearChange"
+          }
+        ]
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "title": "Changes",
+      "type": "array"
+    },
+    "expectedCaseVersion": {
+      "minimum": 0,
+      "title": "Expectedcaseversion",
+      "type": "integer"
+    },
+    "expectedProfileVersion": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expectedprofileversion"
+    },
+    "mode": {
+      "$ref": "#/$defs/UpdateMode"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    },
+    "sourceMessageId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sourcemessageid"
+    }
+  },
+  "required": [
+    "mode",
+    "expectedCaseVersion",
+    "operationId",
+    "changes"
+  ],
+  "title": "UpdateInputsRequest",
+  "type": "object"
+}

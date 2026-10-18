@@ -1,0 +1,22 @@
+# SHARED file - provisional. Step 0 provides only the local PostgreSQL service.
+# API/worker services are added later by joint decision.
+services:
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_DB: strauss
+      POSTGRES_USER: strauss
+      POSTGRES_PASSWORD: ${STRAUSS_DB_PASSWORD:-strauss_dev_only}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      - "55432:5432"
+    volumes:
+      - strauss-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U strauss -d strauss"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  strauss-pgdata:

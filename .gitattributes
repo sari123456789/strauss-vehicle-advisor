@@ -1,0 +1,16 @@
+# Line-ending and binary rules for the whole repository.
+
+# Text files written by the project are UTF-8 with LF line endings.
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+
+# Original challenge sources must stay byte-for-byte identical:
+# never apply line-ending or encoding conversion.
+data/source/** -text -diff
+data/src/**    -text -diff
+*.xlsx binary
+*.pdf  binary

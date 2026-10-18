@@ -1,11 +1,9 @@
-# Angular
-node_modules/
-.angular/
-dist/
-out-tsc/
-coverage/
+# Root ignore rules for the whole repository (backend + frontend).
+# Merged from origin/main, the Business Module's rules and the Angular outputs of
+# feature/frontend (drive-angular). Only generated/local/sensitive files are ignored:
+# sources, lockfiles, migrations, tests and approved specifications stay tracked.
 
-# Python
+# ===== Python / backend =====
 __pycache__/
 *.py[cod]
 .venv/
@@ -14,19 +12,66 @@ venv/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
-# Secrets
-.env
-.env.*
-!.env.example
-
-# Local files
-*.log
-.DS_Store
-Thumbs.db
-
-# Generated test output
+# ===== Angular / frontend (outputs only; sources, package.json, package-lock.json and
+#       e2e/__baselines__ screenshots stay tracked) =====
+node_modules/
+.angular/
+dist/
+out-tsc/
+coverage/
 drive-angular/e2e/.results/
 drive-angular/e2e/visual/__diff__/
 playwright-report/
 test-results/
+blob-report/
+playwright/.cache/
+
+# ===== Environment / secrets =====
+.env
+.env.*
+!.env.example
+*.local.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+id_ed25519*
+*.secret
+secrets/
+
+# ===== PostgreSQL / Docker (compose.yaml and migrations stay tracked) =====
+pgdata/
+postgres-data/
+*.dump
+*.backup
+*.sql.gz
+compose.override.yaml
+compose.override.yml
+docker-compose.override.yml
+
+# ===== Claude Code (CLAUDE.md and shared .claude/settings.json stay tracked) =====
+.claude/settings.local.json
+.claude/**/*.local.*
+
+# ===== Challenge source data =====
+# Redistribution is not approved (CLAUDE.md). Hashes are tracked in data/source-manifest.json;
+# the derived demo policy in data/rules/ stays tracked.
+data/source/
+data/src/
+data/processed/
+
+# ===== Logs, temporary files, OS, editors =====
+*.log
+*.tmp
+.tmp/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

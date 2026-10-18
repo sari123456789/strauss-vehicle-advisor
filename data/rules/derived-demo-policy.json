@@ -1,0 +1,101 @@
+{
+  "derivedPolicyVersion": "derived-demo-v2",
+  "status": "Explicit demonstration decisions. NOT supplied verbatim by the organizers and NOT approved real payroll rules.",
+  "versioningRule": "Any change to this file bumps derivedPolicyVersion and appends a revisions entry. The effective rule version is identified by the SHA-256 of the rules source and of this file; version strings are labels.",
+  "revisions": [
+    {
+      "version": "derived-demo-v1",
+      "date": "2026-10-15",
+      "semanticChanges": "Initial derived policy: familyParticipationMode, allowanceInsurable, grossUpInsurable, contributionsExcludeVehicleBenefits, childAgeComparison; gross-up settings; display rounding; support limits.",
+      "payrollSemanticsChanged": true
+    },
+    {
+      "version": "derived-demo-v2",
+      "date": "2026-10-17",
+      "semanticChanges": "Added occupation-ID mapping (decision R6, business-decisions.md section 5) and per-vehicle tax-key vehicle-type mapping for the 20 catalogue vehicles (SRC-03). Payroll policy flags, gross-up settings, display rounding and support limits unchanged.",
+      "payrollSemanticsChanged": false
+    }
+  ],
+  "appliesToSource": {
+    "path": "data/source/business-rules.json",
+    "suppliedVersion": "mock-2026-10-12",
+    "sha256": "3ca0ac970581301fe176dcbb0646c9ca40109356b2b94c21c352608a83b43eec"
+  },
+  "policy": {
+    "familyParticipationMode": "base_plus_gap",
+    "allowanceInsurable": true,
+    "grossUpInsurable": true,
+    "contributionsExcludeVehicleBenefits": true,
+    "childAgeComparison": "age_less_than_24"
+  },
+  "policySources": {
+    "familyParticipationMode": "architecture.md §5 and §11; agent-spec.md T54/T55; supported by workbook E-002",
+    "allowanceInsurable": "architecture.md §5 (reconstructed policy matching reference results)",
+    "grossUpInsurable": "architecture.md §5; agent-spec.md §8 approved contribution rule",
+    "contributionsExcludeVehicleBenefits": "architecture.md §5; agent-spec.md §8 and §13",
+    "childAgeComparison": "agent-spec.md §6 and §13 (approved decision)"
+  },
+  "calculation": {
+    "decimalPrecision": 40,
+    "grossUp": {
+      "netTolerance": "0.000001",
+      "maxIterations": 120,
+      "initialUpperBound": "500",
+      "maxUpperBound": "1000000"
+    },
+    "displayRounding": "whole_shekel_half_away_from_zero",
+    "source": "architecture.md §12"
+  },
+  "supportLimits": {
+    "maxMonthlyAmount": "1000000",
+    "maxCreditPoints": "100",
+    "maxChildren": 100,
+    "maxAlternativesPerRun": 30,
+    "source": "architecture.md §6 (configurable demonstration support limits, not eligibility laws)"
+  },
+  "occupationIds": {
+    "source": "Decision R6 (business-decisions.md section 5): keyed by the exact trimmed Hebrew occupation name; never derived from row order; never reused. An unmapped workbook occupation, or a mapped occupation missing from the workbook, fails the import.",
+    "byName": {
+      "נציג/ת מכירות שטח": "OCC-FIELD-SALES-REP",
+      "מנהל/ת אזור מכירות": "OCC-REGIONAL-SALES-MGR",
+      "טכנאי/ת שירות": "OCC-SERVICE-TECH",
+      "נהג/ת הפצה": "OCC-DISTRIBUTION-DRIVER",
+      "מפקח/ת איכות במפעל": "OCC-PLANT-QA-INSPECTOR",
+      "רכז/ת רכש": "OCC-PROCUREMENT-COORD",
+      "מהנדס/ת תהליך": "OCC-PROCESS-ENGINEER",
+      "מפתח/ת תוכנה": "OCC-SOFTWARE-DEV",
+      "אנליסט/ית נתונים": "OCC-DATA-ANALYST",
+      "מנהל/ת מוצר": "OCC-PRODUCT-MGR",
+      "מנהל/ת פיתוח": "OCC-DEV-MGR",
+      "מנהל/ת משאבי אנוש": "OCC-HR-MGR",
+      "מנהל/ת מחלקה": "OCC-DEPT-MGR",
+      "מנהל/ת חטיבה": "OCC-DIVISION-MGR"
+    }
+  },
+  "catalogueTaxKeys": {
+    "source": "SRC-03 (architecture.md §5 source inconsistency 2; agent-spec.md SRC-03): the catalogue omits the vehicle-type code. Each listed vehicle was individually verified to match a type-1 CSV record with the identical value of use and drive code. This is NOT a default for other vehicles: an unmapped catalogue vehicle fails the import.",
+    "taxYear": "2026",
+    "vehicleTypeCodeByCatalogueId": {
+      "CAR-01": "1",
+      "CAR-02": "1",
+      "CAR-03": "1",
+      "CAR-04": "1",
+      "CAR-05": "1",
+      "CAR-06": "1",
+      "CAR-07": "1",
+      "CAR-08": "1",
+      "CAR-09": "1",
+      "CAR-10": "1",
+      "CAR-11": "1",
+      "CAR-12": "1",
+      "CAR-13": "1",
+      "CAR-14": "1",
+      "CAR-15": "1",
+      "CAR-16": "1",
+      "CAR-17": "1",
+      "CAR-18": "1",
+      "CAR-19": "1",
+      "CAR-20": "1"
+    }
+  }
+}

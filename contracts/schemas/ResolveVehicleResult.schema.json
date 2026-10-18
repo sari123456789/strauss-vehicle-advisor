@@ -1,0 +1,125 @@
+{
+  "$defs": {
+    "ResolveStatus": {
+      "enum": [
+        "resolved",
+        "ambiguous",
+        "not_found"
+      ],
+      "title": "ResolveStatus",
+      "type": "string"
+    },
+    "VehicleCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "catalogueId": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Catalogueid"
+        },
+        "commercialName": {
+          "title": "Commercialname",
+          "type": "string"
+        },
+        "manufacturerName": {
+          "title": "Manufacturername",
+          "type": "string"
+        },
+        "modelDescription": {
+          "title": "Modeldescription",
+          "type": "string"
+        },
+        "taxKey": {
+          "$ref": "#/$defs/VehicleTaxKey"
+        },
+        "valueOfUse": {
+          "maxLength": 40,
+          "pattern": "^\\d+(\\.\\d+)?$",
+          "title": "Valueofuse",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxKey",
+        "manufacturerName",
+        "commercialName",
+        "modelDescription",
+        "valueOfUse"
+      ],
+      "title": "VehicleCandidate",
+      "type": "object"
+    },
+    "VehicleTaxKey": {
+      "additionalProperties": false,
+      "description": "Official five-part key: (שנת מס, שנת רישום, קוד סוג רכב, קוד תוצר, קוד דגם).\n\nCodes are strings and keep leading zeros exactly as in the source dataset.",
+      "properties": {
+        "manufacturerCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Manufacturercode",
+          "type": "string"
+        },
+        "modelCode": {
+          "pattern": "^\\d{5}$",
+          "title": "Modelcode",
+          "type": "string"
+        },
+        "registrationYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Registrationyear",
+          "type": "string"
+        },
+        "taxYear": {
+          "pattern": "^\\d{4}$",
+          "title": "Taxyear",
+          "type": "string"
+        },
+        "vehicleTypeCode": {
+          "pattern": "^\\d$",
+          "title": "Vehicletypecode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taxYear",
+        "registrationYear",
+        "vehicleTypeCode",
+        "manufacturerCode",
+        "modelCode"
+      ],
+      "title": "VehicleTaxKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/VehicleCandidate"
+      },
+      "maxItems": 20,
+      "title": "Candidates",
+      "type": "array"
+    },
+    "status": {
+      "$ref": "#/$defs/ResolveStatus"
+    },
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "ResolveVehicleResult",
+  "type": "object"
+}
