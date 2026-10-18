@@ -6,9 +6,9 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from app.application.ports.reference_data import ReferenceSourceSet, SourceFingerprint
 from app.bootstrap import build_reference_source_reader
-from app.infrastructure.imports.source_document import SourceDocument
+from app.business.application.ports.reference_data import ReferenceSourceSet, SourceFingerprint
+from app.business.infrastructure.imports.source_document import SourceDocument
 from tests.paths import REPO_ROOT
 
 POLICY_PATH = REPO_ROOT / "data" / "rules" / "derived-demo-policy.json"

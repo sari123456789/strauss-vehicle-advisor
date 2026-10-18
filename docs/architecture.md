@@ -964,3 +964,60 @@ The frontend redesign plan's unapproved operations (`reset`, `confirm`, `acceptA
 5. Pending representative response does not prevent new messages/new tasks; ready alternatives appear immediately, and later answer updates the correct calculation without hijacking the current topic.
 6. All expected failures become natural Hebrew messages; no raw HTTP status is visible in the UI.
 7. Historical messages, snapshots and previous results remain unchanged after real profile updates and delayed answers.
+
+
+## Approved implementation update — 2026-10-18: backend package layout
+
+**Decision authority:** project owner, 2026-10-18. This section changes **package paths only**. It does not change module boundaries, layer responsibilities, dependency directions, business rules, calculations, API routes, JSON contract schemas or the transaction model described above. Where Appendix A or other sections name a path, read it through the mapping below.
+
+The backend package `app` (in `src/backend/`) is organized as the two functional modules plus the shared boundary:
+
+```text
+app/
+├── api/                      # shared FastAPI boundary (outside both modules)
+├── business/                 # Business System module
+│   ├── application/          # use cases, authorization, Application-owned ports
+│   ├── bl/                   # deterministic Business Logic
+│   ├── domain/               # Domain / Core
+│   └── infrastructure/       # PostgreSQL persistence, source imports
+├── ai/                       # AI Engine module
+│   ├── application/          # conversation lifecycle, messages, resumption
+│   ├── workflow/             # LangGraph graphs, nodes, state
+│   ├── tools/                # adapters to the injected business tool port
+│   └── infrastructure/       # LLM provider, conversation persistence, checkpoints
+├── contracts/                # shared integration contracts (Pydantic DTOs, Protocols)
+├── cli/                      # runtime entry points
+└── bootstrap.py, main.py, settings.py, runtime.py   # composition root and startup only
+```
+
+| Earlier path (Appendix A and other sections) | Path in the repository |
+| --- | --- |
+| `app/domain/…` | `app/business/domain/…` |
+| `app/business/…` (Business Logic) | `app/business/bl/…` |
+| `app/application/…` | `app/business/application/…` |
+| `app/infrastructure/…` (business persistence, imports, auth) | `app/business/infrastructure/…` |
+| `app/agent/graph/…` | `app/ai/workflow/…` |
+| `app/agent/tools/…` | `app/ai/tools/…` |
+| `app/agent/ports/…`, conversation services | `app/ai/application/…` |
+| AI-owned adapters (`llm/client.py`, `checkpoints/…`, `conversation_store.py`, `event_store.py`, `input_queue.py`, `conversation_lock.py`) | `app/ai/infrastructure/…` |
+| `app/api/contracts/…` | `app/contracts/…` (one shared contract package) |
+| `migrations/` | unchanged (`src/backend/migrations/`, owned by Business Infrastructure) |
+
+Dependency rules, enforced by `tests/architecture/`: Business Domain depends on no other layer; BL depends on Domain; Business Application depends on BL, Domain, contracts and its own ports; Business Infrastructure depends on Domain, Application ports and contracts; the AI module does not import `app.business` and reaches business capabilities only through `app.contracts` interfaces whose Business Application implementations are injected by bootstrap; the API delegates to the modules' Application layers; no import cycles.
+
+**Not changed by this update:** the Unit of Work and durable-input design of Sections 3, 18 and 19 and the location of the `DurableInputQueue` port (`app/business/application/ports/input_queue.py`). A proposal for separate least-privilege database logins with a Business Outbox is approved in principle only; it is not part of this specification until it is separately approved together with its consistency model, failure windows, retries and recovery.
+
+
+## Approved implementation update — 2026-10-18: D1 module isolation and consistency model
+
+**Decision authority:** project owner, 2026-10-18 (decision D1, contract changes C1–C4). This section **replaces** the cross-module atomic transaction design in Section 3 (one Unit of Work saving a representative answer and an agent input "through the same SQLAlchemy session"), Section 18 (representative service writing `agent.inputs` in the same Unit of Work; "no separate Outbox"), Section 19 ("conversation and case creation use one database transaction") and Section 21 ("create the pair atomically"). Business rules, calculations, routes and JSON contract schemas are unchanged.
+
+**Isolation.** Business and AI use separate least-privilege PostgreSQL identities; the AI identity has no privileges on the `business` and `auth` schemas. Each module owns its own Unit of Work, sessions and connection pool; no transaction, session or database credential crosses the module boundary, and none is exposed to LangGraph nodes, tools or model-controlled code. The AI module reaches business data only through Business Application interfaces in `app/contracts` injected by bootstrap. (Role provisioning is deferred, decision D8.)
+
+**Consistency model.** Each module is atomic within itself; between modules the system is eventually consistent through durable intent records, idempotent operations and replay. Cross-module operations are never described as atomic.
+
+- *Conversation and case creation:* (1) the AI records its conversation as `initializing`; (2) it calls `CaseLifecyclePort.create_case_for_conversation(actor, command)`, which authorizes the revalidated actor, creates the case and commits a Business transaction, idempotent by (actor, conversationId, operationId); (3) the AI activates the conversation. Failure after (1) or (2) is recovered by the AI worker repeating (2) with the same operation ID. A case without a conversation can remain only if the AI never retries and has no access path; recovery must be proven by tests in the AI stage.
+- *Representative answers:* Business stores the answer, case mutation, version increments, audit entry and a Business Outbox event in one Business transaction. The AI worker pulls events through `BusinessEventFeed` (a capability injected only into the worker), enqueues each into its own durable input queue deduplicated by event ID, and then acknowledges it. Delivery is at-least-once; consumption is idempotent; early answers wait in the AI queue as before. The Outbox and feed are implemented in the representative-answer stage.
+- *Worker identity:* the worker builds the actor from persisted conversation ownership, but every business operation revalidates the current account status and roles; persisted ownership alone is not authorization.
+
+**Interfaces.** `CaseLifecyclePort` no longer receives a transaction handle and returns `Envelope[CreateCaseResult]`; `TransactionHandle` is removed (C1). The Business `UnitOfWork` has no input queue (C2). `DurableInputQueue` is an AI-internal provisional Protocol in `app/ai/application/ports/input_queue.py` (C3). `BusinessEventFeed` and `BusinessEvent` are provisional shared contracts in `app/contracts/business_events.py` (C4). The FK `agent.conversations.case_id → business.cases` is pending a PostgreSQL permissions test (D3).

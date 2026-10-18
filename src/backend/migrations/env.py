@@ -7,8 +7,9 @@ fixture) provides one, otherwise from `Settings.migration_database_url`.
 from alembic import context
 from sqlalchemy import Connection
 
-from app.infrastructure.database.engine import create_engine, run_async
-from app.infrastructure.database.models import Base
+from app.business.infrastructure.database.engine import create_engine
+from app.business.infrastructure.database.models import Base
+from app.runtime import run_async
 from app.settings import get_settings
 
 config = context.config
@@ -27,7 +28,7 @@ def _run(connection: Connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         include_schemas=True,
-        include_name=lambda name, type_, _parent: type_ != "schema" or name == "business",
+        include_name=lambda name, type_, _parent: type_ != "schema" or name in ("business", "auth"),
         compare_type=True,
     )
     with context.begin_transaction():

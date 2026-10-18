@@ -36,6 +36,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "db: real-PostgreSQL integration tests (separate *_test database; STRAUSS_REQUIRE_DB=1 makes them mandatory)",
+    "sources: needs the challenge files under data/source/ (STRAUSS_REQUIRE_SOURCES=1 makes them mandatory)",
 ]
 
 [tool.ruff]
@@ -57,7 +58,12 @@ warn_unused_configs = true
 ignore_missing_imports = false
 
 [[tool.mypy.overrides]]
-module = ["app.contracts.*", "app.domain.*", "app.business.*", "app.application.*"]
+module = [
+    "app.contracts.*",
+    "app.business.domain.*",
+    "app.business.bl.*",
+    "app.business.application.*",
+]
 strict = true
 
 [[tool.mypy.overrides]]

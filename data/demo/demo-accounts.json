@@ -1,0 +1,42 @@
+{
+  "seedVersion": "demo-seed-v1",
+  "status": "Fictional demo accounts for the six workbook reference employees plus staff accounts. Mapping only: names and payroll values are read from the workbook at seed time; no ID numbers, salaries or credentials are stored in this file.",
+  "uuidNamespace": "ff283965-6a06-4141-b0b9-28c4492c8c32",
+  "currentArrangementSource": "The workbook column 'רכב היום' gives only a commercial name (or an allowance note). A commercial name alone never selects a vehicle, so each employee's current vehicle is mapped explicitly here; the seed fails unless the mapped catalogue vehicle's commercial name equals the workbook text exactly. Same mapping as tests/unit/business/bl/test_reference_employees.py.",
+  "employees": [
+    {
+      "employeeRef": "E-001",
+      "login": "e001",
+      "currentArrangement": {"kind": "company_car", "catalogueId": "CAR-09", "workbookText": "COROLLA CROSS"}
+    },
+    {
+      "employeeRef": "E-002",
+      "login": "e002",
+      "currentArrangement": {"kind": "company_car", "catalogueId": "CAR-05", "workbookText": "NIRO"}
+    },
+    {
+      "employeeRef": "E-003",
+      "login": "e003",
+      "currentArrangement": {"kind": "allowance", "allowance": "1500", "workbookText": "אין (אחזקה 1500 ₪)"}
+    },
+    {
+      "employeeRef": "E-004",
+      "login": "e004",
+      "currentArrangement": {"kind": "company_car", "catalogueId": "CAR-12", "workbookText": "TUCSON"}
+    },
+    {
+      "employeeRef": "E-005",
+      "login": "e005",
+      "currentArrangement": {"kind": "company_car", "catalogueId": "CAR-13", "workbookText": "MAZDA 3"}
+    },
+    {
+      "employeeRef": "E-006",
+      "login": "e006",
+      "currentArrangement": {"kind": "company_car", "catalogueId": "CAR-15", "workbookText": "OCTAVIA"}
+    }
+  ],
+  "staff": [
+    {"login": "rep01", "roles": ["representative"], "displayName": "נציג/ת תחבורה (דמו)"},
+    {"login": "ops01", "roles": ["import_operator"], "displayName": "מפעיל/ת ייבוא (דמו)"}
+  ]
+}

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
         "postgresql+psycopg://strauss:strauss_dev_only@localhost:55432/strauss"
     )
     """Separate migration identity (architecture §3). Same local dev user by default."""
+    idle_in_transaction_timeout_ms: int = 15_000
+    """PostgreSQL `idle_in_transaction_session_timeout` for runtime Business sessions (Q10)."""
 
 
 @lru_cache

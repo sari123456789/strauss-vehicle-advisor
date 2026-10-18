@@ -95,7 +95,7 @@ checkpointer. LangGraph is **not** a backend dependency yet (AI developer's deci
 - `data/rules/derived-demo-policy.json` holds the explicit demo policy flags (architecture §5), gross-up
   settings (§12) and support limits (§6), bound to the rules source by SHA-256; loading fails if the
   rules file hash differs. Occupation and vehicle-type mappings will be added with the importers (Step 2).
-- Policy-support validation lives in BL (`app/business/rules/validator.py`) and is invoked by BL/Application;
+- Policy-support validation lives in BL (`app/business/bl/rules/validator.py`) and is invoked by BL/Application;
   Infrastructure (`rules_loader.py`) maps JSON to Domain only, preserving the dependency table
   (Infrastructure → Domain). This differs from the Appendix A description of `rules_loader.py`
   ("coordinates … business validation"), which would otherwise require Infrastructure → BL.
@@ -140,7 +140,7 @@ API routes, contract changes.
 - **Traceability (R3).** Normalized values go to Domain objects and typed columns; the original source
   values (untrimmed CSV strings, original cells) and row numbers are stored in `source_values` /
   `source_row_number`; the original CSV header is stored per dataset version.
-- **Consistency (BL).** `app/business/reference_data/consistency.py`: every catalogue key exists in the
+- **Consistency (BL).** `app/business/bl/reference_data/consistency.py`: every catalogue key exists in the
   dataset with the same value of use and the propulsion matching `driveField[drive code]` (catalogue
   vehicles only, SRC-04); family-track cars match the rules; no duplicate IDs. Failure →
   `SOURCE_CONFLICT` (a BL subclass of `DomainError`; Domain unchanged).
@@ -181,3 +181,140 @@ API routes, contract changes.
 - Publishing of challenge source files remains postponed until redistribution is approved.
 - Originals under `data/src/` and the original-named documents are kept in the original local folder;
   removing them requires approval.
+
+## 12. Package-layout refactor (approved 2026-10-18)
+
+Scope: structural only (plan phases 0–5 and 7). No change to business logic, calculations,
+eligibility, API routes, JSON contract schemas, migration history, source files or the
+transaction model. No Git operations were performed by the refactor.
+
+| Earlier package | Now |
+|---|---|
+| `app/domain/` | `app/business/domain/` |
+| `app/business/` (BL) | `app/business/bl/` (`app/business/` is the module root) |
+| `app/application/` | `app/business/application/` |
+| `app/infrastructure/` | `app/business/infrastructure/` |
+| `run_async` in `infrastructure/database/engine.py` | `app/runtime.py` (shared startup helper, D6) |
+| — | `app/ai/{application,workflow,tools,infrastructure}/` (empty skeleton) |
+| `tests/unit/{domain,business,application,infrastructure}/` | `tests/unit/business/{domain,bl,application,infrastructure}/` |
+| `tests/integration/database/` | `tests/integration/business/database/` |
+
+- **Architecture tests** (`tests/architecture/`): layer rules for the new prefixes; exact package
+  layout of `app/`, `app/business/`, `app/ai/`; AI never imports `app.business` (tools see only
+  `app.contracts`); no DB drivers outside module database infrastructure; no business-schema SQL
+  strings in AI code; API used only by `app.main`; shared entry points import no BL/Domain/AI
+  workflow; no import cycles (Tarjan SCC); every Application port implemented or explicitly
+  pending; every business tool takes the server-injected `ToolContext`; no contract except
+  `ToolContext`/`ActorRef` carries identity fields. Each rule was checked against a synthetic
+  violation. Runtime authorization tests (foreign case, invented IDs) belong to 3B/4C.
+- mypy strict scope: `app.contracts`, `app.business.domain`, `app.business.bl`,
+  `app.business.application` (Infrastructure stays non-strict: openpyxl is untyped).
+- Authoritative docs: a path-mapping addendum was appended to `architecture.md` and
+  `integration-contracts.md`; their `sha256` in `data/source-manifest.json` was updated with a
+  `revisionNote`.
+
+Decisions recorded with the refactor plan:
+
+| ID | Decision | Status |
+|---|---|---|
+| D1 | Separate least-privilege DB logins + Business Outbox instead of cross-schema transactions | Approved in principle; **not implemented**. Needs separate approval of the consistency model, failure windows, retries and recovery (proven by tests) |
+| D2 | `DurableInputQueue` → AI module, `BusinessEventFeed` in contracts | Conditional on D1; port unchanged at `app/business/application/ports/input_queue.py` |
+| D3 | Cross-schema FK `agent.conversations.case_id → business.cases` | To be verified by a real PostgreSQL permissions test before deciding |
+| D4 | Event feed as a dedicated internal capability with runtime authorization | Approved (not implemented) |
+| D5 | Migrations stay in `src/backend/migrations/` (Business-owned) | Approved |
+| D6 | `run_async` in `app/runtime.py` | Approved, done |
+| D7 | Tests mirror the package layout | Approved, done |
+| D8 | DB role provisioning | Separate approval required before AI persistence |
+| D9 | `auth.users` owned by Business Infrastructure | Approved |
+| D10 | Refactor before Step 3A | Approved |
+
+Constraints recorded with the approval: the AI module never receives SQL access or Business
+Infrastructure objects; database credentials are never exposed to LangGraph nodes, tools or
+model-controlled code; separate transactions are never described as cross-module atomic.
+
+Fact corrections: Steps 0–2 (not only Step 0) were complete before the refactor; the baseline was
+341 collected tests (337 passed, 4 skipped), not 140; the repository is under Git on
+`feature/business-backend`.
+
+## 13. Step 3A: persistence foundation (approved 2026-10-18)
+
+Scope: migration `0002_business_cases`, Business ORM models and repositories, persistence
+ports, `SqlUnitOfWork`, optimistic concurrency, idempotency, immutable calculation records and
+demo seeding. No change to shared contracts, AI code, BL, source files or migration 0001.
+D1/D2/D3/D8 remain pending: no Outbox, no separate DB roles, no AI persistence, no change to
+cross-module transaction contracts (`UnitOfWork.input_queue` and `CaseLifecyclePort` unchanged).
+
+Approved decisions (Q1-Q12) as implemented:
+
+| ID | Implementation |
+|---|---|
+| Q1 | Facts documents (`employee_profiles.fields`, `cases.actual_facts`) are JSONB, schema version 1: exactly 16 fact paths + `schemaVersion`; each field `value, status, source, sourceMessageId, updatedAt, revision, lastConfirmedAt`. Missing is explicit (`null`/`missing`), never zero. Decimals are strings (`format(d, "f")`). Checked by the codec (`repositories/codec.py`), Domain invariants and `CHECK (business.is_valid_facts_document(...))`. Engine-wide JSON: serializer `allow_nan=False` and no implicit types; deserializer rejects non-integer numbers and NaN/Infinity. |
+| Q2 | `BusinessUnitOfWork(UnitOfWork)` adds the repositories; Business-internal. `UnitOfWork` and the shared fake are unchanged. |
+| Q3 | `operations`: `scope_kind` (`conversation`, `case`, reserved `representative_request`) + `scope_id uuid`; all contract operation IDs are UUIDs. |
+| Q4 | `uq_reference_releases_lineage` (constraint only) + composite FK from `comparison_runs`. |
+| Q5 | Extra columns as planned; composite FK `(case_id, option_result_set_id, reference_release_id)`. |
+| Q6 | `reject_delete` (DELETE/TRUNCATE) on profiles, cases, alternatives, operations, representative requests; `reject_snapshot_mutation` on runs and result sets. |
+| Q7 | `UnavailableInputQueue` raises `InputQueueUnavailableError` on every call; never accepts or drops an event. |
+| Q8 | Option A with the owner's correction: seeded facts are `usable` for the demo, `source=employee` (propulsion: `catalogue`), `lastConfirmedAt=null`, `sourceMessageId=null` - never employee-confirmed. Internal provenance in `employee_profiles.origin` (`kind=demo_seed`, seed version, seed-file and workbook SHA-256, employee ref, `seededAt`); not in any contract. |
+| Q9 | New Domain files `cases.py`, `representatives.py`, `json_values.py` (stdlib only). |
+| Q10 | Runtime engine (`create_runtime_engine`, `bootstrap.build_business_persistence`) sets the PostgreSQL connection option `-c idle_in_transaction_session_timeout=15000` (setting `STRAUSS_IDLE_IN_TRANSACTION_TIMEOUT_MS`). PostgreSQL terminates a session idle inside an open transaction for longer than this (rollback, nothing committed). Executing statements do not count (verified: a 1.5 s `pg_sleep` under a 0.5 s limit completes); no `statement_timeout`. Import, migration and seed engines do not set it. |
+| Q11 | Marker `sources` + `STRAUSS_REQUIRE_SOURCES=1` for the new source-dependent tests. |
+| Q12 | Roadmap kept in `docs/plans/business-module-roadmap.md`. |
+
+Further notes:
+
+- `auth.users.login` is stored lowercase (CHECK `^[a-z0-9._-]{2,64}$`) with a plain UNIQUE
+  constraint, instead of a unique index on `lower(login)` (same guarantee, drift-safe).
+  The open-request uniqueness index uses `NULLS NOT DISTINCT` (PostgreSQL 15+) instead of
+  `coalesce(alternative_id, nil-uuid)`. Composite indexes are ascending (`(case_id,
+  created_at)`); btree scans serve newest-first queries.
+- Constraint names: 0002 check constraints are named `ck_<table>_<name>`. Migration 0001's
+  check constraints carry a doubled prefix (`ck_<table>_ck_<table>_<name>`) because the naming
+  convention wraps the explicit name; this is pre-existing and left unchanged (0001 is frozen).
+- Seed reader: openpyxl returns the workbook's non-integer percentages/credit points as binary
+  floats; each is converted with `Decimal(repr(value))` only if it round-trips exactly and has
+  at most 6 decimals (otherwise the seed fails). Money and counts must be integer cells. The
+  fictional ID-number column is never read into seed records or stored. Current vehicles are
+  mapped explicitly in `data/demo/demo-accounts.json` and verified against the catalogue name.
+- Repository scoping (owner/case) supports Application authorization (3B); it is not a
+  substitute. Triggers protect against application errors, not against owner/superuser roles
+  (the local user is a superuser); role separation is D8.
+- Verification (2026-10-18): `STRAUSS_REQUIRE_DB=1 STRAUSS_REQUIRE_SOURCES=1` full suite 492
+  passed, 4 skipped (original-edition documents not in the clone); ruff, mypy, schema drift
+  clean; dev DB migrated to `0002_business_cases`, `alembic check` clean, seed run twice
+  (second run created nothing). Bridge test: seeded DB profiles + stored reference data ->
+  existing BL reproduce Agent Spec §8 for E-001..E-006 (E-003 -1939, E-006 +722).
+
+## 14. Step 3B: Business Application services (approved 2026-10-18)
+
+D1 (approved direction): separate least-privilege DB identities for Business and AI, no shared
+transactions, Business Outbox for cross-module events, recoverable idempotent coordination for
+conversation/case creation. Documented in `architecture.md` / `integration-contracts.md`
+("D1 module isolation"). Outbox, AI persistence and role provisioning (D8) are not implemented;
+D3 (cross-schema FK) is still pending.
+
+Contract changes (Python only; **no exported JSON Schema changed**):
+
+| ID | Change |
+|---|---|
+| C1 | `CaseLifecyclePort.create_case_for_conversation(actor, command) -> Envelope[CreateCaseResult]`; `TransactionHandle` removed |
+| C2 | Business `UnitOfWork.input_queue` removed (and the 3A placeholder `UnavailableInputQueue`) |
+| C3 | `DurableInputQueue` moved to `app/ai/application/ports/input_queue.py` (provisional); fakes to `tests/fakes/ai/` |
+| C4 | New provisional `app/contracts/business_events.py` (`BusinessEvent`, `BusinessEventFeed`); not exported |
+
+Decisions B1–B9: token authentication deferred to 4D (B1); missing profile = all-missing at
+version 0, first actual update inserts version 1 (B2); unchanged values are no-ops, never
+reconfirmation (B3); hypothetical `clear` removes the override (B4); no close-case operation,
+closed cases read-only (B5); `CaseLifecyclePort` returns `Envelope` (B6); foreign conversations and
+cases are `NOT_FOUND` without details (B7); `ReferenceDataRepository.get_rules` (B8); services tested
+on real PostgreSQL, unit fakes only for the policy (B9).
+
+Services (`app/business/application/`): `identity/` (`IdentityService`, `revalidate_actor`,
+`AuthorizationPolicy`), `profiles/profile_service.py`, `cases/` (`case_service.py`, `changes.py`,
+`mapping.py`, `freshness.py`, `alternatives.py`, `lifecycle_adapter.py`), `errors.py`, `ports/clock.py`.
+Every protected operation revalidates the actor against `auth.users` inside its Unit of Work
+(roles from the store, never from the presented `ActorRef`), then checks ownership; this also
+applies to worker-originated calls.
+
+Note: the 3B service tests live in `tests/integration/business/database/` (not a separate
+`application/` directory) to reuse the DB fixtures and the `db` marker.

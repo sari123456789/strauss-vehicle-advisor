@@ -5,15 +5,13 @@ from uuid import uuid4
 
 import pytest
 
-from app.application.ports.input_queue import (
+from app.ai.application.ports.input_queue import (
     DurableInputQueue,
     EnqueueOutcome,
     InputPayloadMismatchError,
 )
-from app.application.ports.unit_of_work import UnitOfWork
 from app.contracts.business_port import CANONICAL_TOOL_NAMES, BusinessToolsPort
 from app.contracts.case_inputs import UpdateInputsRequest
-from app.contracts.case_lifecycle import TransactionHandle
 from app.contracts.catalogue import (
     EligibilityRequest,
     ListOptionsRequest,
@@ -25,9 +23,9 @@ from app.contracts.comparisons import CompareRequest, ComparisonDetailsRequest, 
 from app.contracts.readiness import ReadinessRequest
 from app.contracts.representatives import CreateQuestionRequest, RepresentativeAnsweredEvent
 from app.contracts.tool_context import ToolContext
+from tests.fakes.ai.fake_input_queue import InMemoryInputQueue
+from tests.fakes.ai.fake_unit_of_work import InMemoryUnitOfWork
 from tests.fakes.fake_business_port import SCENARIOS, FakeBusinessPort
-from tests.fakes.fake_input_queue import InMemoryInputQueue
-from tests.fakes.fake_unit_of_work import InMemoryUnitOfWork
 
 CTX = ToolContext.model_validate(
     {
@@ -154,10 +152,8 @@ def _event(**overrides: object) -> RepresentativeAnsweredEvent:
     return RepresentativeAnsweredEvent.model_validate(body)
 
 
-def test_in_memory_fakes_satisfy_application_ports() -> None:
+def test_ai_side_queue_fake_satisfies_the_provisional_ai_port() -> None:
     uow = InMemoryUnitOfWork()
-    assert isinstance(uow, UnitOfWork)
-    assert isinstance(uow, TransactionHandle)
     assert isinstance(uow.input_queue, DurableInputQueue)
 
 

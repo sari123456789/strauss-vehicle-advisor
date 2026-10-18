@@ -4,15 +4,16 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.application.ports.reference_data import (
+from app.business.application.ports.reference_data import (
     JsonScalar,
     PublicationResult,
     PublishedRelease,
     ReferenceSourceSet,
     ReleaseIdentity,
 )
-from app.domain.occupations import OccupationPolicy
-from app.domain.vehicles import CatalogueVehicle, TaxRecord, VehicleTaxKey
+from app.business.domain.occupations import OccupationPolicy
+from app.business.domain.rules import RulesConfig
+from app.business.domain.vehicles import CatalogueVehicle, TaxRecord, VehicleTaxKey
 
 
 class StaticSourceReader:
@@ -29,6 +30,7 @@ class InMemoryReferenceDataRepository:
     def __init__(self) -> None:
         self.releases: list[PublishedRelease] = []
         self._sets: dict[UUID, ReferenceSourceSet] = {}
+        self._rules: dict[UUID, RulesConfig] = {}
 
     async def latest_release(self) -> PublishedRelease | None:
         return self.releases[-1] if self.releases else None
@@ -58,7 +60,11 @@ class InMemoryReferenceDataRepository:
         )
         self.releases.append(release)
         self._sets[release.catalogue_version_id] = sources
+        self._rules[release.rules_snapshot_id] = sources.rules.config
         return PublicationResult(release=release, created=True)
+
+    async def get_rules(self, rules_snapshot_id: UUID) -> RulesConfig | None:
+        return self._rules.get(rules_snapshot_id)
 
     async def get_vehicle(
         self, catalogue_version_id: UUID, catalogue_id: str
