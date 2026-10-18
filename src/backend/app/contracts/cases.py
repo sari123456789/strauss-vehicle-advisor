@@ -68,3 +68,8 @@ class CaseContext(ContractModel):
     alternatives: list[AlternativeView] = Field(default_factory=list)
     open_requests: list[OpenRequestSummary] = Field(default_factory=list)
     recent_runs: list[RunSummary] = Field(default_factory=list)
+    fields_requiring_confirmation: list[FieldPath] = Field(default_factory=list)
+    """Usable actual facts neither confirmed nor updated since this case was created (G4).
+
+    Informational: ask only when relevant to the current goal; never a blanket questionnaire,
+    and not a time-based staleness verdict. Distinct from `recentRuns[].freshness`."""

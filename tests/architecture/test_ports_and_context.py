@@ -16,6 +16,12 @@ import app.contracts as contracts_package
 from app.bootstrap import build_demo_seed_reader, build_reference_source_reader
 from app.business.application.ports.auth import UserDirectory
 from app.business.application.ports.clock import Clock
+from app.business.application.ports.credentials import (
+    AccessTokenCodec,
+    CredentialStore,
+    PasswordHasher,
+    RefreshSessionRepository,
+)
 from app.business.application.ports.demo_seed import DemoSeedSourceReader
 from app.business.application.ports.reference_data import (
     ReferenceDataRepository,
@@ -37,6 +43,8 @@ from app.business.infrastructure.database.repositories.reference_data import (
     SqlReferenceDataRepository,
 )
 from app.business.infrastructure.database.unit_of_work import SqlUnitOfWorkFactory
+from app.business.infrastructure.security.password_hasher import ScryptPasswordHasher
+from app.business.infrastructure.security.token_codec import Hs256TokenCodec
 from app.contracts.business_port import CANONICAL_TOOL_NAMES, BusinessToolsPort
 from app.contracts.case_lifecycle import CaseLifecyclePort
 from app.contracts.tool_context import ActorRef, ToolContext
@@ -58,6 +66,10 @@ IMPLEMENTED_PORTS = {
     "RepresentativeRequestRepository",
     "DemoSeedSourceReader",
     "Clock",
+    "PasswordHasher",
+    "AccessTokenCodec",
+    "CredentialStore",
+    "RefreshSessionRepository",
 }
 PENDING_PORTS: dict[str, str] = {}
 """Business ports without an implementation yet (none: `DurableInputQueue` moved to AI, C3)."""
@@ -103,12 +115,17 @@ def test_sql_unit_of_work_implements_the_business_ports() -> None:
         "option_result_sets": OptionResultSetRepository,
         "comparison_runs": ComparisonRunRepository,
         "representative_requests": RepresentativeRequestRepository,
+        "credentials": CredentialStore,
+        "refresh_sessions": RefreshSessionRepository,
     }
     for attribute, port in expected.items():
         assert isinstance(getattr(uow, attribute), port), attribute
     assert not hasattr(uow, "input_queue")  # C2: no AI inputs in a Business transaction
     assert isinstance(SystemClock(), Clock)
     assert isinstance(build_demo_seed_reader(), DemoSeedSourceReader)
+    assert isinstance(ScryptPasswordHasher(), PasswordHasher)
+    codec = Hs256TokenCodec(b"x" * 32, issuer="i", audience="a")
+    assert isinstance(codec, AccessTokenCodec)
 
 
 def test_every_business_tool_receives_the_server_injected_tool_context() -> None:
@@ -153,6 +170,37 @@ SERVICE_ENTRY_POINTS = {
         "create_case_for_conversation": "ActorRef",
         "get_context": "ToolContext",
         "update_inputs": "ToolContext",
+        "confirm_profile_fields": "ToolContext",
+        "context_for_case": "ActorRef",
+    },
+    ("app.business.application.vehicles.catalogue_service", "CatalogueService"): {
+        "list_eligible_options": "ToolContext",
+        "check_eligibility": "ToolContext",
+    },
+    ("app.business.application.vehicles.valuation_service", "ValuationService"): {
+        "resolve_vehicle": "ToolContext",
+        "get_vehicle_tax_value": "ToolContext",
+    },
+    ("app.business.application.occupations.occupation_service", "OccupationService"): {
+        "resolve_occupation": "ToolContext",
+    },
+    (
+        "app.business.application.representatives.request_service",
+        "RepresentativeRequestService",
+    ): {"get_representative_request": "ToolContext"},
+    ("app.business.application.comparisons.readiness_service", "ReadinessService"): {
+        "check_calculation_readiness": "ToolContext",
+    },
+    (
+        "app.business.application.representatives.question_service",
+        "RepresentativeQuestionService",
+    ): {"create_representative_question": "ToolContext"},
+    ("app.business.application.tools_facade", "BusinessToolsFacade"): {
+        name: "ToolContext" for name in CANONICAL_TOOL_NAMES
+    },
+    ("app.business.application.comparisons.comparison_service", "ComparisonService"): {
+        "compare_scenarios": "ToolContext",
+        "get_comparison_details": "ToolContext",
     },
 }
 

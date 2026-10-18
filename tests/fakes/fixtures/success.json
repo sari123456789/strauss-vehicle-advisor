@@ -216,5 +216,39 @@
       },
       "inputSnapshot": {"note": "shape finalized in Phase 3"}
     }
+  },
+  "get_representative_request": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 3,
+    "data": {
+      "requestId": "c0000000-0000-4000-8000-000000000050",
+      "status": "open",
+      "fieldCode": "alternative.participation",
+      "optionKey": "vehicle:CAR-11",
+      "answer": null,
+      "createdAt": "2026-10-15T08:06:00Z",
+      "updatedAt": "2026-10-15T08:06:00Z"
+    }
+  },
+  "resolve_occupation": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "data": {
+      "status": "resolved",
+      "candidates": [{"occupationId": "OCC-SOFTWARE-DEV", "nameHe": "מפתח/ת תוכנה"}]
+    }
+  },
+  "confirm_profile_fields": {
+    "status": "ok",
+    "traceId": "fixture-trace",
+    "caseVersion": 4,
+    "profileVersion": 6,
+    "data": {
+      "confirmedFields": ["payroll.baseGross", "payroll.creditPoints"],
+      "notConfirmable": [],
+      "newCaseVersion": 4,
+      "newProfileVersion": 6
+    }
   }
 }

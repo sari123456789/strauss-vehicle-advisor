@@ -10,6 +10,7 @@ from types import TracebackType
 from typing import Protocol, Self, runtime_checkable
 
 from app.business.application.ports.auth import UserDirectory
+from app.business.application.ports.credentials import CredentialStore, RefreshSessionRepository
 from app.business.application.ports.repositories import (
     AlternativeRepository,
     CaseRepository,
@@ -56,6 +57,8 @@ class BusinessUnitOfWork(UnitOfWork, Protocol):
     option_result_sets: OptionResultSetRepository
     comparison_runs: ComparisonRunRepository
     representative_requests: RepresentativeRequestRepository
+    credentials: CredentialStore
+    refresh_sessions: RefreshSessionRepository
 
 
 class BusinessUnitOfWorkFactory(Protocol):

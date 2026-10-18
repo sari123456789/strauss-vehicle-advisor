@@ -104,3 +104,29 @@ class UpdateInputsResult(ContractModel):
     new_profile_version: int | None = Field(default=None, ge=0)
     stale_run_ids: list[UUID] = Field(default_factory=list)
     missing_information: list[Issue] = Field(default_factory=list)
+
+
+class ConfirmProfileFieldsRequest(ContractModel):
+    """`confirm_profile_fields` (G3): the employee confirms that stored *actual* values are
+    still correct. Values never change; only confirmation metadata and revisions do. Separate
+    from `update_conversation_inputs` (an unchanged `set` is never a confirmation)."""
+
+    expected_case_version: int = Field(ge=0)
+    expected_profile_version: int = Field(ge=0)
+    operation_id: UUID
+    source_message_id: UUID | None = None
+    fields: list[FieldPath] = Field(min_length=1, max_length=16)
+
+    @model_validator(mode="after")
+    def _unique_fields(self) -> Self:
+        if len(self.fields) != len(set(self.fields)):
+            raise ValueError("each field may appear at most once")
+        return self
+
+
+class ConfirmProfileFieldsResult(ContractModel):
+    confirmed_fields: list[FieldPath]
+    not_confirmable: list[Issue] = Field(default_factory=list)
+    """Not usable fields: MISSING_INPUT (missing) or AMBIGUOUS_INPUT (needs_clarification)."""
+    new_case_version: int = Field(ge=0)
+    new_profile_version: int = Field(ge=0)

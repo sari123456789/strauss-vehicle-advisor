@@ -16,13 +16,20 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.contracts.business_port import CANONICAL_TOOL_NAMES
-from app.contracts.case_inputs import UpdateInputsRequest, UpdateInputsResult
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    ConfirmProfileFieldsResult,
+    UpdateInputsRequest,
+    UpdateInputsResult,
+)
 from app.contracts.cases import CaseContext
 from app.contracts.catalogue import (
     EligibilityRequest,
     EligibilityResult,
     ListOptionsRequest,
     ListOptionsResult,
+    ResolveOccupationRequest,
+    ResolveOccupationResult,
     ResolveVehicleRequest,
     ResolveVehicleResult,
     TaxValueRequest,
@@ -36,7 +43,12 @@ from app.contracts.comparisons import (
     ComparisonResult,
 )
 from app.contracts.readiness import ReadinessRequest, ReadinessResult
-from app.contracts.representatives import CreateQuestionRequest, CreateQuestionResult
+from app.contracts.representatives import (
+    CreateQuestionRequest,
+    CreateQuestionResult,
+    RepresentativeRequestLookup,
+    RequestStatusView,
+)
 from app.contracts.tool_context import ToolContext
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
@@ -53,6 +65,9 @@ RESULT_TYPES: dict[str, type[BaseModel]] = {
     "compare_scenarios": ComparisonResult,
     "create_representative_question": CreateQuestionResult,
     "get_comparison_details": ComparisonDetails,
+    "get_representative_request": RequestStatusView,
+    "resolve_occupation": ResolveOccupationResult,
+    "confirm_profile_fields": ConfirmProfileFieldsResult,
 }
 
 
@@ -127,3 +142,18 @@ class FakeBusinessPort:
         self, ctx: ToolContext, request: ComparisonDetailsRequest
     ) -> Envelope[ComparisonDetails]:
         return self._respond("get_comparison_details", ctx, request)
+
+    async def get_representative_request(
+        self, ctx: ToolContext, request: RepresentativeRequestLookup
+    ) -> Envelope[RequestStatusView]:
+        return self._respond("get_representative_request", ctx, request)
+
+    async def resolve_occupation(
+        self, ctx: ToolContext, request: ResolveOccupationRequest
+    ) -> Envelope[ResolveOccupationResult]:
+        return self._respond("resolve_occupation", ctx, request)
+
+    async def confirm_profile_fields(
+        self, ctx: ToolContext, request: ConfirmProfileFieldsRequest
+    ) -> Envelope[ConfirmProfileFieldsResult]:
+        return self._respond("confirm_profile_fields", ctx, request)

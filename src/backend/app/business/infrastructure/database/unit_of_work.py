@@ -14,6 +14,7 @@ from typing import Self
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.business.application.ports.auth import UserDirectory
+from app.business.application.ports.credentials import CredentialStore, RefreshSessionRepository
 from app.business.application.ports.repositories import (
     AlternativeRepository,
     CaseRepository,
@@ -27,6 +28,10 @@ from app.business.infrastructure.database.repositories.alternatives import (
     SqlAlternativeRepository,
 )
 from app.business.infrastructure.database.repositories.cases import SqlCaseRepository
+from app.business.infrastructure.database.repositories.credentials import (
+    SqlCredentialStore,
+    SqlRefreshSessionRepository,
+)
 from app.business.infrastructure.database.repositories.operations import SqlOperationRepository
 from app.business.infrastructure.database.repositories.profiles import (
     SqlEmployeeProfileRepository,
@@ -59,6 +64,8 @@ class SqlUnitOfWork:
         self.representative_requests: RepresentativeRequestRepository = (
             SqlRepresentativeRequestRepository(self._session)
         )
+        self.credentials: CredentialStore = SqlCredentialStore(self._session)
+        self.refresh_sessions: RefreshSessionRepository = SqlRefreshSessionRepository(self._session)
 
     async def __aenter__(self) -> Self:
         if self._entered:

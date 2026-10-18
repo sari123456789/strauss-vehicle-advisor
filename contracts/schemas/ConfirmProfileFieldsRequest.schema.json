@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "FieldPath": {
+      "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+      "enum": [
+        "payroll.baseGross",
+        "payroll.commissionsGross",
+        "payroll.bonusGross",
+        "payroll.pensionEmployeeRate",
+        "payroll.studyFundEmployeeRate",
+        "payroll.creditPoints",
+        "employee.occupationId",
+        "employee.entitlementGroup",
+        "employee.qualifyingChildrenCount",
+        "currentArrangement.kind",
+        "currentArrangement.vehicle",
+        "currentArrangement.propulsion",
+        "currentArrangement.participation",
+        "currentArrangement.familyDeduction",
+        "currentArrangement.familyDeductionIncludedInParticipation",
+        "currentArrangement.allowance"
+      ],
+      "title": "FieldPath",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "`confirm_profile_fields` (G3): the employee confirms that stored *actual* values are\nstill correct. Values never change; only confirmation metadata and revisions do. Separate\nfrom `update_conversation_inputs` (an unchanged `set` is never a confirmation).",
+  "properties": {
+    "expectedCaseVersion": {
+      "minimum": 0,
+      "title": "Expectedcaseversion",
+      "type": "integer"
+    },
+    "expectedProfileVersion": {
+      "minimum": 0,
+      "title": "Expectedprofileversion",
+      "type": "integer"
+    },
+    "fields": {
+      "items": {
+        "$ref": "#/$defs/FieldPath"
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "title": "Fields",
+      "type": "array"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    },
+    "sourceMessageId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sourcemessageid"
+    }
+  },
+  "required": [
+    "expectedCaseVersion",
+    "expectedProfileVersion",
+    "operationId",
+    "fields"
+  ],
+  "title": "ConfirmProfileFieldsRequest",
+  "type": "object"
+}

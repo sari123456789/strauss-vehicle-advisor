@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "`resolve_occupation` (G2). Without a query, every official occupation is returned.",
+  "properties": {
+    "query": {
+      "anyOf": [
+        {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Query"
+    }
+  },
+  "title": "ResolveOccupationRequest",
+  "type": "object"
+}

@@ -3,7 +3,7 @@
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import Table, insert, select
+from sqlalchemy import Table, insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.business.domain.cases import OptionResultSetRecord
@@ -12,6 +12,7 @@ from app.business.infrastructure.database.models.cases import OptionResultSetRow
 from app.business.infrastructure.database.repositories.codec import freeze_document, thaw
 
 RESULT_SETS = cast(Table, OptionResultSetRow.__table__)
+FINGERPRINT_KEY = "inputFingerprint"
 
 
 def _record(row: Any) -> OptionResultSetRecord:
@@ -46,6 +47,31 @@ class SqlOptionResultSetRepository:
                 created_at=record.created_at,
             )
         )
+
+    async def add_or_get_identical(
+        self, record: OptionResultSetRecord
+    ) -> tuple[OptionResultSetRecord, bool]:
+        fingerprint = record.request.get(FINGERPRINT_KEY)
+        if not isinstance(fingerprint, str):
+            raise ValueError(f"result set request needs a string {FINGERPRINT_KEY!r}")
+        await self._session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"option_result_set:{record.case_id}:{fingerprint}"},
+        )
+        statement = (
+            select(RESULT_SETS)
+            .where(
+                RESULT_SETS.c.case_id == record.case_id,
+                RESULT_SETS.c.request[FINGERPRINT_KEY].astext == fingerprint,
+            )
+            .order_by(RESULT_SETS.c.created_at.desc(), RESULT_SETS.c.id)
+            .limit(1)
+        )
+        existing = (await self._session.execute(statement)).first()
+        if existing is not None:
+            return _record(existing), False
+        await self.add(record)
+        return record, True
 
     async def get(self, case_id: UUID, result_set_id: UUID) -> OptionResultSetRecord | None:
         statement = select(RESULT_SETS).where(

@@ -159,6 +159,24 @@ class PublicationResult:
     """False when the identical set was already the latest release (idempotent no-op)."""
 
 
+@dataclass(frozen=True, slots=True)
+class TaxRecordDetails:
+    """A tax-dataset record with its descriptive source columns (trimmed), for resolution."""
+
+    record: TaxRecord
+    manufacturer_name: str
+    commercial_name: str
+    model_description: str
+
+
+class ReferenceDataUnavailableError(Exception):
+    """The reference data (e.g. the tax-value lookup) cannot be read right now (T61).
+
+    Never a missing value: the operation fails explicitly and produces no numeric result."""
+
+    code = "INFRA_UNAVAILABLE"
+
+
 class ReferenceDataConflictError(Exception):
     """Publication would contradict already-published immutable data (e.g. reused version)."""
 
@@ -203,6 +221,31 @@ class ReferenceDataRepository(Protocol):
     async def get_occupation(
         self, catalogue_version_id: UUID, occupation_id: str
     ) -> OccupationPolicy | None: ...
+
+    async def list_occupations(
+        self, catalogue_version_id: UUID
+    ) -> tuple[OccupationPolicy, ...]: ...
+
+    async def get_tax_record_details(
+        self, tax_dataset_version_id: UUID, key: VehicleTaxKey
+    ) -> TaxRecordDetails | None:
+        """Complete five-part key only (same rule as `get_value_of_use`)."""
+        ...
+
+    async def find_tax_records(
+        self,
+        tax_dataset_version_id: UUID,
+        *,
+        commercial_name: str,
+        registration_year: str | None = None,
+        manufacturer_code: str | None = None,
+        model_code: str | None = None,
+        limit: int,
+    ) -> tuple[TaxRecordDetails, ...]:
+        """Candidates whose trimmed commercial name contains `commercial_name`
+        (case-insensitive), filtered exactly by the given codes; ordered by key; at most
+        `limit` rows. Never a selection - callers present the candidates."""
+        ...
 
     async def get_value_of_use(
         self, tax_dataset_version_id: UUID, key: VehicleTaxKey

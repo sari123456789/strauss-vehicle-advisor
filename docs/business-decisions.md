@@ -318,3 +318,357 @@ applies to worker-originated calls.
 
 Note: the 3B service tests live in `tests/integration/business/database/` (not a separate
 `application/` directory) to reuse the DB fixtures and the `db` marker.
+
+## 15. Step 4A: eligibility, catalogue and valuation + contract changes G1–G5 (approved 2026-10-18)
+
+Status: implemented, awaiting review. The shared contract changes are **not yet synchronized**
+with the AI developer and must not be committed before that synchronization.
+
+Contract changes (exported JSON Schemas: 5 new, `CaseContext`/`ReadinessResult`/`index.json`
+changed, the other 25 byte-identical):
+
+| ID | Change |
+|---|---|
+| G1 | New tool `get_representative_request(ctx, RepresentativeRequestLookup) -> Envelope[RequestStatusView]`; only within the bound case; no Outbox |
+| G2 | New tool `resolve_occupation(ctx, ResolveOccupationRequest) -> Envelope[ResolveOccupationResult]` (+ `OccupationCandidate`) |
+| G3 | New tool `confirm_profile_fields(ctx, ConfirmProfileFieldsRequest) -> Envelope[ConfirmProfileFieldsResult]` |
+| G4 | `CaseContext.fieldsRequiringConfirmation: list[FieldPath]` (default empty) |
+| G5 | `PendingRepresentativeField.fieldCode: RepresentativeFieldCode` (was a free string) |
+
+`BusinessToolsPort` therefore has 13 tools; `CANONICAL_TOOL_NAMES` lists them.
+
+Decisions A1–A12 as implemented:
+
+- **A1** A free-text query never resolves a vehicle; even a unique candidate is returned as
+  `ambiguous` for confirmation. Catalogue ID or complete key -> `resolved`/`not_found`.
+- **A2** Query = case-insensitive substring of the trimmed commercial name (`כינוי מסחרי`), plus
+  exact code filters; ordered by key; at most 20 candidates (`truncated`). LIKE wildcards in the
+  query are literal. With codes in the query, `TAX_KEY_AMBIGUOUS` when several candidates match
+  or when the given codes alone match several official records (e.g. ATTO 3 / TANG share
+  01014/00003/2025 and differ only by vehicle type, T25); otherwise `AMBIGUOUS_INPUT`.
+- **A3** Occupation/group conflict: eligible only if eligible under both the reported and the
+  table group; ineligible only if ineligible under both; otherwise `needs_information` with
+  `occupation_group_conflict`. The reported group is never overwritten.
+- **A4/A5** Effective facts = latest shared actual profile + this case's hypothetical overrides.
+- **A6** Listing shows eligible and `needs_information` items, ineligible vehicles are omitted;
+  the waiver item is shown whenever `waiver` is requested (also when ineligible). A category with
+  a `needs_information` item is in `uncheckedCategories`; `scopeComplete` only without them
+  (envelope `partial`). Missing facts are reported once per field. Filters: `propulsion` on all
+  vehicles; `groups` on regular vehicles only (the family track is not a ranked group).
+- **A7** Unknown catalogue ID / key for a value or eligibility check -> `NOT_FOUND` with a
+  `VEHICLE_NOT_FOUND` issue (`BusinessError.issues`, carried into the error envelope).
+- **A8** An occupation that is neither mandatory-car nor waiver-allowed, or an unsupported
+  rules policy, fails explicitly (`UnsupportedPolicy`, `INFRA_UNAVAILABLE`).
+- **A9** A closed case cannot list options (`INVALID_STATE_TRANSITION`); reads stay allowed.
+- **A10** No new index (ILIKE over 77,988 rows measured at ~46 ms).
+- **A11** `purpose=alternative` is restricted to catalogue vehicles; a valid key outside the
+  catalogue -> `not_found` + `UNSUPPORTED_INPUT`/`not_in_catalogue` (T29). The current car may
+  be outside the catalogue (T28).
+- **A12** Identical listing retries do not multiply result sets: the request JSON of a result
+  set stores `inputFingerprint` = SHA-256 over (case version, latest profile version, release,
+  request); `OptionResultSetRepository.add_or_get_identical` takes a transaction-scoped advisory
+  lock per (case, fingerprint) and returns the existing immutable set. No new contract field
+  or public operation ID; no migration.
+
+G-rules as implemented:
+
+- **G2** Exact official ID (whitespace/case ignored) or exact normalized official name (NFC,
+  collapsed whitespace, casefold) resolves; for names like "מפתח/ת תוכנה" both written forms
+  ("מפתח תוכנה", "מפתחת תוכנה") are exact. Substring or whole-word overlap -> `ambiguous`
+  candidates; no query -> all occupations, `ambiguous`; otherwise `not_found`. No synonyms.
+- **G3** Only usable fields are confirmed: `lastConfirmedAt = now`, `source = employee`,
+  `sourceMessageId`, revision + 1; value and `updatedAt` unchanged. Missing/unclear fields are
+  returned in `notConfirmable` (`MISSING_INPUT`/`AMBIGUOUS_INPUT`). Profile CAS then case CAS in
+  one Unit of Work; idempotent (operation scope = case, type `confirm_profile_fields`); a closed
+  case is read-only. Nothing confirmed -> no write, versions unchanged.
+- **G4** A usable fact requires confirmation when neither `updatedAt` nor `lastConfirmedAt` is at
+  or after the case's creation. Informational only: no blanket confirmation at conversation
+  start, only facts relevant to the current goal are asked (listing vehicles never needs salary
+  confirmation), no time-based expiry; distinct from stale business data and stale runs.
+
+Services (`app/business/application/`): `vehicles/` (`catalogue_service.py` — `CatalogueService`;
+`valuation_service.py` — `ValuationService`; `facts.py`; `mapping.py`), `occupations/`
+(`OccupationService`), `representatives/` (`RepresentativeRequestService`),
+`cases/confirmation.py` (G3/G4 rules; `CaseService.confirm_profile_fields`), `outcomes.py`
+(`Outcome[T]`; the tools facade of 4C turns it into an `Envelope`), `reference.py` (pinned
+release). BL: `bl/eligibility/` (group, family, waiver policies, evaluator); Domain:
+`domain/eligibility.py`. Ports: `ReferenceDataRepository.list_occupations`,
+`get_tax_record_details`, `find_tax_records`; `OptionResultSetRepository.add_or_get_identical`.
+Every public service method takes the server-built `ToolContext` first and authorizes through
+`AuthorizationPolicy.tool_case` before reading business data.
+
+## 16. Step 4B: calculation readiness and scenario comparisons (approved 2026-10-18)
+
+Status: implemented without shared-contract changes, awaiting review. **Q1 is paused** until
+shared-contract approval, so readiness evaluates regular calculations only.
+
+### What was added
+- **Services** (`app/business/application/comparisons/`): `ReadinessService.check_calculation_readiness`
+  and `ComparisonService.compare_scenarios` / `get_comparison_details`. Each takes the
+  server-built `ToolContext` first.
+- **Supporting modules:** `planner.py` (shared by readiness and comparison), `facts.py`,
+  `selection.py`, `mapping.py`, `snapshot.py`.
+- **BL:** `bl/readiness/assessor.py`. It reuses the existing builder and component functions
+  and adds no rule.
+- **Domain:** `domain/readiness.py`.
+- **Ports:** `EmployeeProfileRepository.lock` and `CaseRepository.lock` (`FOR UPDATE`).
+- **Unchanged:** the payroll formulas, builder, gross-up and display rounding. No migration.
+
+### Decisions as implemented
+
+**Q1 (paused).** The proposal is `ReadinessRequest.kind: RunKind = "regular"`, which is optional
+and backward compatible. The planner already takes the fact basis; only the contract field is
+missing.
+
+**Q2: baseline reliability.**
+- The contracts have no marker for a conditional estimate: `ScenarioResult.delta` has no flag,
+  and `Assumption` is run-level. An unreliable baseline is therefore not calculated and every
+  delta is null. Independent alternatives are still calculated.
+- A baseline is unreliable when a material current-arrangement fact is any of:
+  - missing or unclear;
+  - not found;
+  - in contradiction with the catalogue (`SOURCE_CONFLICT`);
+  - blocked by an open representative request;
+  - usable, but neither updated nor confirmed in this conversation (G4).
+- The last case is reported as an issue `AMBIGUOUS_INPUT` with `reason="confirmation_required"`.
+  It is **not** listed in `missingEmployeeFields` or `ambiguousFields`; `baselineReady=false`.
+- Material facts: `kind`, then either `allowance`, or `vehicle` + `participation`. Add
+  `propulsion` for a car outside the catalogue. On the family track, add the inclusion flag,
+  plus the family deduction when it is not included.
+- Salary facts never require confirmation.
+
+**Q3: the current car.**
+- Catalogue car: the catalogue's track and propulsion. A different reported propulsion is
+  `SOURCE_CONFLICT`.
+- Car outside the catalogue: regular track and the reported propulsion (D6). A reported family
+  deduction is treated as unclear.
+
+**Q4.** An unknown option key returns `NOT_FOUND` + `VEHICLE_NOT_FOUND`, and nothing is
+persisted.
+
+**Q5/Q7: consistent facts.**
+- One request uses one effective fact set and one pinned release for eligibility, readiness and
+  calculation.
+- Fact bases:
+  - `actual`: regular runs; the case copy is synchronized to the latest profile first;
+  - `case_copy_with_overrides`: hypothetical runs, with a fixed baseline;
+  - `latest_with_overrides`: listing (A4/A5).
+- A stored option list contributes only its keys and their order; eligibility is always
+  re-evaluated.
+  - List from another release: `VERSION_CONFLICT` + `STALE_REVISION` / `result_set_release_changed`.
+  - List built from other facts: `STALE_REVISION` / `result_set_built_from_other_facts`, and per
+    option `eligibility_changed_since_list`.
+- Lists store their `factBasis`, which is also part of the dedupe fingerprint.
+- Facts count as the same when the case and profile versions match and overrides are applied in
+  both or in neither (or the case has none).
+
+**Q6.** An open request tied to an option blocks only that option (`PENDING_REPRESENTATIVE`). An
+open `currentArrangement.*` request blocks only the baseline.
+
+**Q8: assumption codes.** All are verified against the sources:
+- `participation.catalogue_default`: per calculated vehicle (agent-spec §2.6).
+- `demo_policy.family_participation_base_plus_gap`: per calculated family vehicle, when the
+  derived policy says so.
+- `demo_policy.payroll_tables_<rules tax year>_vehicle_data_<key tax year>`: only when the years
+  differ (SRC-06). Currently `..._2025_vehicle_data_2026`, the code the fake already uses.
+
+**Q9: input snapshot v1.** Contents:
+- `schemaVersion` and `factBasis`;
+- the month and reference date;
+- the case and profile versions used, and the source versions;
+- every fact with its provenance, and the overrides applied;
+- the resolved selection;
+- per-scenario components and blockers, and the baseline;
+- the issues.
+
+It is internal JSON inside `ComparisonDetails.inputSnapshot`; no schema change.
+
+**Q10: locks.**
+- Order: operation claim, then profile, then case (`FOR UPDATE`). This is the same order as
+  every profile + case write.
+- Versions are re-checked under the lock, and there is no lock upgrade. (The earlier
+  `FOR SHARE` idea could deadlock on the regular synchronization.)
+- A concurrent write waits for the comparison, and then makes the run stale (T42).
+- A profile row that does not exist yet cannot be locked. A run created meanwhile is reported
+  stale on read.
+
+**Q11.** `expectedProfileVersion` is required for regular runs and must equal the latest
+version. For hypothetical runs it is optional; when given, it must equal the case copy's
+version.
+
+**Q12.** `all_eligible` defaults to regular + family; the waiver is included only when
+requested. The list is persisted and linked to the run (`option_result_set_id`).
+
+**Family listing.**
+- Readiness for `list_family` needs only the qualifying-child count. Family eligibility does not
+  depend on group ranking (4A).
+- The group is needed only to calculate a family alternative, because F uses the group budget.
+- Architecture §14 and agent-spec §6 list the group as a prerequisite for family listing. Per
+  the owner's instruction, listing and calculation requirements are kept separate.
+
+### Envelope status
+- **Comparison:** `ok` when every requested item is calculated or ineligible; `partial` when some
+  are calculated; otherwise `needs_information`.
+- **Readiness:** `ok` when the scope is complete; `partial` when some scenarios are ready.
+
+## 17. Step 4C: `BusinessToolsFacade` and representative questions (approved 2026-10-18)
+
+Status: implemented with the shared contracts exactly as defined in the Business branch, with
+no contract change; awaiting review. Q1 remains deferred.
+
+### What was added
+- **Facade:** `app/business/application/tools_facade.py`, class `BusinessToolsFacade`. It
+  implements `BusinessToolsPort` for all 13 canonical tools.
+  - It is a thin adapter: it calls the Application services and turns each `Outcome` or
+    `BusinessError` into a contract `Envelope`.
+  - It holds no business logic.
+  - Every method takes the server-built `ToolContext` first. `traceId` is `ToolContext.trace_id`.
+  - Bootstrap exposes it as `BusinessServices.tools`.
+- **Representative questions (employee side):** `representatives/question_service.py`,
+  `create_representative_question`.
+  - **Authorization:** through the server-bound tool context. A closed case is read-only. A
+    stale `expectedCaseVersion` is `VERSION_CONFLICT`. The case does not change.
+  - **Scope allowlist:**
+    - `alternative.participation` requires a catalogue vehicle option, which is persisted as the
+      case's alternative;
+    - `occupation.waiverPolicy` takes the waiver or no option;
+    - `employee.entitlementGroup` and `currentArrangement.*` take no option.
+  - **Idempotency:** `idempotencyKey` acts as the operation ID. The same payload returns the
+    stored request with `created=false`; a different payload is `OPERATION_PAYLOAD_MISMATCH`.
+    An equivalent open request (same case, alternative, field and subject) is reused (T34).
+  - **Subject snapshot:** minimal context only (D11). `{"catalogueId"}`, `{"occupationId"}`, or
+    `{"currentVehicle"}`; never salary.
+  - **`expectedValueType`:** follows the field code one to one: money, boolean,
+    entitlement_group, propulsion, tax_key. PROVISIONAL (api-contracts §8 open item).
+  - **Blocking:** a pending question blocks only the dependent option, or only the baseline for
+    `currentArrangement.*` (4B Q6). The conversation and every other tool stay usable.
+- **T61:** a port-level `ReferenceDataUnavailableError` is mapped to `INFRA_UNAVAILABLE` with
+  `safe_details.reason="reference_data_unavailable"`.
+  - No numeric result is returned and nothing is persisted, not even the operation. A retry with
+    the same operation ID then works.
+  - It is covered deterministically by a test double. The production code paths are unchanged.
+
+### Envelope mapping
+- **Success:** the service `Outcome`, carrying its status, issues, versions and sources.
+- **`update_conversation_inputs`:** `ok`, with conflicts and missing information as issues.
+- **`confirm_profile_fields`:**
+  - `ok` when every field was confirmed;
+  - `partial` when some were;
+  - `needs_information` when none were (`notConfirmable` as issues).
+- **`BusinessError`:** `status=error`, with the stable code, safe details and any issues.
+- **Unexpected exception:** `status=error`, `INFRA_UNAVAILABLE`, no details.
+  - The log records the tool name, the exception type and the trace ID only (no arguments or
+    salary data).
+  - **Open for joint review:** the contract has no internal-error code.
+
+### Outbox and business event feed
+No responsibility is assigned to 4C. architecture.md ("D1 module isolation") and
+integration-contracts assign the Outbox and the feed to the representative-answer stage.
+Nothing was implemented.
+
+## 18. Step 4D (Business-owned part): HTTP API, authentication and sessions (2026-10-18)
+
+Status: implemented as **isolated Business components**, awaiting review. The shared
+`app/main.py`, `app/bootstrap.py` and `app/settings.py` are **not** changed; integration is the
+coordinated step described below. No shared contract or DTO was changed, and Q1 remains deferred.
+Not implemented: AI conversation endpoints, SSE, and workers.
+
+### What was added
+
+**Authentication (architecture §22):**
+- **Ports:** `application/ports/credentials.py` defines `PasswordHasher`, `AccessTokenCodec`,
+  `CredentialStore` and `RefreshSessionRepository`.
+- **Service:** `application/identity/auth_service.py`, `AuthService`, with `login`, `refresh`,
+  `logout` and `authenticate`.
+  - **Login:** a failure is a uniform `UNAUTHENTICATED`. An unknown login still pays the full hash
+    cost, and repeated failures are throttled (`RATE_LIMITED` with `Retry-After`, an in-process
+    window).
+  - **Access token:** 15 minutes. It carries only the subject and the session family; roles are
+    re-read from `auth.users` on every request, with `Origin.HTTP`.
+  - **Refresh token:** 8 hours and one-time use. Rotation happens under a row lock; reusing a
+    rotated token revokes the whole family. Logout revokes the family immediately.
+- **Operator path:** `application/identity/credential_admin.py`, `CredentialAdminService`. It
+  works only for the import operator from the CLI, and requires at least 12 characters.
+- **Infrastructure:** `infrastructure/security/password_hasher.py` (`hashlib.scrypt`, salted, with
+  constant-time verification) and `infrastructure/security/token_codec.py` (`Hs256TokenCodec`).
+  - The codec is standard library only: PyPI was not reachable (TLS interception,
+    `UnknownIssuer`), so PyJWT could not be added.
+  - It accepts a single fixed header, so `alg=none` and algorithm swaps are rejected. It uses a
+    constant-time signature compare, and checks `iss`, `aud`, `typ`, `exp` and `iat`.
+  - It requires a secret of at least 32 bytes. PyJWT can replace it behind the same port.
+- **Storage:** `repositories/credentials.py`, the ORM rows in `models/identity.py`, and a new
+  migration `0003_auth_credentials`.
+  - It adds `auth.credentials` and `auth.refresh_sessions` and is additive only: 0001/0002 are
+    unchanged.
+  - Only hashes are stored: scrypt for passwords, SHA-256 digests for refresh tokens.
+- **CLI:** `app/cli/set_password.py`. The password comes from `STRAUSS_NEW_PASSWORD` or a hidden
+  prompt, and is never printed. No password is in the repository.
+
+**Trusted context:** `CaseService.context_for_case(actor, case_id, trace_id) -> ToolContext`.
+- The actor comes only from the verified token. The case must be owned, else `NOT_FOUND`.
+- The conversation is taken from the stored case, so HTTP passes the same checks as the tools.
+
+**HTTP API** (`app/api/business/`), installed with `install_business_api(app, api)`:
+- **Routes:**
+  - `/api/v1/auth/{login,refresh,logout,me}` and `/api/v1/me/profile`;
+  - `/api/v1/cases/{caseId}`: `GET` and `PATCH`, plus `/profile-confirmations`, `/option-lists`,
+    `/vehicle-resolutions`, `/vehicle-tax-values`, `/eligibility-checks`,
+    `/occupation-resolutions`, `/readiness`, `/comparisons`, `/comparisons/{runId}`,
+    `/representative-requests` and `/representative-requests/{requestId}`.
+- **Facade integration:** each case route calls `BusinessToolsPort` (the 4C facade) with the
+  shared request DTOs unchanged. There is no case-creation route; cases come with
+  AI-owned conversations.
+- **Responses:** success is 200 with the contract `Envelope`, including missing information or
+  ineligibility. Errors are Problem Details (`application/problem+json`; provisional HTTP DTO):
+  `type`, `title`, `status`, `code`, `traceId`, `details`, `issues`.
+- **Status mapping:**
+
+  | Code | HTTP |
+  |---|---|
+  | `MALFORMED_REQUEST` | 400 |
+  | `UNAUTHENTICATED` | 401, with `WWW-Authenticate` |
+  | `FORBIDDEN` | 403 |
+  | `NOT_FOUND` | 404 |
+  | version, payload or state conflicts | 409 |
+  | invalid input or range | 422 |
+  | `RATE_LIMITED` | 429 |
+  | `INFRA_UNAVAILABLE` | 503 |
+  | `INFRA_UNAVAILABLE` with `reason=internal_error`, or anything unexpected | 500, no details |
+
+- **`BusinessRoute`:** scoped to the Business routers only.
+  - It sets a trace ID (from `X-Request-ID`, or generated) and echoes it.
+  - Validation errors list field locations and types, never the submitted values.
+  - It adds `Cache-Control: no-store`, `nosniff` and `no-referrer`.
+- **Cookies and CSRF:** the refresh cookie is `HttpOnly; Secure; SameSite=Strict;
+  Path=/api/v1/auth`. Refresh and logout require `X-CSRF-Protection: 1` and an allowed `Origin`,
+  when one is sent.
+- **OpenAPI:** `business_openapi()` builds the document. It is exported to
+  `contracts/openapi/business-api.json` by `tests/contract/business_openapi.py`; the API may be
+  imported only by `app.main`, so the exporter lives on the test side. `test_business_openapi.py`
+  fails on drift and checks that every non-auth route is bearer-protected.
+
+### Integration (coordinated change to shared files; not applied)
+
+1. **`settings.py`:**
+   - `auth_token_secret: SecretStr` (required, at least 32 bytes; startup fails without it
+     outside development);
+   - `auth_allowed_origins: list[str]`;
+   - `auth_cookie_secure: bool = True`.
+2. **`bootstrap.py`:** build
+   `AuthService(uow, ScryptPasswordHasher(), Hs256TokenCodec(secret, issuer=..., audience=...), clock)`
+   and `BusinessApi(auth=..., tools=services.tools, cases=services.cases,
+   profiles=services.profiles, http=HttpConfig(...))`.
+3. **`main.py`:**
+   - `install_business_api(app, business_api)`;
+   - `CORSMiddleware` for the Angular origin, with credentials and the `X-CSRF-Protection`
+     header;
+   - dispose the engine on shutdown.
+4. **Deployment:** add `uvicorn` as a dependency, run behind HTTPS, and limit request sizes at
+   the proxy.
+
+### Open items for joint review
+- The HTTP route names and the Problem Details shape (D4D-1/3).
+- SSE authentication (EventSource cannot send `Authorization`, D4D-7).
+- The ownership of `main.py` / `bootstrap.py` (D4D-8).
+- The `origin/feature/frontend` check (D4D-9, needs approval for a read-only Git command).
+- The throttle is in-process (single API instance in the MVP).
