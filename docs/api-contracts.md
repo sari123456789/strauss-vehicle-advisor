@@ -72,7 +72,7 @@ Hebrew messages, never codes.
 
 | Tool | Request | Result | Key rules |
 |---|---|---|---|
-| `get_conversation_context` | — | `CaseContext` | Latest actual profile, `salaryProfileVersionUsed`, `latestProfileVersion`, `profileMismatch`, hypothetical overrides, alternatives, open requests, recent runs with freshness. Business part only; messages are AI-owned. |
+| `get_conversation_context` | — | `CaseContext` | Latest actual profile, `salaryProfileVersionUsed`, `latestProfileVersion`, `profileMismatch`, hypothetical overrides, alternatives, open requests, recent runs with freshness, `fieldsRequiringConfirmation` (G4: informational, case-relative; ask only when the current goal needs the fact; no time-based expiry). Business part only; messages are AI-owned. |
 | `update_conversation_inputs` | `UpdateInputsRequest` | `UpdateInputsResult` | `set`/`clear` only on allowlisted `FieldPath`s; `actual_update` requires `expectedCaseVersion` **and** `expectedProfileVersion` and updates profile + case atomically; `hypothetical` touches the case only; `set null` invalid; one field at most once; whole list rejected on any invalid value. |
 | `list_eligible_options` | `ListOptionsRequest` | `ListOptionsResult` | Categories default `regular`+`family`; waiver only when requested; persisted `resultSetId`; ordered items with eligibility + reasons; `uncheckedCategories`, `scopeComplete`. |
 | `resolve_vehicle` | `ResolveVehicleRequest` | `ResolveVehicleResult` | Exactly one of `catalogueId`/`taxKey`/`query`; `resolved`/`ambiguous`/`not_found`; never auto-selects. |
@@ -82,6 +82,9 @@ Hebrew messages, never codes.
 | `compare_scenarios` | `CompareRequest` | `ComparisonResult` | Selection `explicit`(optionKeys)/`result_set`/`all_eligible`; `kind=regular` requires `expectedProfileVersion` (synchronizes to latest profile); per-scenario status; partial results; `delta` null without baseline. |
 | `create_representative_question` | `CreateQuestionRequest` | `CreateQuestionResult` | Allowlisted `fieldCode`; idempotent by key; blocks only the dependent option. |
 | `get_comparison_details` | `ComparisonDetailsRequest` | `ComparisonDetails` | Immutable snapshot; freshness evaluated on read; never recalculates. |
+| `get_representative_request` | `RepresentativeRequestLookup` | `RequestStatusView` | G1: one request of the server-bound case only; foreign/invented IDs are `NOT_FOUND`; read-only; `answer` empty until the answer stage. |
+| `resolve_occupation` | `ResolveOccupationRequest` | `ResolveOccupationResult` | G2: `resolved` only for an exact official ID or exact normalized official name (either written form of "X/ת"); otherwise `ambiguous` candidates or `not_found`; no synonyms, no invented IDs; never writes the profile. |
+| `confirm_profile_fields` | `ConfirmProfileFieldsRequest` | `ConfirmProfileFieldsResult` | G3: confirms saved usable actual values (sets `lastConfirmedAt`, revision + 1; values unchanged); missing/unclear fields in `notConfirmable`; `expectedCaseVersion` + `expectedProfileVersion`; idempotent by `operationId`; profile + case atomically. |
 
 `get_conversation_messages` (optional) is owned by the AI Engine and is not part of this port.
 
@@ -94,8 +97,12 @@ Hebrew messages, never codes.
 `currentArrangement.familyDeduction`, `currentArrangement.familyDeductionIncludedInParticipation`,
 `currentArrangement.allowance`.
 
-Not approved v1 operations (rejected by the contract): `confirm`, `reset`, `acceptAssumption`, per-field
-`scope`.
+Not approved v1 change operations in `update_conversation_inputs` (rejected by the contract): `confirm`,
+`reset`, `acceptAssumption`, per-field `scope`. Confirmation is the separate `confirm_profile_fields` tool (G3).
+
+`PendingRepresentativeField.fieldCode` is the `RepresentativeFieldCode` enum (G5).
+
+Step 4A result semantics (resolution, listing, dedupe): see `docs/business-decisions.md` §15.
 
 ## 5. Name mapping (D5)
 

@@ -10,13 +10,20 @@ Expected business outcomes and rejections are returned as `Envelope` values (sta
 
 from typing import Protocol, runtime_checkable
 
-from app.contracts.case_inputs import UpdateInputsRequest, UpdateInputsResult
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    ConfirmProfileFieldsResult,
+    UpdateInputsRequest,
+    UpdateInputsResult,
+)
 from app.contracts.cases import CaseContext
 from app.contracts.catalogue import (
     EligibilityRequest,
     EligibilityResult,
     ListOptionsRequest,
     ListOptionsResult,
+    ResolveOccupationRequest,
+    ResolveOccupationResult,
     ResolveVehicleRequest,
     ResolveVehicleResult,
     TaxValueRequest,
@@ -30,7 +37,12 @@ from app.contracts.comparisons import (
     ComparisonResult,
 )
 from app.contracts.readiness import ReadinessRequest, ReadinessResult
-from app.contracts.representatives import CreateQuestionRequest, CreateQuestionResult
+from app.contracts.representatives import (
+    CreateQuestionRequest,
+    CreateQuestionResult,
+    RepresentativeRequestLookup,
+    RequestStatusView,
+)
 from app.contracts.tool_context import ToolContext
 
 CANONICAL_TOOL_NAMES: tuple[str, ...] = (
@@ -44,6 +56,9 @@ CANONICAL_TOOL_NAMES: tuple[str, ...] = (
     "compare_scenarios",
     "create_representative_question",
     "get_comparison_details",
+    "get_representative_request",
+    "resolve_occupation",
+    "confirm_profile_fields",
 )
 
 
@@ -86,3 +101,15 @@ class BusinessToolsPort(Protocol):
     async def get_comparison_details(
         self, ctx: ToolContext, request: ComparisonDetailsRequest
     ) -> Envelope[ComparisonDetails]: ...
+
+    async def get_representative_request(
+        self, ctx: ToolContext, request: RepresentativeRequestLookup
+    ) -> Envelope[RequestStatusView]: ...
+
+    async def resolve_occupation(
+        self, ctx: ToolContext, request: ResolveOccupationRequest
+    ) -> Envelope[ResolveOccupationResult]: ...
+
+    async def confirm_profile_fields(
+        self, ctx: ToolContext, request: ConfirmProfileFieldsRequest
+    ) -> Envelope[ConfirmProfileFieldsResult]: ...

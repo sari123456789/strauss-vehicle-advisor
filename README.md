@@ -21,6 +21,13 @@ frontend is developed on the `feature/frontend` branch.
 - Step 3B: Business Application services — revalidated identity, authorization policy, employee
   profile and case services (actual vs hypothetical updates, idempotency, optimistic versions),
   contract changes C1–C4 (decision D1). See `docs/business-decisions.md` §14.
+- Step 4A: eligibility (group, family track, waiver), catalogue listing with immutable,
+  deduplicated result sets, vehicle resolution and official value of use, occupation resolution,
+  representative request status and field confirmation (contract changes G1–G5). See §15.
+- Step 4B: goal-specific calculation readiness and scenario comparisons (regular vs hypothetical,
+  current vs alternatives, partial results, immutable run snapshots, freshness on read). See §16.
+- Step 4C: `BusinessToolsFacade` (the 13 canonical tools as contract Envelopes) and employee-side
+  representative questions. See §17.
 
 ## Layout
 

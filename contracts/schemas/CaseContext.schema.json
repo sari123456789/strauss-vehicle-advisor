@@ -1294,6 +1294,13 @@
       "title": "Conversationid",
       "type": "string"
     },
+    "fieldsRequiringConfirmation": {
+      "items": {
+        "$ref": "#/$defs/FieldPath"
+      },
+      "title": "Fieldsrequiringconfirmation",
+      "type": "array"
+    },
     "hypotheticalOverrides": {
       "items": {
         "$ref": "#/$defs/HypotheticalOverride"

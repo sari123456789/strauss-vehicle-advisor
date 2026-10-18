@@ -22,6 +22,7 @@ from app.business.application.cases.changes import (
     effective_value,
     parse_changes,
 )
+from app.business.application.cases.confirmation import confirm_fields
 from app.business.application.cases.freshness import run_freshness
 from app.business.application.cases.mapping import case_context
 from app.business.application.errors import (
@@ -52,14 +53,20 @@ from app.business.domain.json_values import freeze_object
 from app.business.domain.representatives import RequestStatus
 from app.business.domain.rules import RulesConfig
 from app.business.domain.vehicles import VehicleRef
-from app.contracts.case_inputs import UpdateInputsRequest, UpdateInputsResult
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    ConfirmProfileFieldsResult,
+    UpdateInputsRequest,
+    UpdateInputsResult,
+)
 from app.contracts.case_lifecycle import CreateCaseCommand, CreateCaseResult
 from app.contracts.cases import CaseContext
-from app.contracts.common import Freshness, Issue, IssueCode, UpdateMode
+from app.contracts.common import FieldPath, Freshness, Issue, IssueCode, UpdateMode
 from app.contracts.tool_context import ActorRef, ToolContext
 
 CREATE_CASE = "create_case"
 UPDATE_INPUTS = "update_conversation_inputs"
+CONFIRM_FIELDS = "confirm_profile_fields"
 RECENT_RUNS = 20
 
 
@@ -185,6 +192,64 @@ class CaseService:
                 changes = parse_changes(request.changes, rules.limits)
                 await self._check_identifiers(changes, release)
                 result = await self._apply(uow, case, request, changes, release)
+                await uow.operations.complete(
+                    key, freeze_object(result.model_dump(mode="json", by_alias=True))
+                )
+                await uow.commit()
+                return result
+
+    # --- confirm (G3) -------------------------------------------------------------------
+
+    async def confirm_profile_fields(
+        self, ctx: ToolContext, request: ConfirmProfileFieldsRequest
+    ) -> ConfirmProfileFieldsResult:
+        """The employee confirms that saved actual values are still correct (G3).
+
+        Only usable fields are confirmed: `lastConfirmedAt`, employee provenance, the
+        confirming message and the revision change; values and `updatedAt` never change.
+        Missing or unclear fields are returned in `notConfirmable` and are not touched.
+        Version-checked (case and profile), idempotent by operation ID, and atomic: the
+        shared profile and this case's actual copy change in one transaction.
+        """
+        request_hash = canonical_request_hash(request.model_dump(mode="json", by_alias=True))
+        with translate_errors():
+            async with self._unit_of_work() as uow:
+                actor, case = await self._policy.tool_case(uow, ctx)
+                key = OperationKey(
+                    actor.subject_id,
+                    ScopeKind.CASE,
+                    case.case_id,
+                    CONFIRM_FIELDS,
+                    request.operation_id,
+                )
+                claim = await uow.operations.claim(key, request_hash)
+                if isinstance(claim, Replay) and claim.result is not None:
+                    return ConfirmProfileFieldsResult.model_validate(dict(claim.result))
+                if case.lifecycle_status is CaseLifecycleStatus.CLOSED:
+                    raise InvalidStateTransition("a closed case is read-only")
+                if request.expected_case_version != case.version:
+                    raise VersionConflict("the case changed in the meantime; reload first")
+                profile = await load_profile(uow, case.owner_subject_id)
+                if request.expected_profile_version != profile.version:
+                    raise VersionConflict("the employee profile changed in the meantime")
+                confirmed, not_confirmable, updated = confirm_fields(
+                    profile,
+                    [FactPath(f.value) for f in request.fields],
+                    now=self._clock.now(),
+                    source_message_id=request.source_message_id,
+                )
+                stored_case = case
+                if confirmed:
+                    profile = await uow.profiles.update(updated)
+                    stored_case = await uow.cases.update(
+                        replace(case, actual_facts=profile, updated_at=self._clock.now())
+                    )
+                result = ConfirmProfileFieldsResult(
+                    confirmed_fields=[FieldPath(p.value) for p in confirmed],
+                    not_confirmable=not_confirmable,
+                    new_case_version=stored_case.version,
+                    new_profile_version=profile.version,
+                )
                 await uow.operations.complete(
                     key, freeze_object(result.model_dump(mode="json", by_alias=True))
                 )

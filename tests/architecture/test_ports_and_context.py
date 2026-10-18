@@ -153,6 +153,36 @@ SERVICE_ENTRY_POINTS = {
         "create_case_for_conversation": "ActorRef",
         "get_context": "ToolContext",
         "update_inputs": "ToolContext",
+        "confirm_profile_fields": "ToolContext",
+    },
+    ("app.business.application.vehicles.catalogue_service", "CatalogueService"): {
+        "list_eligible_options": "ToolContext",
+        "check_eligibility": "ToolContext",
+    },
+    ("app.business.application.vehicles.valuation_service", "ValuationService"): {
+        "resolve_vehicle": "ToolContext",
+        "get_vehicle_tax_value": "ToolContext",
+    },
+    ("app.business.application.occupations.occupation_service", "OccupationService"): {
+        "resolve_occupation": "ToolContext",
+    },
+    (
+        "app.business.application.representatives.request_service",
+        "RepresentativeRequestService",
+    ): {"get_representative_request": "ToolContext"},
+    ("app.business.application.comparisons.readiness_service", "ReadinessService"): {
+        "check_calculation_readiness": "ToolContext",
+    },
+    (
+        "app.business.application.representatives.question_service",
+        "RepresentativeQuestionService",
+    ): {"create_representative_question": "ToolContext"},
+    ("app.business.application.tools_facade", "BusinessToolsFacade"): {
+        name: "ToolContext" for name in CANONICAL_TOOL_NAMES
+    },
+    ("app.business.application.comparisons.comparison_service", "ComparisonService"): {
+        "compare_scenarios": "ToolContext",
+        "get_comparison_details": "ToolContext",
     },
 }
 

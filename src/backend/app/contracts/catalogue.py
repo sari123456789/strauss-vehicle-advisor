@@ -17,6 +17,7 @@ from app.contracts.common import (
     EntitlementGroup,
     Issue,
     NonNegativeMoneyStr,
+    OccupationIdStr,
     OptionCategory,
     OptionKeyStr,
     Propulsion,
@@ -165,3 +166,23 @@ class EligibilityResult(ContractModel):
     status: EligibilityStatus
     reasons: list[EligibilityReason] = Field(default_factory=list)
     missing_information: list[Issue] = Field(default_factory=list)
+
+
+class ResolveOccupationRequest(ContractModel):
+    """`resolve_occupation` (G2). Without a query, every official occupation is returned."""
+
+    query: Annotated[str, StringConstraints(min_length=1, max_length=120)] | None = None
+
+
+class OccupationCandidate(ContractModel):
+    occupation_id: OccupationIdStr
+    name_he: str
+    """Official Hebrew occupation name from the occupation table."""
+
+
+class ResolveOccupationResult(ContractModel):
+    """`resolved` only for an official ID or an exact normalized official name; otherwise
+    candidates for clarification (`ambiguous`) or `not_found`. Never a guessed or new ID."""
+
+    status: ResolveStatus
+    candidates: list[OccupationCandidate] = Field(default_factory=list, max_length=20)

@@ -11,17 +11,22 @@ from app.ai.application.ports.input_queue import (
     InputPayloadMismatchError,
 )
 from app.contracts.business_port import CANONICAL_TOOL_NAMES, BusinessToolsPort
-from app.contracts.case_inputs import UpdateInputsRequest
+from app.contracts.case_inputs import ConfirmProfileFieldsRequest, UpdateInputsRequest
 from app.contracts.catalogue import (
     EligibilityRequest,
     ListOptionsRequest,
+    ResolveOccupationRequest,
     ResolveVehicleRequest,
     TaxValueRequest,
 )
 from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode
 from app.contracts.comparisons import CompareRequest, ComparisonDetailsRequest, ScenarioStatus
 from app.contracts.readiness import ReadinessRequest
-from app.contracts.representatives import CreateQuestionRequest, RepresentativeAnsweredEvent
+from app.contracts.representatives import (
+    CreateQuestionRequest,
+    RepresentativeAnsweredEvent,
+    RepresentativeRequestLookup,
+)
 from app.contracts.tool_context import ToolContext
 from tests.fakes.ai.fake_input_queue import InMemoryInputQueue
 from tests.fakes.ai.fake_unit_of_work import InMemoryUnitOfWork
@@ -77,6 +82,18 @@ REQUESTS: dict[str, Any] = {
         }
     ),
     "get_comparison_details": ComparisonDetailsRequest.model_validate({"runId": str(uuid4())}),
+    "get_representative_request": RepresentativeRequestLookup.model_validate(
+        {"requestId": str(uuid4())}
+    ),
+    "resolve_occupation": ResolveOccupationRequest.model_validate({"query": "מפתח/ת תוכנה"}),
+    "confirm_profile_fields": ConfirmProfileFieldsRequest.model_validate(
+        {
+            "expectedCaseVersion": 3,
+            "expectedProfileVersion": 5,
+            "operationId": str(uuid4()),
+            "fields": ["payroll.baseGross", "payroll.creditPoints"],
+        }
+    ),
 }
 
 

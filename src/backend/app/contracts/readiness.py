@@ -19,6 +19,7 @@ from app.contracts.common import (
     OptionCategory,
     OptionKeyStr,
 )
+from app.contracts.representatives import RepresentativeFieldCode
 
 
 class ReadinessGoal(StrEnum):
@@ -59,7 +60,7 @@ class Selection(ContractModel):
 
 class PendingRepresentativeField(ContractModel):
     request_id: UUID
-    field_code: str
+    field_code: RepresentativeFieldCode
     option_key: OptionKeyStr | None = None
 
 

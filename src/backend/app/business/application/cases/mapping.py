@@ -6,6 +6,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
+from app.business.application.cases.confirmation import fields_requiring_confirmation
 from app.business.domain.cases import (
     Alternative,
     ComparisonCase,
@@ -147,6 +148,9 @@ def case_context(
             "hypothetical_overrides": [override_view(o) for o in case.hypothetical_overrides],
             "alternatives": [alternative_view(a) for a in alternatives],
             "open_requests": [request_summary(r) for r in open_requests],
+            "fields_requiring_confirmation": fields_requiring_confirmation(
+                latest_profile, case.created_at
+            ),
             "recent_runs": [
                 RunSummary.model_validate(
                     {

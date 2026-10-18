@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 import psycopg
 from psycopg.types.json import Jsonb
-from sqlalchemy import insert, select, text
+from sqlalchemy import func, insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.business.application.ports.reference_data import (
@@ -27,6 +27,7 @@ from app.business.application.ports.reference_data import (
     ReleaseIdentity,
     RulesSource,
     TaxDatasetSource,
+    TaxRecordDetails,
 )
 from app.business.domain.occupations import OccupationPolicy
 from app.business.domain.rules import EntitlementGroup, RulesConfig
@@ -48,6 +49,7 @@ from app.business.infrastructure.database.models.reference_data import (
 )
 from app.business.infrastructure.imports.rules_json_loader import JsonDocument
 from app.business.infrastructure.imports.rules_loader import build_rules_config
+from app.business.infrastructure.imports.tax_csv_importer import EXPECTED_HEADER
 
 PUBLICATION_LOCK_KEY = 0x5354524155535301
 """Advisory lock serializing reference-data publications ("STRAUSS" + 01)."""
@@ -76,6 +78,44 @@ def _report(report: ImportReport) -> dict[str, Any]:
             k: list(v) if isinstance(v, tuple) else v for k, v in (report.details or {}).items()
         },
     }
+
+
+_COMMERCIAL_NAME = EXPECTED_HEADER.index("כינוי מסחרי")
+_MANUFACTURER_NAME = EXPECTED_HEADER.index("תוצר")
+_MODEL_DESCRIPTION = EXPECTED_HEADER.index("תאור דגם")
+
+
+def _occupation(row: OccupationPolicyRow) -> OccupationPolicy:
+    return OccupationPolicy(
+        occupation_id=row.occupation_id,
+        name_he=row.name_he,
+        group=EntitlementGroup(row.entitlement_group),
+        mandatory_car=row.mandatory_car,
+        waiver_allowed=row.waiver_allowed,
+        waiver_allowance=row.waiver_allowance,
+    )
+
+
+def _tax_details(row: ValueOfUseRow) -> TaxRecordDetails:
+    """Descriptive columns from the original CSV values (trimmed for display/matching)."""
+    values = row.source_values
+    key = VehicleTaxKey(
+        row.tax_year,
+        row.registration_year,
+        row.vehicle_type_code,
+        row.manufacturer_code,
+        row.model_code,
+    )
+    return TaxRecordDetails(
+        record=TaxRecord(key=key, value_of_use=row.value_of_use, effective_date=row.effective_date),
+        manufacturer_name=str(values[_MANUFACTURER_NAME]).strip(),
+        commercial_name=str(values[_COMMERCIAL_NAME]).strip(),
+        model_description=str(values[_MODEL_DESCRIPTION]).strip(),
+    )
+
+
+def _escape_like(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _vehicle(row: VehicleRow) -> CatalogueVehicle:
@@ -150,16 +190,7 @@ class SqlReferenceDataRepository:
     ) -> OccupationPolicy | None:
         async with self._sessions() as session:
             row = await session.get(OccupationPolicyRow, (catalogue_version_id, occupation_id))
-            if row is None:
-                return None
-            return OccupationPolicy(
-                occupation_id=row.occupation_id,
-                name_he=row.name_he,
-                group=EntitlementGroup(row.entitlement_group),
-                mandatory_car=row.mandatory_car,
-                waiver_allowed=row.waiver_allowed,
-                waiver_allowance=row.waiver_allowance,
-            )
+            return None if row is None else _occupation(row)
 
     async def get_value_of_use(
         self, tax_dataset_version_id: UUID, key: VehicleTaxKey
@@ -181,6 +212,67 @@ class SqlReferenceDataRepository:
             return TaxRecord(
                 key=key, value_of_use=row.value_of_use, effective_date=row.effective_date
             )
+
+    async def list_occupations(self, catalogue_version_id: UUID) -> tuple[OccupationPolicy, ...]:
+        async with self._sessions() as session:
+            rows = await session.scalars(
+                select(OccupationPolicyRow)
+                .where(OccupationPolicyRow.catalogue_version_id == catalogue_version_id)
+                .order_by(OccupationPolicyRow.occupation_id)
+            )
+            return tuple(_occupation(r) for r in rows)
+
+    async def get_tax_record_details(
+        self, tax_dataset_version_id: UUID, key: VehicleTaxKey
+    ) -> TaxRecordDetails | None:
+        async with self._sessions() as session:
+            row = await session.get(
+                ValueOfUseRow,
+                (
+                    tax_dataset_version_id,
+                    key.tax_year,
+                    key.registration_year,
+                    key.vehicle_type_code,
+                    key.manufacturer_code,
+                    key.model_code,
+                ),
+            )
+            return None if row is None else _tax_details(row)
+
+    async def find_tax_records(
+        self,
+        tax_dataset_version_id: UUID,
+        *,
+        commercial_name: str,
+        registration_year: str | None = None,
+        manufacturer_code: str | None = None,
+        model_code: str | None = None,
+        limit: int,
+    ) -> tuple[TaxRecordDetails, ...]:
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        pattern = "%" + _escape_like(commercial_name.strip()) + "%"
+        name = func.trim(ValueOfUseRow.source_values[_COMMERCIAL_NAME].astext)
+        statement = select(ValueOfUseRow).where(
+            ValueOfUseRow.tax_dataset_version_id == tax_dataset_version_id,
+            name.ilike(pattern, escape="\\"),
+        )
+        for column, value in (
+            (ValueOfUseRow.registration_year, registration_year),
+            (ValueOfUseRow.manufacturer_code, manufacturer_code),
+            (ValueOfUseRow.model_code, model_code),
+        ):
+            if value is not None:
+                statement = statement.where(column == value)
+        statement = statement.order_by(
+            ValueOfUseRow.tax_year,
+            ValueOfUseRow.registration_year,
+            ValueOfUseRow.vehicle_type_code,
+            ValueOfUseRow.manufacturer_code,
+            ValueOfUseRow.model_code,
+        ).limit(limit)
+        async with self._sessions() as session:
+            return tuple(_tax_details(r) for r in await session.scalars(statement))
 
     async def _release(
         self, session: AsyncSession, release_id: UUID | None

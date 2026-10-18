@@ -38,6 +38,17 @@ class SqlEmployeeProfileRepository:
             return None
         return decode_facts(row.fields, employee_id=employee_id, version=row.version)
 
+    async def lock(self, employee_id: UUID) -> EmployeeProfile | None:
+        statement = (
+            select(PROFILES.c.version, PROFILES.c.fields)
+            .where(PROFILES.c.employee_id == employee_id)
+            .with_for_update()
+        )
+        row = (await self._session.execute(statement)).first()
+        if row is None:
+            return None
+        return decode_facts(row.fields, employee_id=employee_id, version=row.version)
+
     async def add(self, profile: EmployeeProfile, *, origin: JsonObject | None = None) -> None:
         statement = (
             insert(PROFILES)

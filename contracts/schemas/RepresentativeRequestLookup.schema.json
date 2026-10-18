@@ -1,0 +1,16 @@
+{
+  "additionalProperties": false,
+  "description": "`get_representative_request` (G1): one request of the server-bound case.",
+  "properties": {
+    "requestId": {
+      "format": "uuid",
+      "title": "Requestid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "requestId"
+  ],
+  "title": "RepresentativeRequestLookup",
+  "type": "object"
+}

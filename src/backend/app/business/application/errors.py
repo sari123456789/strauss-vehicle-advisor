@@ -6,25 +6,38 @@ exceptions in one place. Expected outcomes are returned (not raised) at the cont
 carries no details, so another employee's resources are never disclosed.
 """
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any
 
+from app.business.application.ports.reference_data import ReferenceDataUnavailableError
 from app.business.application.ports.repositories import (
     OperationPayloadMismatchError,
     VersionConflictError,
 )
-from app.business.domain.errors import DomainError, OutOfSupportedRangeError
+from app.business.domain.errors import (
+    DomainError,
+    OutOfSupportedRangeError,
+    UnsupportedPolicyError,
+)
 from app.business.domain.representatives import InvalidStateTransitionError
-from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode, ErrorInfo
+from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode, ErrorInfo, Issue
 
 
 class BusinessError(Exception):
     code: ErrorCode = ErrorCode.INVALID_BUSINESS_INPUT
 
-    def __init__(self, message: str, *, safe_details: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        safe_details: dict[str, str] | None = None,
+        issues: Sequence[Issue] = (),
+    ) -> None:
         super().__init__(message)
         self.safe_details = dict(safe_details or {})
+        self.issues = tuple(issues)
+        """Business observations returned with the error (e.g. `VEHICLE_NOT_FOUND`)."""
 
 
 class UnauthenticatedError(BusinessError):
@@ -40,8 +53,10 @@ class NotFoundError(BusinessError):
 
     code = ErrorCode.NOT_FOUND
 
-    def __init__(self, message: str = "resource not found") -> None:
-        super().__init__(message)
+    def __init__(
+        self, message: str = "resource not found", *, issues: Sequence[Issue] = ()
+    ) -> None:
+        super().__init__(message, issues=issues)
 
 
 class VersionConflict(BusinessError):
@@ -68,6 +83,11 @@ class InfrastructureUnavailable(BusinessError):
     code = ErrorCode.INFRA_UNAVAILABLE
 
 
+class UnsupportedPolicy(InfrastructureUnavailable):
+    """The published rules contain a policy the deterministic engine does not implement
+    (decision A8): the operation cannot be answered; nothing is guessed."""
+
+
 def to_business_error(error: Exception) -> BusinessError | None:
     """Translate a known Domain/port exception; `None` for anything unexpected."""
     if isinstance(error, BusinessError):
@@ -81,6 +101,13 @@ def to_business_error(error: Exception) -> BusinessError | None:
     if isinstance(error, OutOfSupportedRangeError):
         field = {"field": error.field} if error.field else None
         return OutOfSupportedRange(str(error), safe_details=field)
+    if isinstance(error, ReferenceDataUnavailableError):
+        return InfrastructureUnavailable(
+            "reference data is temporarily unavailable",
+            safe_details={"reason": "reference_data_unavailable"},
+        )
+    if isinstance(error, UnsupportedPolicyError):
+        return UnsupportedPolicy(str(error), safe_details={"reason": "unsupported_policy"})
     if isinstance(error, DomainError):
         field = {"field": error.field} if error.field else None
         return InvalidInput(str(error), safe_details=field)
@@ -102,5 +129,6 @@ def error_envelope(error: BusinessError, trace_id: str) -> Envelope[Any]:
     return Envelope[Any](
         status=EnvelopeStatus.ERROR,
         error=ErrorInfo(code=error.code, trace_id=trace_id, safe_details=error.safe_details),
+        issues=list(error.issues),
         trace_id=trace_id,
     )
