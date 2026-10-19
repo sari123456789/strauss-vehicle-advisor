@@ -21,10 +21,18 @@ from app.ai.workflow.models import (
     ProposedFact,
 )
 from app.ai.workflow.runner import LangGraphTurnRunner
-from app.contracts.case_inputs import UpdateInputsRequest
-from app.contracts.common import UpdateMode
-from app.contracts.comparisons import CompareRequest
-from app.contracts.readiness import ReadinessRequest, SelectionMode
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    ConfirmProfileFieldsResult,
+    SetChange,
+    UpdateInputsRequest,
+    UpdateInputsResult,
+)
+from app.contracts.catalogue import ResolveOccupationResult
+from app.contracts.common import Envelope, UpdateMode
+from app.contracts.comparisons import CompareRequest, ComparisonResult
+from app.contracts.readiness import ReadinessRequest, ReadinessResult, SelectionMode
+from app.contracts.representatives import RequestStatusView
 from app.contracts.tool_context import ActorRef, Origin, Role, ToolContext
 from tests.fakes.ai.fake_llm import ScriptedLlm, failure, interpretation
 from tests.fakes.fake_business_port import FakeBusinessPort
@@ -39,13 +47,22 @@ class SwitchablePort:
     def __init__(self, scenario: str = "success") -> None:
         self.fake = FakeBusinessPort(scenario)
         self.calls: list[tuple[str, Any]] = []
+        self.overrides: dict[str, Envelope[Any]] = {}
+        """Test-local responses for situations the shared fixtures do not cover."""
 
     def use(self, scenario: str) -> None:
         self.fake = FakeBusinessPort(scenario)
 
+    def override(self, tool: str, result_type: type[Any], raw: dict[str, Any]) -> None:
+        self.overrides[tool] = Envelope[result_type].model_validate(  # type: ignore[valid-type]
+            {"traceId": "test-trace", **raw}
+        )
+
     def __getattr__(self, name: str) -> Any:
         async def call(ctx: ToolContext, *args: Any) -> Any:
             self.calls.append((name, args[0] if args else None))
+            if name in self.overrides:
+                return self.overrides[name]
             return await getattr(self.fake, name)(ctx, *args)
 
         return call
@@ -218,6 +235,7 @@ async def test_representative_answer_updates_only_the_affected_option() -> None:
     goal_before = (await runner.conversation_state("thread-1"))["active_goal"]
     model_calls_before = len(llm.tasks)
     port.use("success")
+    answer_request(port, "answered")
     answered = await runner.run_turn(
         thread_id="thread-1",
         tool_context=CTX,
@@ -451,3 +469,391 @@ async def test_recent_history_is_bounded_in_the_prompt() -> None:
     turn = TurnInput(uuid4(), InputKind.USER_MESSAGE, text="שלום", recent_messages=history)
     await runner.run_turn(thread_id="thread-1", tool_context=CTX, turn=turn)
     assert len(llm.tasks[0].messages) == 7  # six history messages plus the new one
+
+
+# --- G1-G5: representative status, occupations and confirmations ------------------------------
+
+PARTICIPATION = "currentArrangement.participation"
+
+
+def answer_request(port: SwitchablePort, status: str, outcome: str | None = None) -> None:
+    answer: dict[str, Any] | None = None
+    if outcome is not None:
+        answer = {"outcome": outcome, "answeredAt": "2026-10-16T08:00:00Z"}
+        if outcome == "answered":
+            answer |= {"value": "350.00", "unit": "ILS"}
+    port.override(
+        "get_representative_request",
+        RequestStatusView,
+        {
+            "status": "ok",
+            "data": {
+                "requestId": str(PENDING_REQUEST),
+                "status": status,
+                "fieldCode": "alternative.participation",
+                "optionKey": "vehicle:CAR-11",
+                "answer": answer,
+                "createdAt": "2026-10-15T08:06:00Z",
+                "updatedAt": "2026-10-16T08:00:00Z",
+            },
+        },
+    )
+
+
+async def answer_turn(runner: LangGraphTurnRunner) -> TurnOutcome:
+    return await runner.run_turn(
+        thread_id="thread-1",
+        tool_context=CTX,
+        turn=TurnInput(uuid4(), InputKind.REPRESENTATIVE_ANSWERED, request_id=PENDING_REQUEST),
+    )
+
+
+async def pending_runner() -> tuple[LangGraphTurnRunner, SwitchablePort]:
+    runner, port, llm = make("blocked")
+    llm.interpret(interpretation(Intent.CALCULATE_OPTIONS, all_options=True))
+    await say(runner, "תחשב לי את כל החלופות")
+    port.use("success")
+    return runner, port
+
+
+async def test_answer_event_is_verified_and_an_open_request_stays_pending() -> None:
+    runner, port = await pending_runner()
+    calls_before = len(port.calls)
+    outcome = await answer_turn(runner)  # the shared fixture reports the request as still open
+    assert outcome.messages == ()
+    assert port.tools()[calls_before:] == ["get_conversation_context", "get_representative_request"]
+    assert port.requests("get_representative_request")[0].request_id == PENDING_REQUEST
+    state = await runner.conversation_state("thread-1")
+    assert str(PENDING_REQUEST) in state["pending_tasks"]
+
+
+async def test_undetermined_answer_explains_and_calculates_nothing() -> None:
+    runner, port = await pending_runner()
+    answer_request(port, "cannot_determine", "cannot_determine")
+    calls_before = len(port.calls)
+    outcome = await answer_turn(runner)
+    assert "לא יכול היה לקבוע" in text_of(outcome)
+    assert "compare_scenarios" not in port.tools()[calls_before:]
+    assert (await runner.conversation_state("thread-1"))["pending_tasks"] == {}
+    assert_employee_safe(outcome)
+
+
+async def test_unknown_or_foreign_request_is_dropped_silently() -> None:
+    runner, port = await pending_runner()
+    port.override(
+        "get_representative_request",
+        RequestStatusView,
+        {"status": "error", "error": {"code": "NOT_FOUND", "traceId": "test-trace"}},
+    )
+    outcome = await answer_turn(runner)
+    assert outcome.messages == ()
+    assert (await runner.conversation_state("thread-1"))["pending_tasks"] == {}
+
+
+async def test_pending_field_code_is_checkpointed_as_a_plain_string() -> None:
+    runner, _ = await pending_runner()
+    task = (await runner.conversation_state("thread-1"))["pending_tasks"][str(PENDING_REQUEST)]
+    assert type(task["fieldCode"]) is str and task["fieldCode"] == "alternative.participation"
+
+
+def needs_confirmation(port: SwitchablePort) -> None:
+    port.override(
+        "check_calculation_readiness",
+        ReadinessResult,
+        {
+            "status": "partial",
+            "caseVersion": 3,
+            "issues": [
+                {
+                    "code": "AMBIGUOUS_INPUT",
+                    "field": PARTICIPATION,
+                    "reason": "confirmation_required",
+                }
+            ],
+            "data": {
+                "readyScenarioIds": ["vehicle:CAR-10"],
+                "baselineReady": False,
+                "scopeComplete": True,
+            },
+        },
+    )
+
+
+def confirms(port: SwitchablePort) -> None:
+    port.override(
+        "confirm_profile_fields",
+        ConfirmProfileFieldsResult,
+        {
+            "status": "ok",
+            "data": {
+                "confirmedFields": [PARTICIPATION],
+                "newCaseVersion": 4,
+                "newProfileVersion": 6,
+            },
+        },
+    )
+
+
+async def test_unconfirmed_baseline_asks_only_that_fact_and_shows_no_delta() -> None:
+    runner, port, llm = make()
+    needs_confirmation(port)
+    llm.interpret(interpretation(Intent.COMPARE_TO_CURRENT, all_options=True))
+    llm.compose("החישוב מוכן.")
+    outcome = await say(runner, "מה עדיף לי לעומת היום?")
+    compare: CompareRequest = port.requests("compare_scenarios")[0]
+    assert compare.include_current is False  # never a definitive delta from an unconfirmed fact
+    asks = [m for m in outcome.messages if m.kind == "confirmation_request"]
+    assert len(asks) == 1 and asks[0].payload["fields"] == [PARTICIPATION]
+    assert "שכר" not in asks[0].text  # targeted: no blanket profile questionnaire
+    assert "confirm_profile_fields" not in port.tools()  # nothing is confirmed implicitly
+    state = await runner.conversation_state("thread-1")
+    assert state["awaiting_confirmation"] == [PARTICIPATION]
+
+
+async def test_explicit_confirmation_confirms_asked_facts_and_resumes_the_goal() -> None:
+    runner, port, llm = make()
+    needs_confirmation(port)
+    llm.interpret(
+        interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
+    await say(runner, "מה עדיף לי לעומת היום?")
+    del port.overrides["check_calculation_readiness"]
+    confirms(port)
+    input_id = uuid4()
+    outcome = await say(runner, "כן, זה עדיין נכון", input_id)
+    confirm: ConfirmProfileFieldsRequest = port.requests("confirm_profile_fields")[0]
+    assert [f.value for f in confirm.fields] == [PARTICIPATION]
+    assert (confirm.expected_case_version, confirm.expected_profile_version) == (3, 5)
+    assert confirm.source_message_id == input_id
+    compare: CompareRequest = port.requests("compare_scenarios")[-1]
+    assert compare.include_current is True
+    assert (compare.expected_case_version, compare.expected_profile_version) == (4, 6)
+    assert any(m.kind == "confirmation" for m in outcome.messages)
+    assert (await runner.conversation_state("thread-1"))["awaiting_confirmation"] == []
+
+
+async def test_confirmation_resumes_exactly_the_explicitly_selected_option() -> None:
+    runner, port, llm = make()
+    llm.interpret(
+        interpretation(Intent.LIST_OPTIONS),
+        interpretation(
+            Intent.COMPARE_TO_CURRENT,
+            option_refs=[OptionReference(kind="catalogue_id", value="CAR-06")],
+        ),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
+    await say(runner, "אילו רכבים יש?")  # stores a result set for the whole list
+    needs_confirmation(port)
+    await say(runner, "כמה אקבל עם MG4 לעומת היום?")
+    goal = (await runner.conversation_state("thread-1"))["active_goal"]
+    assert goal["optionKeys"] == ["vehicle:CAR-06"] and goal["includeCurrent"] is True
+    del port.overrides["check_calculation_readiness"]
+    confirms(port)
+    await say(runner, "כן, נכון")
+    # The AI's own selection; `compare_scenarios` then receives what readiness reports ready
+    # (a canned list in this fake; the real-Business test asserts the compare arguments).
+    readiness: ReadinessRequest = port.requests("check_calculation_readiness")[-1]
+    assert readiness.selection is not None
+    assert readiness.selection.mode is SelectionMode.EXPLICIT  # never the earlier result set
+    assert readiness.selection.option_keys == ["vehicle:CAR-06"]
+    assert readiness.include_current is True
+    assert port.requests("compare_scenarios")[-1].include_current is True
+
+
+async def test_a_goal_without_an_explicit_selection_keeps_the_previous_behavior() -> None:
+    runner, port, llm = make()
+    needs_confirmation(port)
+    llm.interpret(
+        interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
+    await say(runner, "מה עדיף לי לעומת היום?")
+    assert "optionKeys" not in (await runner.conversation_state("thread-1"))["active_goal"]
+    del port.overrides["check_calculation_readiness"]
+    confirms(port)
+    await say(runner, "כן")
+    readiness: ReadinessRequest = port.requests("check_calculation_readiness")[-1]
+    assert readiness.selection is not None
+    assert readiness.selection.mode is SelectionMode.ALL_ELIGIBLE
+
+
+async def test_confirmation_operation_id_is_stable_across_replays() -> None:
+    input_id, operation_ids = uuid4(), []
+    for _ in range(2):
+        runner, port, llm = make()
+        needs_confirmation(port)
+        confirms(port)
+        llm.interpret(
+            interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+            interpretation(Intent.CONFIRM_FACTS),
+        )
+        await say(runner, "מה עדיף לי לעומת היום?", UUID(int=1))
+        await say(runner, "כן", input_id)
+        operation_ids.append(port.requests("confirm_profile_fields")[0].operation_id)
+    assert operation_ids[0] == operation_ids[1]
+
+
+async def test_nothing_is_confirmed_without_a_pending_question() -> None:
+    runner, port, llm = make()
+    llm.interpret(interpretation(Intent.CONFIRM_FACTS))
+    outcome = await say(runner, "כן, הכל נכון")
+    assert "confirm_profile_fields" not in port.tools()
+    assert outcome.messages[-1].kind == "info"
+
+
+async def test_a_value_stated_in_the_same_turn_is_never_confirmed() -> None:
+    runner, port, llm = make()
+    needs_confirmation(port)
+    llm.interpret(
+        interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+        interpretation(
+            Intent.CONFIRM_FACTS,
+            facts=[fact(FactField.CURRENT_PARTICIPATION, "500", FactMode.HYPOTHETICAL)],
+        ),
+    )
+    await say(runner, "מה עדיף לי לעומת היום?")
+    await say(runner, "נכון, אבל מה אם ההשתתפות תהיה 500?")
+    assert "confirm_profile_fields" not in port.tools()
+    update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
+    assert update.mode is UpdateMode.HYPOTHETICAL
+
+
+async def test_confirmation_version_conflict_reloads_and_asks_again() -> None:
+    runner, port, llm = make()
+    needs_confirmation(port)
+    llm.interpret(
+        interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
+    await say(runner, "מה עדיף לי לעומת היום?")
+    port.override(
+        "confirm_profile_fields",
+        ConfirmProfileFieldsResult,
+        {"status": "error", "error": {"code": "VERSION_CONFLICT", "traceId": "test-trace"}},
+    )
+    calls_before = len(port.calls)
+    outcome = await say(runner, "כן")
+    assert port.tools()[calls_before:] == [
+        "get_conversation_context",
+        "confirm_profile_fields",
+        "get_conversation_context",
+    ]
+    assert "עודכנו בינתיים" in text_of(outcome)
+    assert (await runner.conversation_state("thread-1"))["awaiting_confirmation"] == [PARTICIPATION]
+    assert_employee_safe(outcome)
+
+
+async def test_listing_and_opening_never_trigger_confirmation() -> None:
+    runner, port, llm = make()
+    llm.interpret(interpretation(Intent.SMALLTALK), interpretation(Intent.LIST_OPTIONS))
+    await say(runner, "שלום")
+    await say(runner, "אילו רכבים מתאימים לי?")
+    assert "confirm_profile_fields" not in port.tools()
+    assert "check_calculation_readiness" not in port.tools()
+
+
+async def test_resolved_occupation_is_saved_through_update_inputs() -> None:
+    runner, port, llm = make()
+    llm.interpret(
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.OCCUPATION_ID, "מפתחת תוכנה")])
+    )
+    await say(runner, "אני מפתחת תוכנה")
+    assert port.requests("resolve_occupation")[0].query == "מפתחת תוכנה"
+    update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
+    assert update.mode is UpdateMode.ACTUAL_UPDATE
+    change = update.changes[0]
+    assert isinstance(change, SetChange)
+    assert change.field.value == "employee.occupationId" and change.value == "OCC-SOFTWARE-DEV"
+
+
+async def test_ambiguous_occupation_is_never_auto_selected() -> None:
+    runner, port, llm = make()
+    port.override(
+        "resolve_occupation",
+        ResolveOccupationResult,
+        {
+            "status": "ok",
+            "data": {
+                "status": "ambiguous",
+                "candidates": [{"occupationId": "OCC-SOFTWARE-DEV", "nameHe": "מפתח תוכנה"}],
+            },
+        },
+    )
+    llm.interpret(
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.OCCUPATION_ID, "מתכנת")]),
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.OCCUPATION_ID, "1")]),
+    )
+    first = await say(runner, "אני מתכנת")
+    assert "update_conversation_inputs" not in port.tools()  # even with a single candidate
+    assert "מפתח תוכנה" in text_of(first)
+    await say(runner, "הראשון")
+    assert port.tools().count("resolve_occupation") == 1  # the choice is resolved by code
+    update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
+    assert isinstance(update.changes[0], SetChange)
+    assert update.changes[0].value == "OCC-SOFTWARE-DEV"
+    assert (await runner.conversation_state("thread-1"))["occupation_candidates"] == []
+
+
+async def test_unknown_occupation_asks_again_without_writing() -> None:
+    runner, port, llm = make()
+    port.override(
+        "resolve_occupation",
+        ResolveOccupationResult,
+        {"status": "needs_information", "data": {"status": "not_found"}},
+    )
+    llm.interpret(
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.OCCUPATION_ID, "אסטרונאוט")])
+    )
+    outcome = await say(runner, "אני אסטרונאוט")
+    assert "update_conversation_inputs" not in port.tools()
+    assert "לא מצאתי עיסוק" in text_of(outcome)
+
+
+async def test_option_list_from_an_older_release_is_dropped() -> None:
+    runner, port, llm = make()
+    llm.interpret(interpretation(Intent.LIST_OPTIONS), interpretation(Intent.CALCULATE_OPTIONS))
+    await say(runner, "אילו רכבים יש?")
+    port.override(
+        "compare_scenarios",
+        ComparisonResult,
+        {
+            "status": "error",
+            "error": {"code": "VERSION_CONFLICT", "traceId": "test-trace"},
+            "issues": [{"code": "STALE_REVISION", "reason": "result_set_release_changed"}],
+        },
+    )
+    outcome = await say(runner, "תחשב את כולן")
+    assert outcome.messages[-1].kind == "options_changed"
+    state = await runner.conversation_state("thread-1")
+    assert state["result_set_id"] is None and state["displayed_options"] == []
+    assert_employee_safe(outcome)
+
+
+async def test_committed_update_with_conflicts_is_not_treated_as_usable() -> None:
+    runner, port, llm = make()
+    port.override(
+        "update_conversation_inputs",
+        UpdateInputsResult,
+        {
+            "status": "ok",
+            "data": {
+                "acceptedFields": ["currentArrangement.propulsion"],
+                "conflicts": [
+                    {
+                        "code": "SOURCE_CONFLICT",
+                        "field": "currentArrangement.propulsion",
+                        "reason": "catalogue_propulsion_differs",
+                    }
+                ],
+                "newCaseVersion": 4,
+                "newProfileVersion": 6,
+            },
+        },
+    )
+    llm.interpret(
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.CURRENT_PROPULSION, "electric")])
+    )
+    outcome = await say(runner, "הרכב שלי חשמלי")
+    assert any(m.kind == "conflict" for m in outcome.messages)
+    assert "סתירה" in text_of(outcome)

@@ -84,8 +84,8 @@ _CLARIFICATIONS = {
     ClarificationCode.RATE_UNIT: "באיזה אחוז מדובר ב{label}? למשל 6%.",
     ClarificationCode.INVALID_VALUE: "לא הצלחתי להבין את הערך של {label}. אפשר לכתוב אותו שוב?",
     ClarificationCode.CONFLICTING_VALUES: "ציינת שני ערכים שונים ל{label}. מה הערך הנכון?",
-    ClarificationCode.OCCUPATION_UNSUPPORTED: (
-        "עדיין אין באפשרותי לרשום את העיסוק דרך השיחה. אפשר להמשיך בבדיקות שאינן תלויות בעיסוק."
+    ClarificationCode.OCCUPATION_UNRESOLVED: (
+        "לא מצאתי עיסוק רשמי שמתאים לתיאור. אפשר לכתוב את שם התפקיד כפי שהוא מופיע בחברה?"
     ),
     ClarificationCode.VEHICLE_UNRESOLVED: (
         "לא הצלחתי לזהות את הרכב בוודאות. אפשר לציין דגם ושנת רישום מדויקים?"
@@ -104,6 +104,52 @@ def clarification_text(items: list[Clarification]) -> str:
 def vehicle_candidates_text(names: list[str]) -> str:
     numbered = "\n".join(f"{i}. {name}" for i, name in enumerate(names, start=1))
     return f"מצאתי כמה רכבים מתאימים לתיאור. לאיזה מהם התכוונת?\n{numbered}"
+
+
+def occupation_candidates_text(names: list[str]) -> str:
+    numbered = "\n".join(f"{i}. {name}" for i, name in enumerate(names, start=1))
+    return f"מצאתי כמה עיסוקים רשמיים שמתאימים לתיאור. איזה מהם הוא העיסוק שלך?\n{numbered}"
+
+
+def labels_text(fields: Iterable[str]) -> str:
+    labels = [field_label(f) for f in fields]
+    return labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " ו" + labels[-1]
+
+
+def confirm_request_text(fields: list[str]) -> str:
+    return (
+        "לפני שאציג הפרש לעומת היום, אפשר לאשר שהפרטים השמורים עדיין נכונים: "
+        f"{labels_text(fields)}? הם מופיעים בחלונית הצד. "
+        "אם משהו השתנה, אפשר פשוט לכתוב את הערך הנכון."
+    )
+
+
+def confirmed_text(fields: list[str]) -> str:
+    return f"תודה, אישרתי ש{labels_text(fields)} עדיין נכונים."
+
+
+def conflicts_text(fields: list[str]) -> str:
+    if not fields:
+        return "שמתי לב לסתירה בין הפרטים שמסרת לנתונים במערכת. כדאי לבדוק אותם לפני חישוב."
+    return f"שמתי לב לסתירה לגבי {labels_text(fields)}. כדאי לבדוק את הפרט הזה לפני חישוב."
+
+
+def still_missing_text(fields: list[str]) -> str:
+    return f"לתשומת לבך: לחישוב מלא עדיין חסר {labels_text(fields)}."
+
+
+PROPULSION_DIFFERS = (
+    "סוג ההנעה שדיווחת לרכב הנוכחי שונה מהרשום בקטלוג, ולכן לא חישבתי את ההסדר הנוכחי. "
+    "מה סוג ההנעה הנכון?"
+)
+OPTIONS_CHANGED = (
+    "הפרטים השתנו מאז שהצגתי את רשימת החלופות, ולכן ייתכן שהיא כבר לא מדויקת. "
+    'אפשר לבקש "אילו רכבים מתאימים לי?" כדי לראות רשימה מעודכנת.'
+)
+
+
+def eligibility_changed_text(labels: list[str]) -> str:
+    return f"הזכאות ל{', '.join(labels)} השתנתה מאז שהוצגה הרשימה."
 
 
 def option_label(item: OptionItem) -> str:
@@ -179,6 +225,13 @@ def representative_answer_text(label: str) -> str:
     return f"התקבלה תשובה מנציג התחבורה לגבי {label}."
 
 
+def representative_undetermined_text(label: str) -> str:
+    return (
+        f"נציג התחבורה לא יכול היה לקבוע את המידע לגבי {label}, ולכן לא ניתן לחשב את החלופה הזו. "
+        "שאר הבדיקות ממשיכות כרגיל."
+    )
+
+
 def updated_text(fields: list[str], *, hypothetical: bool, stale_runs: bool) -> str:
     labels = ", ".join(field_label(f) for f in fields)
     if hypothetical:
@@ -198,6 +251,7 @@ def history_text(result: ComparisonResult, labels: dict[str, str], *, stale: boo
 
 
 NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. אפשר לבקש לחשב נטו לחלופה מסוימת."
+NOTHING_TO_CONFIRM = "אין כרגע פרטים שממתינים לאישור. במה אפשר לעזור?"
 CANCELLED = "בסדר, הפסקתי את הבדיקה. אפשר להתחיל בדיקה חדשה בכל רגע."
 UNCLEAR = 'ייתכן שלא הבנתי נכון. אפשר לנסח שוב, למשל: "אילו רכבים מתאימים לי?"'
 HELP = (

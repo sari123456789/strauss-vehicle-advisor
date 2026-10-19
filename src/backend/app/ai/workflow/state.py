@@ -53,6 +53,9 @@ class ActiveGoal(TypedDict):
     intent: str
     includeCurrent: bool
     kind: Literal["regular", "hypothetical"]
+    optionKeys: NotRequired[list[str]]
+    """The options the employee explicitly selected (absent for list/all-option goals and in
+    goals checkpointed before this field existed). A resumed goal compares exactly these."""
 
 
 class PendingTask(TypedDict):
@@ -74,6 +77,13 @@ class LastOutbox(TypedDict):
     messages: list[OutboxRef]
 
 
+class OccupationCandidateRef(TypedDict):
+    """An official occupation offered for selection (ID and official name only)."""
+
+    occupationId: str
+    label: str
+
+
 class ConversationState(TypedDict, total=False):
     turn: TurnPayload | None
     route: str
@@ -87,6 +97,10 @@ class ConversationState(TypedDict, total=False):
     processed_input_ids: list[str]
     latest_run_id: str | None
     last_outbox: LastOutbox | None
+    awaiting_confirmation: list[str]
+    """Saved facts (`FieldPath` values) the advisor asked the employee to confirm."""
+    occupation_candidates: list[OccupationCandidateRef]
+    """Official occupations shown for an ambiguous description, awaiting a choice."""
 
 
 @dataclass
@@ -118,6 +132,8 @@ class TurnRuntime:
     interpretation: TurnInterpretation | None = None
     extraction: ExtractionOutcome | None = None
     applied: dict[UpdateMode, list[str]] = field(default_factory=dict)
+    confirmed: list[str] = field(default_factory=list)
+    """Saved facts confirmed in this turn through `confirm_profile_fields`."""
     halt: bool = False
     """Stop acting on this turn (an error or clarification has already been replied)."""
     replies: list[Reply] = field(default_factory=list)

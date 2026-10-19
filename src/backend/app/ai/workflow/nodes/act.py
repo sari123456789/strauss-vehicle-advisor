@@ -26,15 +26,24 @@ from app.ai.workflow.state import (
 from app.contracts.catalogue import EligibilityStatus, ListOptionsRequest, OptionFilters
 from app.contracts.common import (
     EnvelopeStatus,
+    ErrorCode,
     FieldPath,
     Freshness,
+    Issue,
+    IssueCode,
     OptionCategory,
     RunKind,
     UpdateMode,
 )
 from app.contracts.comparisons import CompareRequest, ComparisonDetailsRequest, ComparisonResult
 from app.contracts.readiness import ReadinessGoal, ReadinessRequest, Selection, SelectionMode
-from app.contracts.representatives import CreateQuestionRequest, RepresentativeFieldCode
+from app.contracts.representatives import (
+    AnswerOutcome,
+    CreateQuestionRequest,
+    RepresentativeFieldCode,
+    RepresentativeRequestLookup,
+    RequestStatus,
+)
 
 MAX_ASKS_PER_FIELD = 2
 """After this many unanswered questions a field is treated as unknown (no question loops)."""
@@ -44,7 +53,17 @@ REPRESENTATIVE_FIELDS: dict[str, RepresentativeFieldCode] = {
     FieldPath.CURRENT_PROPULSION.value: RepresentativeFieldCode.VEHICLE_PROPULSION,
     FieldPath.CURRENT_VEHICLE.value: RepresentativeFieldCode.VEHICLE_TAX_KEY,
 }
-"""Provisional mapping of employee-unknown facts to the representative allowlist (gap G5)."""
+"""Employee-unknown facts that may be escalated to a representative (G5 allowlist).
+
+`occupation.waiverPolicy` is deliberately absent until the expected answer type for a waiver
+(boolean versus allowance amount) is agreed with the Business module."""
+
+# Stable `Issue.reason` tokens from the Business module (Step 4B).
+CONFIRMATION_REQUIRED = "confirmation_required"
+PROPULSION_DIFFERS = "catalogue_propulsion_differs"
+LIST_BUILT_FROM_OTHER_FACTS = "result_set_built_from_other_facts"
+ELIGIBILITY_CHANGED = "eligibility_changed_since_list"
+LIST_RELEASE_CHANGED = "result_set_release_changed"
 
 _COMPUTE_INTENTS = frozenset({Intent.CALCULATE_OPTIONS, Intent.COMPARE_TO_CURRENT})
 _CATALOGUE_ID = re.compile(r"^[A-Z]{2,5}-\d{2,4}$")
@@ -82,9 +101,43 @@ def _resolve_refs(
     return list(dict.fromkeys(keys)), unresolved
 
 
-def _error(rt: TurnRuntime, envelope: Any) -> None:
+def _has_reason(issues: list[Issue], reason: str) -> bool:
+    return any(issue.reason == reason for issue in issues)
+
+
+def _confirmation_fields(issues: list[Issue]) -> list[str]:
+    """Saved facts the server needs confirmed in this conversation (not stale results)."""
+    fields = [
+        i.field.value
+        for i in issues
+        if i.code is IssueCode.AMBIGUOUS_INPUT
+        and i.reason == CONFIRMATION_REQUIRED
+        and i.field is not None
+    ]
+    return list(dict.fromkeys(fields))
+
+
+def _error(rt: TurnRuntime, envelope: Any, updates: dict[str, Any] | None = None) -> None:
     code = envelope.error.code if envelope.error else None
+    if (
+        updates is not None
+        and code is ErrorCode.VERSION_CONFLICT
+        and _has_reason(envelope.issues, LIST_RELEASE_CHANGED)
+    ):
+        # The stored option list belongs to an older rules release: it can never be reused.
+        updates.update(result_set_id=None, displayed_options=[])
+        rt.reply(he.OPTIONS_CHANGED, "options_changed")
+        return
     rt.reply(he.error_text(code), "error", code=code.value if code else None)
+
+
+def _ask_confirmation(
+    state: ConversationState, rt: TurnRuntime, fields: list[str], updates: dict[str, Any]
+) -> None:
+    """Ask only about the saved facts the current calculation needs (never a blanket check)."""
+    awaiting = updates.get("awaiting_confirmation", state.get("awaiting_confirmation", []))
+    updates["awaiting_confirmation"] = list(dict.fromkeys([*awaiting, *fields]))
+    rt.reply(he.confirm_request_text(fields), "confirmation_request", fields=fields)
 
 
 async def _list_options(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any]) -> None:
@@ -101,7 +154,7 @@ async def _list_options(state: ConversationState, rt: TurnRuntime, updates: dict
         )
     )
     if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
-        _error(rt, envelope)
+        _error(rt, envelope, updates)
         return
     data = envelope.data
     eligible = [i for i in data.items if i.eligibility is EligibilityStatus.ELIGIBLE]
@@ -202,6 +255,8 @@ async def compute(
 ) -> ComparisonResult | None:
     """Readiness gate, then one comparison for every ready option (partial results allowed)."""
     labels = _labels(state, rt)
+    # Readiness always evaluates the actual profile; a `kind` field (proposal Q1) is pending
+    # joint approval, so hypothetical goals are checked against actual facts until then.
     readiness_env = await rt.tools.check_calculation_readiness(
         ReadinessRequest(
             goal=ReadinessGoal.COMPARE_TO_CURRENT
@@ -213,15 +268,17 @@ async def compute(
         )
     )
     if readiness_env.status is EnvelopeStatus.ERROR or readiness_env.data is None:
-        _error(rt, readiness_env)
+        _error(rt, readiness_env, updates)
         return None
     readiness = readiness_env.data
+    to_confirm = _confirmation_fields(readiness_env.issues)
+    propulsion_differs = _has_reason(readiness_env.issues, PROPULSION_DIFFERS)
     pending = dict(updates.get("pending_tasks", state.get("pending_tasks", {})))
     for item in readiness.pending_representative_fields:
         pending.setdefault(
             str(item.request_id),
             PendingTask(
-                fieldCode=item.field_code,
+                fieldCode=item.field_code.value,
                 optionKey=item.option_key,
                 includeCurrent=include_current,
                 kind=kind.value,
@@ -236,6 +293,10 @@ async def compute(
     if not readiness.ready_scenario_ids:
         if missing:
             await _ask_missing(state, rt, missing, updates)
+        elif to_confirm:
+            _ask_confirmation(state, rt, to_confirm, updates)
+        elif propulsion_differs:
+            rt.reply(he.PROPULSION_DIFFERS, "question", fields=[FieldPath.CURRENT_PROPULSION.value])
         elif pending_labels:
             rt.reply(he.pending_text(pending_labels), "representative_waiting")
         else:
@@ -259,11 +320,21 @@ async def compute(
         )
     )
     if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
-        _error(rt, envelope)
+        _error(rt, envelope, updates)
         return None
     result = envelope.data
     updates["latest_run_id"] = str(result.run_id)
     rt.reply(he.comparison_text(result, labels), "comparison", runId=str(result.run_id))
+    if _has_reason(envelope.issues, LIST_BUILT_FROM_OTHER_FACTS):
+        updates["result_set_id"] = None
+        rt.reply(he.OPTIONS_CHANGED, "options_changed")
+    changed = [
+        labels.get(i.option_key, i.option_key)
+        for i in envelope.issues
+        if i.reason == ELIGIBILITY_CHANGED and i.option_key is not None
+    ]
+    if changed:
+        rt.reply(he.eligibility_changed_text(changed), "options_changed")
     blocked = [
         f"• {labels.get(b.option_key, b.option_key)}: {he.issue_blocks_text(b.reason)}"
         for b in readiness.blocked_scenarios
@@ -271,7 +342,11 @@ async def compute(
     ]
     if blocked:
         rt.reply("חלופות שלא חושבו:\n" + "\n".join(blocked), "blocked")
-    if include_current and not with_current:
+    if include_current and not with_current and to_confirm:
+        _ask_confirmation(state, rt, to_confirm, updates)  # no delta until confirmed
+    elif include_current and not with_current and propulsion_differs:
+        rt.reply(he.PROPULSION_DIFFERS, "question", fields=[FieldPath.CURRENT_PROPULSION.value])
+    elif include_current and not with_current:
         baseline_missing = [f for f in missing if f.startswith("currentArrangement.")]
         rt.reply(
             "כדי להציג הפרש לעומת היום חסרים פרטים על ההסדר הנוכחי. "
@@ -287,13 +362,23 @@ async def compute(
     return result
 
 
-def _selection(state: ConversationState, rt: TurnRuntime) -> Selection | None:
+def _goal_keys(goal: ActiveGoal | None) -> list[str]:
+    return list(goal.get("optionKeys") or []) if goal else []
+
+
+def _selection(
+    state: ConversationState, rt: TurnRuntime, *, resume: ActiveGoal | None = None
+) -> Selection | None:
+    """The options to calculate. A resumed goal (after a confirmation or a what-if change)
+    keeps the employee's explicit selection unless this message names other options."""
     assert rt.interpretation is not None
     displayed = state.get("displayed_options", [])
     keys, unresolved = _resolve_refs(list(rt.interpretation.option_refs), displayed)
     if unresolved:
         rt.reply(he.ASK_WHICH_VEHICLE, "clarification")
         return None
+    if not keys and not rt.interpretation.all_options:
+        keys = _goal_keys(resume)
     if keys:
         return Selection(mode=SelectionMode.EXPLICIT, option_keys=keys[:30])
     propulsion = list(rt.interpretation.propulsion) or None
@@ -348,22 +433,35 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     hypothetical_now = bool(rt.applied.get(UpdateMode.HYPOTHETICAL))
     actual_now = bool(rt.applied.get(UpdateMode.ACTUAL_UPDATE))
     previous = state.get("active_goal")
-    if intent in _COMPUTE_INTENTS or (hypothetical_now and intent is Intent.UPDATE_FACTS):
-        selection = _selection(state, rt)
+    resume_after_confirm = bool(rt.confirmed and previous and intent is Intent.CONFIRM_FACTS)
+    if (
+        intent in _COMPUTE_INTENTS
+        or (hypothetical_now and intent is Intent.UPDATE_FACTS)
+        or resume_after_confirm
+    ):
+        resuming = intent in (Intent.UPDATE_FACTS, Intent.CONFIRM_FACTS)
+        selection = _selection(state, rt, resume=previous if resuming else None)
         if selection is None:
             return
         include_current = intent is Intent.COMPARE_TO_CURRENT or bool(
-            intent is Intent.UPDATE_FACTS and previous and previous["includeCurrent"]
+            intent in (Intent.UPDATE_FACTS, Intent.CONFIRM_FACTS)
+            and previous
+            and previous["includeCurrent"]
         )
         hypothetical = hypothetical_now or bool(
             previous and previous["kind"] == "hypothetical" and not actual_now
         )
         kind = RunKind.HYPOTHETICAL if hypothetical else RunKind.REGULAR
-        updates["active_goal"] = ActiveGoal(
-            intent=intent.value if intent in _COMPUTE_INTENTS else Intent.CALCULATE_OPTIONS.value,
-            includeCurrent=include_current,
-            kind=kind.value,
-        )
+        if intent in _COMPUTE_INTENTS:
+            goal_intent = intent.value
+        elif resume_after_confirm and previous:
+            goal_intent = previous["intent"]
+        else:
+            goal_intent = Intent.CALCULATE_OPTIONS.value
+        goal = ActiveGoal(intent=goal_intent, includeCurrent=include_current, kind=kind.value)
+        if selection.mode is SelectionMode.EXPLICIT and selection.option_keys:
+            goal["optionKeys"] = list(selection.option_keys)
+        updates["active_goal"] = goal
         await compute(
             state,
             rt,
@@ -382,10 +480,19 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     elif intent is Intent.UPDATE_FACTS:
         if not (actual_now or hypothetical_now):
             rt.reply(he.UNCLEAR, "clarification")
+    elif intent is Intent.CONFIRM_FACTS:
+        if not rt.confirmed and not rt.replies:
+            rt.reply(he.NOTHING_TO_CONFIRM, "info")
     elif intent is Intent.CANCEL:
         cancelled = list(state.get("cancelled_request_ids", []))
         cancelled.extend(r for r in state.get("pending_tasks", {}) if r not in cancelled)
-        updates.update(active_goal=None, pending_tasks={}, cancelled_request_ids=cancelled)
+        updates.update(
+            active_goal=None,
+            pending_tasks={},
+            cancelled_request_ids=cancelled,
+            awaiting_confirmation=[],
+            occupation_candidates=[],
+        )
         rt.reply(he.CANCELLED, "info")
     elif intent is Intent.ASK_REPRESENTATIVE:
         fields = [f for f in state.get("unknown_fields", []) if f in REPRESENTATIVE_FIELDS]
@@ -416,6 +523,70 @@ async def act(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[s
     return updates
 
 
+def _baseline_selection(state: ConversationState) -> Selection:
+    keys = _goal_keys(state.get("active_goal"))
+    if keys:
+        return Selection(mode=SelectionMode.EXPLICIT, option_keys=keys[:30])
+    result_set_id = state.get("result_set_id")
+    if result_set_id:
+        return Selection(mode=SelectionMode.RESULT_SET, result_set_id=UUID(result_set_id))
+    return Selection(
+        mode=SelectionMode.ALL_ELIGIBLE,
+        categories=[OptionCategory.REGULAR, OptionCategory.FAMILY],
+    )
+
+
+async def _handle_answer(
+    state: ConversationState, rt: TurnRuntime, request_id: str, task: PendingTask
+) -> dict[str, Any]:
+    turn = state.get("turn")
+    assert turn is not None
+    # The event is only a wake-up signal: the request's actual status comes from the server.
+    envelope = await rt.tools.get_representative_request(
+        RepresentativeRequestLookup(request_id=UUID(request_id))
+    )
+    remaining = dict(state.get("pending_tasks", {}))
+    remaining.pop(request_id, None)
+    if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
+        code = envelope.error.code if envelope.error else None
+        # An unknown or foreign request is dropped silently; anything else stays pending.
+        return {"pending_tasks": remaining} if code is ErrorCode.NOT_FOUND else {}
+    view = envelope.data
+    if view.status is RequestStatus.OPEN:
+        return {}
+    updates: dict[str, Any] = {"pending_tasks": remaining}
+    if view.status is RequestStatus.CANCELLED:
+        return updates
+    label = _labels(state, rt).get(task["optionKey"] or "", he.field_label(task["fieldCode"]))
+    if view.status is RequestStatus.CANNOT_DETERMINE or (
+        view.answer is not None and view.answer.outcome is AnswerOutcome.CANNOT_DETERMINE
+    ):
+        rt.reply(
+            he.representative_undetermined_text(label),
+            "representative_answer",
+            requestId=request_id,
+        )
+        return updates
+    rt.reply(he.representative_answer_text(label), "representative_answer", requestId=request_id)
+    if task["optionKey"] is not None:
+        selection = Selection(mode=SelectionMode.EXPLICIT, option_keys=[task["optionKey"]])
+    elif task["includeCurrent"]:
+        selection = _baseline_selection(state)  # a baseline fact: refresh the comparison
+    else:
+        return updates
+    await compute(
+        {**state, "pending_tasks": remaining},
+        rt,
+        input_id=turn["inputId"],
+        selection=selection,
+        include_current=task["includeCurrent"],
+        kind=RunKind(task["kind"]),
+        updates=updates,
+        question="",
+    )
+    return updates
+
+
 async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
     """A representative answer: update only the affected option; the active goal is untouched."""
     rt = runtime.context
@@ -428,24 +599,8 @@ async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime])
     if task is None:
         return {}
     updates: dict[str, Any] = {}
-    remaining = dict(state.get("pending_tasks", {}))
-    remaining.pop(request_id)
-    updates["pending_tasks"] = remaining
-    label = _labels(state, rt).get(task["optionKey"] or "", he.field_label(task["fieldCode"]))
-    rt.reply(he.representative_answer_text(label), "representative_answer", requestId=request_id)
-    if task["optionKey"] is None:
-        return updates
     try:
-        await compute(
-            {**state, "pending_tasks": remaining},
-            rt,
-            input_id=turn["inputId"],
-            selection=Selection(mode=SelectionMode.EXPLICIT, option_keys=[task["optionKey"]]),
-            include_current=task["includeCurrent"],
-            kind=RunKind(task["kind"]),
-            updates=updates,
-            question="",
-        )
+        updates = await _handle_answer(state, rt, request_id, task)
     except ToolBudgetExceeded:
         rt.reply(he.BUDGET_EXCEEDED, "error", code="TOOL_BUDGET_EXCEEDED")
     rt.compose = None
