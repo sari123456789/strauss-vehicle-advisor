@@ -26,7 +26,7 @@ class ClarificationCode(StrEnum):
     RATE_UNIT = "rate_unit"
     INVALID_VALUE = "invalid_value"
     CONFLICTING_VALUES = "conflicting_values"
-    OCCUPATION_UNSUPPORTED = "occupation_unsupported"
+    OCCUPATION_UNRESOLVED = "occupation_unresolved"
     VEHICLE_UNRESOLVED = "vehicle_unresolved"
 
 
@@ -43,6 +43,8 @@ class ExtractionOutcome:
     clarifications: list[Clarification] = field(default_factory=list)
     vehicle_queries: dict[FactMode, str] = field(default_factory=dict)
     """Current-car descriptions that need `resolve_vehicle` before they can be written."""
+    occupation_queries: dict[FactMode, str] = field(default_factory=dict)
+    """Occupation descriptions that need `resolve_occupation` before they can be written."""
 
 
 MONEY_FIELDS = frozenset(
@@ -174,9 +176,7 @@ def normalize_facts(facts: list[ProposedFact]) -> ExtractionOutcome:
             )
             continue
         if path is FieldPath.OCCUPATION_ID:
-            outcome.clarifications.append(
-                Clarification(ClarificationCode.OCCUPATION_UNSUPPORTED, path.value)
-            )
+            outcome.occupation_queries[fact.mode] = fact.value.strip()
             continue
         early = _clarify_value(fact, path, fact.value)
         if early is not None:

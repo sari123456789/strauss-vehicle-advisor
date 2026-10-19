@@ -24,6 +24,8 @@ class Intent(StrEnum):
     EXPLAIN_RESULT = "explain_result"
     SHOW_HISTORY = "show_history"
     UPDATE_FACTS = "update_facts"
+    CONFIRM_FACTS = "confirm_facts"
+    """The employee confirms that saved details the advisor asked about are still correct."""
     CANCEL = "cancel"
     ASK_REPRESENTATIVE = "ask_representative"
     GENERAL_QUESTION = "general_question"
@@ -83,6 +85,9 @@ class TurnInterpretation(_Strict):
     include_waiver: bool = False
     unknown_fields: list[FactField] = Field(default_factory=list, max_length=16)
     """Facts the employee says they do not know."""
+    confirmed_fields: list[FactField] = Field(default_factory=list, max_length=16)
+    """Saved facts the employee explicitly says are still correct. Code confirms only facts
+    the advisor asked about; an empty list with `confirm_facts` means all of them."""
 
 
 class ComposedText(_Strict):

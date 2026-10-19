@@ -21,12 +21,27 @@
 
 .brand {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   min-block-size: var(--tap);
   direction: ltr;
   text-align: right;
   color: var(--accent);
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+// The asset is pre-trimmed of its large transparent margins; width follows the height.
+.brand__logo {
+  display: block;
+  block-size: 38px;
+  inline-size: auto;
+  object-fit: contain;
 }
 
 .brand__mark {
@@ -78,6 +93,14 @@
 
   .brand {
     margin-top: 4px;
+  }
+
+  .brand {
+    gap: 14px;
+  }
+
+  .brand__logo {
+    block-size: 54px;
   }
 
   .brand__mark {

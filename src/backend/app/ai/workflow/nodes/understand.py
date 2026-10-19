@@ -12,12 +12,22 @@ from app.ai.workflow.extraction import (
     ClarificationCode,
     normalize_facts,
 )
-from app.ai.workflow.models import FactMode, TurnInterpretation
+from app.ai.workflow.models import FactMode, Intent, TurnInterpretation
 from app.ai.workflow.prompts import INTERPRET_SYSTEM, as_data
-from app.ai.workflow.state import ConversationState, TurnRuntime, stable_id
-from app.contracts.case_inputs import SetChange, UpdateInputsRequest
+from app.ai.workflow.state import (
+    ConversationState,
+    OccupationCandidateRef,
+    TurnRuntime,
+    stable_id,
+)
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    SetChange,
+    UpdateInputsRequest,
+)
 from app.contracts.cases import CaseContext
 from app.contracts.catalogue import (
+    ResolveOccupationRequest,
     ResolvePurpose,
     ResolveStatus,
     ResolveVehicleRequest,
@@ -27,6 +37,7 @@ from app.contracts.common import EnvelopeStatus, ErrorCode, FieldPath, UpdateMod
 from app.contracts.profile import VehicleRef
 
 HISTORY_MESSAGES = 6
+MAX_OCCUPATION_CHOICES = 10
 _FIELD_PATHS = frozenset(path.value for path in FieldPath)
 
 _PROFILE_ATTRS: dict[FieldPath, tuple[str, ...]] = {
@@ -104,6 +115,11 @@ def _interpret_task(state: ConversationState, rt: TurnRuntime) -> LlmTask[TurnIn
             for index, option in enumerate(state.get("displayed_options", []), start=1)
         ],
         "activeGoal": goal["intent"] if goal else None,
+        "awaitingConfirmation": list(state.get("awaiting_confirmation", [])),
+        "occupationChoices": [
+            f"{index}. {c['label']}"
+            for index, c in enumerate(state.get("occupation_candidates", []), start=1)
+        ],
     }
     messages.append(
         LlmMessage("user", f"STATE={as_data(summary)}\nEMPLOYEE_MESSAGE={turn.get('text') or ''}")
@@ -170,12 +186,65 @@ async def _resolve_current_vehicle(rt: TurnRuntime, text: str) -> VehicleRef | C
     return Clarification(ClarificationCode.VEHICLE_UNRESOLVED, FieldPath.CURRENT_VEHICLE.value)
 
 
+async def _resolve_occupation(
+    state: ConversationState, rt: TurnRuntime, text: str, updates: dict[str, Any]
+) -> str | Clarification | None:
+    """An official occupation ID, a clarification, or None when candidates were shown.
+
+    Only `resolved` (an official ID or exact official name) or the employee's own choice from
+    the displayed candidates is written; an ambiguous description is never auto-selected.
+    """
+    unresolved = Clarification(
+        ClarificationCode.OCCUPATION_UNRESOLVED, FieldPath.OCCUPATION_ID.value
+    )
+    choices = state.get("occupation_candidates", [])
+    value = text.strip()
+    if choices and value.isdigit():
+        index = int(value)
+        return choices[index - 1]["occupationId"] if 1 <= index <= len(choices) else unresolved
+    chosen = [c["occupationId"] for c in choices if c["label"] == value]
+    if len(chosen) == 1:
+        return chosen[0]
+    if not value:
+        return unresolved
+    envelope = await rt.tools.resolve_occupation(ResolveOccupationRequest(query=value[:120]))
+    data = envelope.data
+    if envelope.status is EnvelopeStatus.ERROR or data is None:
+        return unresolved
+    if data.status is ResolveStatus.RESOLVED and len(data.candidates) == 1:
+        return data.candidates[0].occupation_id
+    if data.status is ResolveStatus.AMBIGUOUS and data.candidates:
+        shown = data.candidates[:MAX_OCCUPATION_CHOICES]
+        updates["occupation_candidates"] = [
+            OccupationCandidateRef(occupationId=c.occupation_id, label=c.name_he) for c in shown
+        ]
+        rt.reply(he.occupation_candidates_text([c.name_he for c in shown]), "clarification")
+        rt.halt = True
+        return None
+    return unresolved
+
+
 async def prepare(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
-    """Validate proposed facts and resolve described vehicles through the business tools."""
+    """Validate proposed facts and resolve described vehicles and occupations through the
+    business tools."""
     rt = runtime.context
     assert rt.interpretation is not None
+    updates: dict[str, Any] = {}
     extraction = normalize_facts(list(rt.interpretation.facts))
+    for mode, text in extraction.occupation_queries.items():
+        occupation = await _resolve_occupation(state, rt, text, updates)
+        if occupation is None:
+            break
+        if isinstance(occupation, Clarification):
+            extraction.clarifications.append(occupation)
+            continue
+        updates["occupation_candidates"] = []
+        change = SetChange(op="set", field=FieldPath.OCCUPATION_ID, value=occupation)
+        target = extraction.actual if mode is FactMode.ACTUAL else extraction.hypothetical
+        target.append(change)
     for mode, text in extraction.vehicle_queries.items():
+        if rt.halt:
+            break
         resolved = await _resolve_current_vehicle(rt, text)
         if isinstance(resolved, Clarification):
             if not rt.halt:
@@ -189,7 +258,15 @@ async def prepare(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
         set(state.get("unknown_fields", []))
         | {f.value for f in rt.interpretation.unknown_fields if f.value in _FIELD_PATHS}
     )
-    return {"unknown_fields": unknown}
+    return {**updates, "unknown_fields": unknown}
+
+
+async def _reload_context(rt: TurnRuntime) -> None:
+    reloaded = await rt.tools.get_conversation_context()
+    if reloaded.data is not None:
+        rt.case = reloaded.data
+        rt.case_version = reloaded.data.case_version
+        rt.profile_version = reloaded.data.latest_profile_version
 
 
 async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
@@ -219,11 +296,7 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
         if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
             code = envelope.error.code if envelope.error else None
             if code is ErrorCode.VERSION_CONFLICT:
-                reloaded = await rt.tools.get_conversation_context()
-                if reloaded.data is not None:
-                    rt.case = reloaded.data
-                    rt.case_version = reloaded.data.case_version
-                    rt.profile_version = reloaded.data.latest_profile_version
+                await _reload_context(rt)
             rt.reply(he.error_text(code), "error", code=code.value if code else None)
             rt.halt = True
             return {}
@@ -244,4 +317,66 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
                 mode=mode.value,
                 fields=accepted,
             )
+        # `ok` means committed, not that every fact is usable: report what the server flagged.
+        conflicts = [i.field.value for i in result.conflicts if i.field is not None]
+        if result.conflicts:
+            rt.reply(he.conflicts_text(conflicts[:2]), "conflict", fields=conflicts[:2])
+        missing = [i.field.value for i in result.missing_information if i.field is not None]
+        if missing:
+            rt.reply(he.still_missing_text(missing[:2]), "info", fields=missing[:2])
+    stated = set(rt.applied.get(UpdateMode.ACTUAL_UPDATE, []))
+    awaiting = state.get("awaiting_confirmation", [])
+    if stated & set(awaiting):  # a corrected value needs no separate confirmation
+        return {"awaiting_confirmation": [f for f in awaiting if f not in stated]}
     return {}
+
+
+async def apply_confirmations(
+    state: ConversationState, runtime: Runtime[TurnRuntime]
+) -> dict[str, Any]:
+    """Confirm saved facts (G3) only when the employee explicitly confirms facts the advisor
+    asked about. Values never change; facts stated in this turn are never confirmed."""
+    rt = runtime.context
+    turn = state.get("turn")
+    assert turn is not None
+    interpretation, extraction = rt.interpretation, rt.extraction
+    if rt.halt or interpretation is None or interpretation.intent is not Intent.CONFIRM_FACTS:
+        return {}
+    assert extraction is not None
+    stated = {c.field.value for c in [*extraction.actual, *extraction.hypothetical]}
+    awaiting = [f for f in state.get("awaiting_confirmation", []) if f not in stated]
+    requested = {f.value for f in interpretation.confirmed_fields} or set(awaiting)
+    fields = [f for f in awaiting if f in requested]
+    if not fields:
+        return {}
+    envelope = await rt.tools.confirm_profile_fields(
+        ConfirmProfileFieldsRequest(
+            expected_case_version=rt.case_version,
+            expected_profile_version=rt.profile_version,
+            operation_id=stable_id(turn["inputId"], "confirm"),
+            source_message_id=UUID(turn["inputId"]),
+            fields=[FieldPath(f) for f in fields],
+        )
+    )
+    if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
+        code = envelope.error.code if envelope.error else None
+        if code is ErrorCode.VERSION_CONFLICT:
+            await _reload_context(rt)
+        rt.reply(he.error_text(code), "error", code=code.value if code else None)
+        rt.halt = True
+        return {}
+    result = envelope.data
+    rt.case_version = result.new_case_version
+    rt.profile_version = result.new_profile_version
+    rt.confirmed = [f.value for f in result.confirmed_fields]
+    if rt.confirmed:
+        rt.reply(he.confirmed_text(rt.confirmed), "confirmation", fields=rt.confirmed)
+    not_confirmable = [i.field.value for i in result.not_confirmable if i.field is not None]
+    if not_confirmable:
+        rt.reply(he.ask_for_fields(not_confirmable[:2]), "question", fields=not_confirmable[:2])
+    done = set(rt.confirmed) | set(not_confirmable)
+    return {
+        "awaiting_confirmation": [
+            f for f in state.get("awaiting_confirmation", []) if f not in done
+        ]
+    }
