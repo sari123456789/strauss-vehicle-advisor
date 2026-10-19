@@ -13,15 +13,24 @@ from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from app.contracts.business_port import BusinessToolsPort
-from app.contracts.case_inputs import UpdateInputsRequest, UpdateInputsResult
+from app.contracts.case_inputs import (
+    ConfirmProfileFieldsRequest,
+    ConfirmProfileFieldsResult,
+    UpdateInputsRequest,
+    UpdateInputsResult,
+)
 from app.contracts.cases import CaseContext
 from app.contracts.catalogue import (
     EligibilityRequest,
     EligibilityResult,
     ListOptionsRequest,
     ListOptionsResult,
+    ResolveOccupationRequest,
+    ResolveOccupationResult,
     ResolveVehicleRequest,
     ResolveVehicleResult,
+    TaxValueRequest,
+    TaxValueResult,
 )
 from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode, ErrorInfo
 from app.contracts.comparisons import (
@@ -31,7 +40,12 @@ from app.contracts.comparisons import (
     ComparisonResult,
 )
 from app.contracts.readiness import ReadinessRequest, ReadinessResult
-from app.contracts.representatives import CreateQuestionRequest, CreateQuestionResult
+from app.contracts.representatives import (
+    CreateQuestionRequest,
+    CreateQuestionResult,
+    RepresentativeRequestLookup,
+    RequestStatusView,
+)
 from app.contracts.tool_context import ToolContext
 
 logger = logging.getLogger("app.ai.tools")
@@ -103,6 +117,11 @@ class BusinessToolGateway:
             "resolve_vehicle", lambda: self._port.resolve_vehicle(self._ctx, request)
         )
 
+    async def get_vehicle_tax_value(self, request: TaxValueRequest) -> Envelope[TaxValueResult]:
+        return await self._invoke(
+            "get_vehicle_tax_value", lambda: self._port.get_vehicle_tax_value(self._ctx, request)
+        )
+
     async def check_eligibility(self, request: EligibilityRequest) -> Envelope[EligibilityResult]:
         return await self._invoke(
             "check_eligibility", lambda: self._port.check_eligibility(self._ctx, request)
@@ -135,4 +154,27 @@ class BusinessToolGateway:
         return await self._invoke(
             "get_comparison_details",
             lambda: self._port.get_comparison_details(self._ctx, request),
+        )
+
+    async def get_representative_request(
+        self, request: RepresentativeRequestLookup
+    ) -> Envelope[RequestStatusView]:
+        return await self._invoke(
+            "get_representative_request",
+            lambda: self._port.get_representative_request(self._ctx, request),
+        )
+
+    async def resolve_occupation(
+        self, request: ResolveOccupationRequest
+    ) -> Envelope[ResolveOccupationResult]:
+        return await self._invoke(
+            "resolve_occupation", lambda: self._port.resolve_occupation(self._ctx, request)
+        )
+
+    async def confirm_profile_fields(
+        self, request: ConfirmProfileFieldsRequest
+    ) -> Envelope[ConfirmProfileFieldsResult]:
+        return await self._invoke(
+            "confirm_profile_fields",
+            lambda: self._port.confirm_profile_fields(self._ctx, request),
         )

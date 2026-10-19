@@ -85,7 +85,6 @@ def test_clear_facts_become_contract_changes_split_by_mode() -> None:
         ),
         (fact(FactField.PENSION_EMPLOYEE_RATE, "0.06"), ClarificationCode.RATE_UNIT),
         (fact(FactField.ENTITLEMENT_GROUP, "ה"), ClarificationCode.INVALID_VALUE),
-        (fact(FactField.OCCUPATION_ID, "מפתחת תוכנה"), ClarificationCode.OCCUPATION_UNSUPPORTED),
         (
             fact(FactField.QUALIFYING_CHILDREN_COUNT, "שלושה או ארבעה"),
             ClarificationCode.INVALID_VALUE,
@@ -96,6 +95,12 @@ def test_unclear_facts_are_never_written(proposed: ProposedFact, code: Clarifica
     outcome = normalize_facts([proposed])
     assert outcome.actual == [] and outcome.hypothetical == []
     assert [c.code for c in outcome.clarifications] == [code]
+
+
+def test_occupation_description_needs_resolution_and_is_never_written_directly() -> None:
+    outcome = normalize_facts([fact(FactField.OCCUPATION_ID, "מפתחת תוכנה")])
+    assert outcome.actual == [] and outcome.hypothetical == [] and outcome.clarifications == []
+    assert outcome.occupation_queries == {FactMode.ACTUAL: "מפתחת תוכנה"}
 
 
 def test_conflicting_values_for_one_field_need_clarification() -> None:
