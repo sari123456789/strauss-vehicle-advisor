@@ -64,6 +64,21 @@ class SubmittedMessage:
     """True when the same client message was already recorded (nothing new was written)."""
 
 
+@dataclass(frozen=True)
+class InputStatusView:
+    input_id: UUID
+    conversation_id: UUID
+    sequence: int
+    status: str
+    """pending, processing, retry, completed, dead or needs_reconciliation."""
+    attempts: int
+    messages: tuple[ps.MessageRecord, ...]
+    """Visible messages linked to this input (the user message and its replies)."""
+
+
+_MESSAGE_PAGE = 200
+
+
 def _view(record: ps.ConversationRecord) -> ConversationView:
     return ConversationView(
         conversation_id=record.conversation_id,
@@ -253,6 +268,35 @@ class ConversationService:
             return await store.list_messages(
                 conversation_id, after_sequence=after_sequence, limit=limit
             )
+
+    async def get_input(
+        self, actor: ActorRef, conversation_id: UUID, input_id: UUID
+    ) -> InputStatusView:
+        """An owned input's processing state and the visible messages linked to it. An input
+        of another conversation is indistinguishable from a missing one."""
+        await self._owned(actor, conversation_id)
+        linked: list[ps.MessageRecord] = []
+        async with self._tx.transaction() as store:
+            record = await store.get_input(input_id)
+            if record is None or record.conversation_id != conversation_id:
+                raise errors.ConversationAccessError()
+            after = 0
+            while True:
+                page = await store.list_messages(
+                    conversation_id, after_sequence=after, limit=_MESSAGE_PAGE
+                )
+                linked.extend(m for m in page if m.input_id == input_id)
+                if len(page) < _MESSAGE_PAGE:
+                    break
+                after = page[-1].sequence
+        return InputStatusView(
+            input_id=record.input_id,
+            conversation_id=record.conversation_id,
+            sequence=record.sequence,
+            status=record.status,
+            attempts=record.attempts,
+            messages=tuple(linked),
+        )
 
     # --- internals ---------------------------------------------------------------------
 
