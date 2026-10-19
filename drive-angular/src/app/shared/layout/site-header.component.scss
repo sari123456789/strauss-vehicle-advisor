@@ -1,5 +1,9 @@
 @use '../../../styles/breakpoints' as bp;
 
+// Inline navigation needs more room than the shared lg breakpoint once the logo sits beside DRIVE:
+// at 1024px the nav came within 17px of the brand. Below this width the menu button is used.
+$nav-inline: 1100px;
+
 :host {
   display: block;
   position: relative;
@@ -118,7 +122,6 @@
   .site-nav {
     position: absolute;
     inset-inline: 0;
-    display: flex;
     justify-content: center;
     gap: 70px;
     margin-top: 12px;
@@ -154,10 +157,6 @@
     font-size: 19px;
   }
 
-  .site-header__menu {
-    display: none;
-  }
-
   :host(.is-overlay) {
     position: absolute;
     inset-block-start: 0;
@@ -166,6 +165,16 @@
 
   :host(.is-overlay) .site-header {
     background: transparent;
+  }
+}
+
+@media (min-width: $nav-inline) {
+  .site-nav {
+    display: flex;
+  }
+
+  .site-header__menu {
+    display: none;
   }
 }
 
