@@ -237,6 +237,7 @@ class RepresentativeRequestRow(Base):
             "idempotency_key",
             name="uq_representative_requests_case_id_idempotency_key",
         ),
+        UniqueConstraint("case_id", "id", name="uq_representative_requests_case_id_id"),
         Index(
             "uq_representative_requests_open_subject",
             "case_id",

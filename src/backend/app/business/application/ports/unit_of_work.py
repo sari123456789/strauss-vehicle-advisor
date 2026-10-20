@@ -13,13 +13,22 @@ from app.business.application.ports.auth import UserDirectory
 from app.business.application.ports.credentials import CredentialStore, RefreshSessionRepository
 from app.business.application.ports.repositories import (
     AlternativeRepository,
+    AuditRepository,
+    CaseFactRepository,
     CaseRepository,
     ComparisonRunRepository,
     EmployeeProfileRepository,
     OperationRepository,
     OptionResultSetRepository,
+    OutboxRepository,
+    RepresentativeAnswerRepository,
     RepresentativeRequestRepository,
 )
+
+
+class TransientConflictError(Exception):
+    """The database aborted the transaction to resolve a deadlock or a serialization
+    conflict. Everything was rolled back; only a whole, idempotent operation may retry."""
 
 
 @runtime_checkable
@@ -57,6 +66,10 @@ class BusinessUnitOfWork(UnitOfWork, Protocol):
     option_result_sets: OptionResultSetRepository
     comparison_runs: ComparisonRunRepository
     representative_requests: RepresentativeRequestRepository
+    representative_answers: RepresentativeAnswerRepository
+    case_facts: CaseFactRepository
+    audit: AuditRepository
+    outbox: OutboxRepository
     credentials: CredentialStore
     refresh_sessions: RefreshSessionRepository
 

@@ -29,22 +29,28 @@ from app.business.application.ports.reference_data import (
 )
 from app.business.application.ports.repositories import (
     AlternativeRepository,
+    AuditRepository,
+    CaseFactRepository,
     CaseRepository,
     ComparisonRunRepository,
     EmployeeProfileRepository,
     OperationRepository,
     OptionResultSetRepository,
+    OutboxRepository,
+    RepresentativeAnswerRepository,
     RepresentativeRequestRepository,
 )
 from app.business.application.ports.unit_of_work import BusinessUnitOfWork, UnitOfWork
 from app.business.infrastructure.clock import SystemClock
 from app.business.infrastructure.database.engine import create_engine, create_session_factory
+from app.business.infrastructure.database.event_feed import SqlBusinessEventFeed
 from app.business.infrastructure.database.repositories.reference_data import (
     SqlReferenceDataRepository,
 )
 from app.business.infrastructure.database.unit_of_work import SqlUnitOfWorkFactory
 from app.business.infrastructure.security.password_hasher import ScryptPasswordHasher
 from app.business.infrastructure.security.token_codec import Hs256TokenCodec
+from app.contracts.business_events import BusinessEventFeed
 from app.contracts.business_port import CANONICAL_TOOL_NAMES, BusinessToolsPort
 from app.contracts.case_lifecycle import CaseLifecyclePort
 from app.contracts.tool_context import ActorRef, ToolContext
@@ -64,6 +70,10 @@ IMPLEMENTED_PORTS = {
     "OptionResultSetRepository",
     "ComparisonRunRepository",
     "RepresentativeRequestRepository",
+    "RepresentativeAnswerRepository",
+    "CaseFactRepository",
+    "AuditRepository",
+    "OutboxRepository",
     "DemoSeedSourceReader",
     "Clock",
     "PasswordHasher",
@@ -115,6 +125,10 @@ def test_sql_unit_of_work_implements_the_business_ports() -> None:
         "option_result_sets": OptionResultSetRepository,
         "comparison_runs": ComparisonRunRepository,
         "representative_requests": RepresentativeRequestRepository,
+        "representative_answers": RepresentativeAnswerRepository,
+        "case_facts": CaseFactRepository,
+        "audit": AuditRepository,
+        "outbox": OutboxRepository,
         "credentials": CredentialStore,
         "refresh_sessions": RefreshSessionRepository,
     }
@@ -126,6 +140,8 @@ def test_sql_unit_of_work_implements_the_business_ports() -> None:
     assert isinstance(ScryptPasswordHasher(), PasswordHasher)
     codec = Hs256TokenCodec(b"x" * 32, issuer="i", audience="a")
     assert isinstance(codec, AccessTokenCodec)
+    feed = SqlBusinessEventFeed(create_session_factory(engine))
+    assert isinstance(feed, BusinessEventFeed)  # D1/C4: Business side of the event feed
 
 
 def test_every_business_tool_receives_the_server_injected_tool_context() -> None:

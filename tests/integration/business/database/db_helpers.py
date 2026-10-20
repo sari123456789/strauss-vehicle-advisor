@@ -35,8 +35,12 @@ CASE_TABLES = (
     "option_result_sets",
     "comparison_runs",
     "representative_requests",
+    "representative_answers",
+    "case_representative_facts",
+    "integration_outbox",
+    "audit_entries",
 )
-"""Business case tables (migration 0002, schema `business`); `auth.users` is separate."""
+"""Business case tables (migrations 0002 and 0004, schema `business`); `auth` is separate."""
 
 
 def run[T](coroutine: Coroutine[Any, Any, T]) -> T:

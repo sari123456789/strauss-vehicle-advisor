@@ -672,3 +672,118 @@ Not implemented: AI conversation endpoints, SSE, and workers.
 - The ownership of `main.py` / `bootstrap.py` (D4D-8).
 - The `origin/feature/frontend` check (D4D-9, needs approval for a read-only Git command).
 - The throttle is in-process (single API instance in the MVP).
+
+## 19. Step B3a: representative answers, case-local facts and the Business outbox (approved 2026-10-20)
+
+Status: implemented in the Business track, awaiting review. **Not** included: HTTP routes (B3b),
+the waiver allowance (B4), bootstrap/`main.py` wiring, and any AI code. No shared DTO or enum
+changed.
+
+### Approved decisions as implemented
+- **Q1, case-local answers:** an applied answer changes only the case it was asked in; the
+  shared EmployeeProfile is never changed.
+  - `alternative.participation`: written to that alternative's `inputs.participation` (decimal
+    string, ILS, `source=representative`, request ID, answer time, effective dates). Alternative
+    version + 1.
+  - `employee.entitlementGroup`, `currentArrangement.propulsion`: written as an insert-only
+    `business.case_representative_facts` row.
+  - Facts survive regular synchronization, which replaces only `cases.actual_facts`.
+- **Effective dates:** an answer applies only while its inclusive, optional period covers
+  `case.reference_date`. Otherwise it is saved as `not_applicable` / `outside_effective_period`
+  and not used (AC30, T36/T37).
+  - A participation answer for an alternative that is inactive, or changed since the question,
+    is `not_applicable` / `alternative_changed`.
+  - When several facts exist for a field, the latest applicable one wins. An expired fact
+    never hides another value.
+- **Precedence:** a hypothetical override (where overrides apply) wins over an applicable
+  representative fact, which wins over the employee-reported value. Precedence is computed in
+  `application/representatives/case_answers.py` and applied by every fact basis (compare,
+  readiness, listing, eligibility).
+- **Source conflict:** an applicable representative fact, a usable employee-reported value of
+  the same field in the same basis that differs from it, and no applied hypothetical override.
+  - It is reported as `SOURCE_CONFLICT` / `representative_fact_differs`, with the request ID.
+  - It is informational: readiness is unchanged and calculations proceed with the
+    representative value.
+  - An actual employee update to such a field is still saved to the profile and reports the
+    same issue.
+- **`cannot_determine`:** accepted for every field code; nothing is applied.
+  - It keeps the request's own option uncalculated (`MISSING_INPUT` /
+    `representative_cannot_determine`, AC33), but only while that alternative is unchanged
+    since the question.
+  - Case-level requests stop being pending.
+- **Q2/Q3, deferred codes:** a value for `occupation.waiverPolicy` or
+  `currentArrangement.vehicle` is rejected (`INVALID_BUSINESS_INPUT`, `safeDetails.reason =
+  field_code_not_answerable_yet`). Nothing is stored and the request stays open.
+- **Q4, demo-only visibility:** any active `representative` lists, reads and answers every
+  request, with the role revalidated on every call.
+  - The view is the minimal `RepresentativeRequestView`: the vehicle context, plus the
+    entitlement group for participation questions only.
+  - It never contains identity, salary, profile, case or conversation IDs.
+  - Employees and other roles get `FORBIDDEN`.
+- **Value formats:**
+  - money: `^\d{1,9}(\.\d{1,2})?$`, unit `ILS` or omitted, at most the published
+    `max_monthly_amount`;
+  - group: one of `א ב ג ד`;
+  - propulsion: a contract propulsion value;
+  - no unit outside money.
+- **Versions:** every committed answer increments the request version and the case version, so
+  earlier runs become stale and their stored snapshots are kept.
+
+### Transactions and lock order
+Global order for every operation that holds more than one lock: operation claim, then
+employee profile, then case, then representative requests, then alternatives. No earlier lock
+is taken after a later one.
+
+| Path | Locks, in order |
+|---|---|
+| `update_inputs` (actual) / `confirm_profile_fields` | claim, profile (UPDATE CAS), case (UPDATE CAS) |
+| `update_inputs` (hypothetical) | claim, case (UPDATE CAS) |
+| `compare_scenarios` | claim, profile `FOR UPDATE`, case `FOR UPDATE`, alternatives, result-set advisory lock |
+| `create_representative_question` | claim, case `FOR UPDATE` (**added in B3a**), alternative, request |
+| `submit_answer` (new) | unlocked request read (to find the case), claim, case `FOR UPDATE`, request `FOR UPDATE` (status and version re-checked), alternative CAS, inserts |
+| `list_eligible_options` | no row lock; result-set advisory lock (its key never matches a comparison's, because the fact basis is part of the key) |
+| `deactivate_alternative` | not used yet; documented to require the case lock first |
+
+- **Retries:** a PostgreSQL deadlock (`40P01`) or serialization abort (`40001`) leaves the
+  Unit of Work as `TransientConflictError`, with everything rolled back. `submit_answer` retries
+  the whole idempotent operation at most 3 times, then returns `INFRA_UNAVAILABLE` /
+  `transient_conflict`. Version conflicts are never retried.
+- **No external calls under locks:** no LLM call, network request or user wait happens while
+  a transaction is open.
+
+### Outbox and delivery (D1)
+- **One transaction:** the answer, request status, any case change (alternative inputs or
+  case fact), case version, audit entry, outbox event and operation completion are committed
+  together.
+- **Stable event:** the `event_id` is generated once in that transaction. A replay of the same
+  `operationId` returns the stored answer and adds no event.
+- **Payload:** `RepresentativeAnsweredEvent` v1, with identifiers and versions only.
+- **`SqlBusinessEventFeed` (`infrastructure/database/event_feed.py`):**
+  - `pending(limit)` returns unacknowledged rows in `sequence` order, and keeps returning them
+    until they are acknowledged;
+  - `acknowledge(ids)` sets `acknowledged_at` once; it is idempotent, and unknown IDs are
+    ignored;
+  - a trigger rejects every other update and every delete;
+  - it never touches AI tables.
+- **Not wired yet:** the AI worker's consumption and the bootstrap injection.
+
+### Migration `0004_representative_answers` (additive)
+- **New tables:**
+  - `representative_answers`: one per request, immutable;
+  - `case_representative_facts`: values checked by `is_valid_fact_value`, immutable;
+  - `integration_outbox`: identity `sequence`, acknowledge-only updates;
+  - `audit_entries`: minimal, immutable, no read API.
+- **Constraint added to an existing table:** `uq_representative_requests_case_id_id` on
+  `representative_requests`, for the composite FKs that keep an answer or fact inside its
+  request's case.
+- **Functions:** `reject_record_mutation()` and `outbox_acknowledge_only()`.
+- **Downgrade:** removes all of the above.
+
+### Coordination still required (not done in B3a)
+- **`bootstrap.py` (shared):** construct `RepresentativeAnswerService(uow, policy, reference,
+  clock)` and `SqlBusinessEventFeed(sessions)`; inject the feed only into the AI worker
+  (decision D4).
+- **AI track:** the worker pulls `pending`, enqueues each event deduplicated by `eventId`, and
+  only then calls `acknowledge`.
+- **B3b:** representative HTTP routes over `list_requests`, `get_request` and `submit_answer`
+  (after decision R).

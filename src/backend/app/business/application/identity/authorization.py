@@ -5,6 +5,12 @@ business data. Matrix: employees may act on their own profile and cases only;
 representatives and import operators are `FORBIDDEN` for these operations. A case that does
 not exist, belongs to someone else, or does not belong to the given conversation is
 `NOT_FOUND` (no existence disclosure). Identifiers alone never grant access.
+
+Representative operations (B3a) require the `representative` role, re-read from the store on
+every call; everyone else is `FORBIDDEN`. DEMO-ONLY POLICY (decision Q4): every active
+representative may see and answer every representative request - there is no per-team or
+per-request assignment. Representatives receive only the minimal request context, never the
+employee's identity, profile, salary, case or conversation.
 """
 
 from uuid import UUID
@@ -21,6 +27,12 @@ class AuthorizationPolicy:
         current = await revalidate_actor(uow, actor)
         if Role.EMPLOYEE not in current.roles:
             raise ForbiddenError("this operation is available to employees only")
+        return current
+
+    async def representative(self, uow: BusinessUnitOfWork, actor: ActorRef) -> ActorRef:
+        current = await revalidate_actor(uow, actor)
+        if Role.REPRESENTATIVE not in current.roles:
+            raise ForbiddenError("this operation is available to representatives only")
         return current
 
     async def owned_case(

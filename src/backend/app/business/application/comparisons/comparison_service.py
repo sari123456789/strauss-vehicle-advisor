@@ -14,6 +14,9 @@ One short Business Unit of Work per comparison:
 - Independent alternatives are always calculated; a blocked one is reported with its reason
   (AC14). A baseline that is not reliable (Q2) is not calculated and every delta is null.
 - Runs are never changed; freshness is evaluated on every read; details never recalculate.
+- Applied representative answers of this case (B3a) enter through the effective facts and the
+  plan; a representative fact that differs from the employee's report is disclosed as
+  `SOURCE_CONFLICT` and does not stop the calculation.
 """
 
 from collections.abc import Sequence
@@ -23,12 +26,20 @@ from uuid import UUID, uuid4
 from app.business.application.cases.alternatives import ensure_alternatives
 from app.business.application.cases.confirmation import fields_requiring_confirmation
 from app.business.application.cases.freshness import run_freshness
-from app.business.application.comparisons.facts import basis_for, effective_profile
+from app.business.application.comparisons.facts import (
+    basis_for,
+    effective_profile,
+    fact_conflicts,
+)
 from app.business.application.comparisons.mapping import (
     baseline_result,
     scenario_result,
 )
-from app.business.application.comparisons.planner import Plan, ScenarioPlanner
+from app.business.application.comparisons.planner import (
+    PARTICIPATION_SOURCE,
+    Plan,
+    ScenarioPlanner,
+)
 from app.business.application.comparisons.selection import ResolvedSelection, resolve_selection
 from app.business.application.comparisons.snapshot import build_input_snapshot
 from app.business.application.errors import (
@@ -50,6 +61,7 @@ from app.business.application.ports.unit_of_work import (
 )
 from app.business.application.profiles.profile_service import load_profile
 from app.business.application.reference import PinnedReference, pin_reference
+from app.business.application.representatives.case_answers import load_case_answers
 from app.business.application.vehicles.catalogue_service import plain_json
 from app.business.bl.comparisons.builder import build_comparison
 from app.business.bl.readiness.assessor import assess_readiness
@@ -125,7 +137,9 @@ class ComparisonService:
                         replace(case, actual_facts=latest, updated_at=now)
                     )  # new regular calculation: synchronize to the latest profile (T70)
                 basis = basis_for(request.kind)
-                profile = effective_profile(basis, case, latest)
+                answers = await load_case_answers(uow, case)
+                profile = effective_profile(basis, case, latest, answers.facts)
+                conflicts = fact_conflicts(basis, case, latest, answers.facts)
                 occupation = await self._planner.occupation(pinned, profile)
                 selected = await resolve_selection(
                     request.selection,
@@ -155,6 +169,7 @@ class ComparisonService:
                     include_baseline=request.include_current,
                     confirmation_required=fields_requiring_confirmation(profile, case.created_at),
                     open_requests=open_requests,
+                    answers=answers,
                 )
                 alternatives = {
                     a.option_key: a
@@ -172,7 +187,7 @@ class ComparisonService:
                 result = _result(
                     run_id, request, case, profile, pinned, plan, outcome, alternatives, now
                 )
-                issues = _issues(selected, plan, result)
+                issues = _issues(selected, plan, result, conflicts)
                 snapshot = build_input_snapshot(
                     case=case,
                     basis=basis,
@@ -366,9 +381,10 @@ def _assumptions(
         if vehicle is None or option.option_key not in calculated:
             continue
         tax_years.add(vehicle.tax_key.tax_year)
-        assumptions.append(
-            Assumption(code="participation.catalogue_default", option_key=option.option_key)
-        )
+        if getattr(option.spec, "participation_source", None) == PARTICIPATION_SOURCE:
+            assumptions.append(
+                Assumption(code="participation.catalogue_default", option_key=option.option_key)
+            )
         if (
             vehicle.track is Track.FAMILY
             and pinned.rules.derived.family_participation_mode == "base_plus_gap"
@@ -389,8 +405,13 @@ def _assumptions(
     return assumptions
 
 
-def _issues(selected: ResolvedSelection, plan: Plan, result: ComparisonResult) -> list[Issue]:
-    issues: list[Issue] = list(selected.issues)
+def _issues(
+    selected: ResolvedSelection,
+    plan: Plan,
+    result: ComparisonResult,
+    conflicts: Sequence[Issue] = (),
+) -> list[Issue]:
+    issues: list[Issue] = list(selected.issues) + list(conflicts)
     for option in plan.options:
         listed = selected.listed_eligibility.get(option.option_key)
         if listed is not None and listed != option.decision.status.value:

@@ -94,7 +94,8 @@ def scenario_result(
         else VehicleSource(
             catalogue_id=vehicle.catalogue_id,
             tax_key=contract_key(vehicle.tax_key),
-            participation_source="catalogue_default",
+            participation_source=getattr(plan.spec, "participation_source", None)
+            or "catalogue_default",
         ),
     }
     if outcome is None:  # blocked before calculation

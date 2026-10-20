@@ -76,6 +76,8 @@ async def ensure_alternatives(
 async def deactivate_alternative(
     uow: BusinessUnitOfWork, case: ComparisonCase, alternative_id: UUID, *, now: datetime
 ) -> Alternative:
+    """Lock order (B3a): the caller must already hold the case lock (`cases.lock`) - requests
+    and alternatives of a case are written only under it. Not called by any use case yet."""
     alternative = await uow.alternatives.get(case.case_id, alternative_id)
     if alternative is None:
         raise NotFoundError()

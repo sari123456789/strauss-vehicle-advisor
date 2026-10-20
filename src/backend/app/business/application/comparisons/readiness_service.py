@@ -11,14 +11,20 @@ Only the facts the goal needs are reported (architecture §14, agent-spec §6):
 Calculation goals use the same planner and BL component checks as `compare_scenarios`, so a
 scenario reported ready is one the comparison calculates. Until the shared contract gains a
 `kind` (decision Q1, pending joint approval) readiness evaluates regular calculations: the
-latest actual profile. Listing goals use the listing facts of 4A.
+latest actual profile. Listing goals use the listing facts of 4A. Both apply this case's
+applicable representative answers (B3a) exactly as `compare_scenarios` does, and disclose a
+differing employee report as `SOURCE_CONFLICT` (informational; readiness is unchanged).
 """
 
 from collections.abc import Sequence
 from typing import Any
 
 from app.business.application.cases.confirmation import fields_requiring_confirmation
-from app.business.application.comparisons.facts import FactBasis, effective_profile
+from app.business.application.comparisons.facts import (
+    FactBasis,
+    effective_profile,
+    fact_conflicts,
+)
 from app.business.application.comparisons.mapping import pending_fields, readiness_result
 from app.business.application.comparisons.planner import ScenarioPlanner
 from app.business.application.comparisons.selection import resolve_selection
@@ -30,6 +36,7 @@ from app.business.application.ports.reference_data import ReferenceDataRepositor
 from app.business.application.ports.unit_of_work import BusinessUnitOfWorkFactory
 from app.business.application.profiles.profile_service import load_profile
 from app.business.application.reference import PinnedReference, pin_reference
+from app.business.application.representatives.case_answers import load_case_answers
 from app.business.application.vehicles.facts import eligibility_facts
 from app.business.bl.eligibility.evaluator import evaluate_waiver_option
 from app.business.bl.facts import require_usable
@@ -80,10 +87,11 @@ class ReadinessService:
                     raise VersionConflict("the case changed in the meantime; reload first")
                 latest = await load_profile(uow, actor.subject_id)
                 pinned = await pin_reference(self._reference_data)
+                answers = await load_case_answers(uow, case)
                 goal = request.goal
                 if goal not in CALCULATION_GOALS:
                     basis = FactBasis.LATEST_WITH_OVERRIDES
-                    profile = effective_profile(basis, case, latest)
+                    profile = effective_profile(basis, case, latest, answers.facts)
                     open_requests = await uow.representative_requests.list_for_case(
                         case.case_id, [RequestStatus.OPEN]
                     )
@@ -93,7 +101,7 @@ class ReadinessService:
                     if request.selection is None:
                         raise InvalidInput("a calculation goal needs a selection")
                     basis = FactBasis.ACTUAL  # regular until Q1 adds `kind` to the contract
-                    profile = effective_profile(basis, case, latest)
+                    profile = effective_profile(basis, case, latest, answers.facts)
                     occupation = await self._planner.occupation(pinned, profile)
                     selected = await resolve_selection(
                         request.selection,
@@ -122,6 +130,7 @@ class ReadinessService:
                             profile, case.created_at
                         ),
                         open_requests=open_requests,
+                        answers=answers,
                     )
                     specs: list[AlternativeSpec] = [
                         o.spec for o in plan.options if o.spec is not None
@@ -134,6 +143,8 @@ class ReadinessService:
                         plan, assessment, baseline_required=baseline_required
                     )
                     issues = selected.issues + issues
+                conflicts = fact_conflicts(basis, case, latest, answers.facts)
+                issues = issues + [c for c in conflicts if c not in issues]
         status = EnvelopeStatus.OK if result.scope_complete else EnvelopeStatus.NEEDS_INFORMATION
         if not result.scope_complete and result.ready_scenario_ids:
             status = EnvelopeStatus.PARTIAL

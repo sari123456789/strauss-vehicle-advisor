@@ -10,6 +10,10 @@ case come from the server-built `ToolContext`.
   only this case's overrides; the profile is never touched.
 - Closed cases are read-only (B5); there is no close operation in this stage.
 - A conversation already bound to another owner is `NOT_FOUND` (B7).
+- An actual update is always saved to the profile; if this case holds an applicable
+  representative fact for a changed field with a different value, the representative fact
+  still wins inside this case and the update reports `SOURCE_CONFLICT`
+  (`representative_fact_differs`). Hypothetical overrides never report it (B3a).
 """
 
 from dataclasses import replace
@@ -48,9 +52,10 @@ from app.business.application.ports.unit_of_work import (
     BusinessUnitOfWorkFactory,
 )
 from app.business.application.profiles.profile_service import EmployeeProfileService, load_profile
+from app.business.application.representatives.case_answers import representative_conflicts
 from app.business.domain.cases import CaseLifecycleStatus, ComparisonCase, FactPath
 from app.business.domain.json_values import freeze_object
-from app.business.domain.representatives import RequestStatus
+from app.business.domain.representatives import RequestStatus, applicable_facts
 from app.business.domain.rules import RulesConfig
 from app.business.domain.vehicles import VehicleRef
 from app.contracts.case_inputs import (
@@ -320,6 +325,13 @@ class CaseService:
                     replace(case, hypothetical_overrides=overrides, updated_at=now)
                 )
         conflicts = await self._occupation_conflicts(changes, updated, release)
+        if request.mode is UpdateMode.ACTUAL_UPDATE:
+            touched = {c.path for c in changes}
+            stored_facts = await uow.case_facts.list_for_case(case.case_id)
+            facts = applicable_facts(stored_facts, case.reference_date)
+            conflicts += representative_conflicts(
+                profile, {p: f for p, f in facts.items() if p in touched}
+            )
         runs = await uow.comparison_runs.list_recent(case.case_id, RECENT_RUNS)
         stale = [
             run.run_id

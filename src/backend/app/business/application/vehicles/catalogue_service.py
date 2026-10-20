@@ -15,6 +15,8 @@ Listing (A6, A11, A12):
   it). An identical retry (same case version, profile version, release and request) returns
   the already stored set instead of a new one - no public operation ID is needed.
 - A closed case cannot be listed (A9); a stale `expectedCaseVersion` is `VERSION_CONFLICT`.
+- This case's applicable representative facts (B3a) apply beneath the overrides, as in every
+  fact basis; a differing employee report is disclosed as `SOURCE_CONFLICT`.
 """
 
 from collections.abc import Mapping
@@ -38,6 +40,11 @@ from app.business.application.ports.unit_of_work import (
 )
 from app.business.application.profiles.profile_service import load_profile
 from app.business.application.reference import PinnedReference, pin_reference
+from app.business.application.representatives.case_answers import (
+    load_case_answers,
+    representative_conflicts,
+    with_representative_facts,
+)
 from app.business.application.vehicles.facts import eligibility_facts, missing_issues
 from app.business.application.vehicles.mapping import vehicle_category, vehicle_item, waiver_item
 from app.business.bl.eligibility.evaluator import evaluate_vehicle, evaluate_waiver_option
@@ -45,6 +52,7 @@ from app.business.domain.arrangements import WAIVER_OPTION_KEY
 from app.business.domain.cases import (
     CaseLifecycleStatus,
     ComparisonCase,
+    FactPath,
     OptionResultSetRecord,
 )
 from app.business.domain.eligibility import (
@@ -52,8 +60,10 @@ from app.business.domain.eligibility import (
     EligibilityFacts,
     EligibilityStatus,
 )
+from app.business.domain.employee_profiles import EmployeeProfile
 from app.business.domain.json_values import JsonValue, freeze_object
 from app.business.domain.occupations import OccupationPolicy
+from app.business.domain.representatives import RepresentativeFact
 from app.business.domain.results import MissingFact
 from app.business.domain.vehicles import CatalogueVehicle, Track
 from app.contracts.catalogue import (
@@ -103,8 +113,12 @@ class CatalogueService:
                 ):
                     raise VersionConflict("the case changed in the meantime; reload first")
                 profile = await load_profile(uow, actor.subject_id)
+                answers = await load_case_answers(uow, case)
+                conflicts = _conflicts(profile, answers.facts, case)
                 pinned = await pin_reference(self._reference_data)
-                facts = eligibility_facts(profile, case.hypothetical_overrides)
+                facts = eligibility_facts(
+                    with_representative_facts(profile, answers.facts), case.hypothetical_overrides
+                )
                 occupation = await self._occupation(pinned, facts)
                 vehicles = await self._reference_data.list_vehicles(
                     pinned.release.catalogue_version_id
@@ -135,7 +149,7 @@ class CatalogueService:
         return Outcome(
             result,
             status=EnvelopeStatus.OK if stored.scope_complete else EnvelopeStatus.PARTIAL,
-            issues=tuple(issues),
+            issues=tuple(issues + conflicts),
             case_version=case.version,
             profile_version=profile.version,
             source_versions=pinned.versions,
@@ -152,8 +166,12 @@ class CatalogueService:
                 if request.expected_case_version != case.version:
                     raise VersionConflict("the case changed in the meantime; reload first")
                 profile = await load_profile(uow, actor.subject_id)
+                answers = await load_case_answers(uow, case)
+            conflicts = _conflicts(profile, answers.facts, case)
             pinned = await pin_reference(self._reference_data)
-            facts = eligibility_facts(profile, case.hypothetical_overrides)
+            facts = eligibility_facts(
+                with_representative_facts(profile, answers.facts), case.hypothetical_overrides
+            )
             occupation = await self._occupation(pinned, facts)
             if request.option_key == WAIVER_OPTION_KEY:
                 decision = evaluate_waiver_option(facts, occupation, pinned.rules)
@@ -185,7 +203,7 @@ class CatalogueService:
         return Outcome(
             result,
             status=EnvelopeStatus.NEEDS_INFORMATION if needs_information else EnvelopeStatus.OK,
-            issues=tuple(missing),
+            issues=tuple(missing + conflicts),
             case_version=case.version,
             profile_version=profile.version,
             source_versions=pinned.versions,
@@ -202,6 +220,13 @@ class CatalogueService:
         return await self._reference_data.get_occupation(
             pinned.release.catalogue_version_id, field.value
         )
+
+
+def _conflicts(
+    profile: EmployeeProfile, facts: Mapping[FactPath, RepresentativeFact], case: ComparisonCase
+) -> list[Issue]:
+    overridden = frozenset(o.path for o in case.hypothetical_overrides)
+    return representative_conflicts(profile, facts, overridden=overridden)
 
 
 async def store_option_list(

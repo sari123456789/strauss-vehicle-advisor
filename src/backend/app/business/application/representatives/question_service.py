@@ -16,6 +16,9 @@ conversation: only the dependent option (or the baseline) waits (agent-spec §2.
 - The subject snapshot holds the minimal context only - never salary data (D11).
 - `expectedValueType` follows the field code one to one (PROVISIONAL, open joint item:
   api-contracts §8 "fieldCode allowlist and expectedValueType").
+- Lock order (B3a): operation claim, then the case row `FOR UPDATE`, then the alternative and
+  the request are written - the global order, so question creation serializes with
+  representative answers and comparisons on the same case.
 """
 
 from uuid import uuid4
@@ -24,6 +27,7 @@ from app.business.application.cases.alternatives import ensure_alternatives
 from app.business.application.errors import (
     InvalidInput,
     InvalidStateTransition,
+    NotFoundError,
     VersionConflict,
     translate_errors,
 )
@@ -154,6 +158,10 @@ class RepresentativeQuestionService:
                     return Outcome(
                         replayed.model_copy(update={"created": False}), case_version=case.version
                     )
+                locked = await uow.cases.lock(case.case_id, owner_subject_id=actor.subject_id)
+                if locked is None:
+                    raise NotFoundError()
+                case = locked
                 if case.lifecycle_status is CaseLifecycleStatus.CLOSED:
                     raise InvalidStateTransition("a closed case is read-only")
                 if request.expected_case_version != case.version:
