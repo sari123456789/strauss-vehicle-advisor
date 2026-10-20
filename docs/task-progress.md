@@ -30,7 +30,7 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 | M2 | Representative HTTP routes (B3b) | **Done** — commit `01359c7`, pushed |
 | M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — commit `b243575`, pushed |
 | M3B | B4 end-to-end verification + E2 | **Done** — commit `edb4f6f`, pushed |
-| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done except the manual Gemini check** (blocked: the Gemini key is rejected, 403) — commit `2c6c05d` |
+| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done** — commit `2c6c05d`; Gemini verified 2026-10-20 after the key was replaced (see below) |
 | M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | **Done** — commit `3d6a0ef` |
 | M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | **Done** — final commit (see git log) |
 
@@ -134,21 +134,27 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   - A representative's waiver or allowance answer for it is still rejected
     (`field_code_not_answerable_yet`), because no authoritative rule exists.
 
-## Open item needing the user
-- A valid Gemini API key for a billing-free AI Studio project is needed. It goes in
-  `src/backend/.env` as `STRAUSS_AI_LLM_PROFILE_DEV_API_KEY`.
-- Then rerun the manual smoke:
-  - Start the server:
-    `SSL_CERT_FILE=<windows-roots.pem> STRAUSS_WORKER_IN_PROCESS=true uvicorn app.main:app --loop asyncio:SelectorEventLoop`
-  - Run `python scripts/smoke.py` with `SMOKE_*_PASSWORD` set.
-  - Hold two conversations: e001 with CAR-10, e005 with the waiver.
+## Manual Gemini check (2026-10-20, new key)
+- **Before the fix:** the interpretation schema was rejected with `400 INVALID_ARGUMENT`, because
+  the approved free-tier model does not accept `minItems`/`maxItems`. They are now dropped from
+  the provider schema, and Pydantic still enforces array lengths. A regression test was added.
+- **Latency:** the free tier answered in about 13–21 s, with occasional `504`/`503` responses.
+  The local timeout `STRAUSS_AI_LLM_PROFILE_DEV_TIMEOUT_SECONDS` was raised to 45; the maximum
+  allowed is 60.
+- **Real conversation (e001) against the local uvicorn server:**
+  1. "אילו רכבים מתאימים לי?" returned the real catalogue from Business.
+  2. "כמה אקבל נטו עם ATTO 3?" returned 11,693 ₪, which equals the Business display "11693".
+     Gemini composed the explanation and used only that amount.
+  - One turn hit a provider `503` and was answered with the deterministic "temporary problem,
+    try again" message. The retry succeeded.
+- **Smoke run:** steps 1–5 PASS. Step 6 depends on the model first running a calculation for the
+  option (a name reference resolves only against options already shown in the conversation). It
+  is covered deterministically by `test_smoke.py` and the M3 flow tests.
 
 ## Next step (exact)
 The integration plan is complete on `feature/full-system-integration`. Remaining items need the
 owner:
-1. Provide a valid billing-free Gemini key, then run the manual Gemini check (see "Open item"
-   above).
-2. Approve the Neon steps: migration 0004, the AI migrations and the checkpointer tables
+1. Approve the Neon steps: migration 0004, the AI migrations and the checkpointer tables
    (`docs/plans/cloud-runbook.md` §1).
-3. Approve the Render/Vercel configuration (runbook §2–§3) once the Render URL is known.
-4. Open a PR or merge into `develop`. This is a separate decision.
+2. Approve the Render/Vercel configuration (runbook §2–§3) once the Render URL is known.
+3. Open a PR or merge into `develop`. This is a separate decision.
