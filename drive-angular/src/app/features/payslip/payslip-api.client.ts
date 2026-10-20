@@ -1,6 +1,7 @@
 import {HttpClient, HttpEvent, HttpHeaders} from '@angular/common/http';
-import {Injectable, InjectionToken, inject} from '@angular/core';
+import {Injectable, inject} from '@angular/core';
 import {Observable} from 'rxjs';
+import {API_V1_BASE_URL} from '../../core/api/api-session';
 import {
   ApproveDraftRequest,
   CorrectDraftRequest,
@@ -9,22 +10,13 @@ import {
 } from './payslip.models';
 
 /**
- * Base URL of the real backend API (`/api/v1`). The legacy demo `API_BASE_URL` (`/api`) is not
- * reused because it targets proposed mock routes; at integration this may be unified.
- */
-export const PAYSLIP_API_BASE_URL = new InjectionToken<string>('PAYSLIP_API_BASE_URL', {
-  providedIn: 'root',
-  factory: () => '/api/v1',
-});
-
-/**
- * Typed client for the payslip-import routes. Authentication (bearer token) is added by the
- * application's HTTP interceptor; this client never handles credentials itself.
+ * Typed client for the payslip-import routes. Authentication (bearer token) is added by
+ * `apiAuthInterceptor`; this client never handles credentials itself.
  */
 @Injectable({providedIn: 'root'})
 export class PayslipApiClient {
   private readonly http = inject(HttpClient);
-  private readonly base = inject(PAYSLIP_API_BASE_URL);
+  private readonly base = inject(API_V1_BASE_URL);
 
   /** Raw PDF body; emits upload progress events and finally the created draft. */
   upload(conversationId: string, file: Blob): Observable<HttpEvent<PayslipDraft>> {

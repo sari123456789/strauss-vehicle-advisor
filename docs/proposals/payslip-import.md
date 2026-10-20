@@ -1,7 +1,8 @@
 # Proposal and integration handoff: AI-assisted payslip PDF import
 
-**Status:** Implemented independently on `feature/payslip-ai-import` (backend and Angular feature);
-not yet wired into the shared application (waits for the integration branch M5). Nothing here is an approved contract until the shared-ownership owners sign off.
+**Status:** Implemented and wired on `feature/payslip-ai-import` (merged with
+`feature/full-system-integration` M1–M4). Verified end to end locally (Angular → FastAPI →
+Business → local PostgreSQL). HTTP DTOs remain PROVISIONAL until the shared-ownership review.
 **Audience:** the full-system integration developer, the Business developer and the frontend developer.
 
 ## 1. Decisions that need sign-off
@@ -128,30 +129,59 @@ Base `/api/v1`, bearer auth, Problem Details errors with `details.payslipCode` (
 Values are decimal strings in profile units; **rates are fractions** (`"0.06"` = 6%). Upload is
 synchronous (typically well under a second without the LLM; ≤10 s extraction timeout).
 
-## 8. Integration handoff (shared files — not changed on this branch)
+## 8. Shared-file wiring (done on this branch)
 
-1. **Lifespan in `app/main.py`** (composition from integration M1) — one call reusing the runtime:
-   ```python
-   app.state.ai_payslip_imports = build_payslip_service(
-       conversations=runtime.conversations,   # existing ConversationService
-       business=services.tools,               # existing BusinessToolsPort
-       llm=llm,                               # existing guarded LLM, or None
-       external_llm_enabled=settings.payslip_external_llm,  # new setting, default False
-   )
-   ```
-   The setting is read in `app.settings` (only settings modules may read the environment).
-   The in-memory store requires one API process (already the case with the in-process worker).
-2. **`app/main.py`** — `app.include_router(payslip_imports.router, prefix="/api/v1")`.
-3. **OpenAPI / TypeScript** — regenerate models from the DTOs after joint approval.
-4. **Docs** — update `architecture.md` §1/§19, `agent-spec.md` T66 and exclusions,
-   `integration-contracts.md` (endpoints, codes), `frontend-handoff.md` (§9 below).
-5. **Agent (optional, later)** — after approval the agent sees the new values through the normal
-   `get_conversation_context`; no workflow change is required. A follow-up could post a system
-   message "הפרופיל עודכן מתלוש השכר" to the conversation history.
+| File | Change |
+|---|---|
+| `app/main.py` | The lifespan resolves ONE LLM port (shared with the AI runtime) and sets `app.state.ai_payslip_imports = build_payslip_imports(...)`, released on shutdown. The router is included under `/api/v1`. CORS also allows `DELETE`. |
+| `app/bootstrap.py` | `build_payslip_imports(services, runtime, llm=, settings=)` reuses `runtime.conversations` (ownership + trusted `ToolContext`) and `services.tools` (`actual_update`). |
+| `app/settings.py` | `payslip_external_llm` (`STRAUSS_PAYSLIP_EXTERNAL_LLM`), default `false`. |
+| `contracts/openapi/payslip-api.json` | A new, separate document (`tests/contract/payslip_openapi.py`) with drift, bearer and Angular-model checks. `ai-api.json` is unchanged. |
+
+Still open for the document owners: `architecture.md` §1/§19, `agent-spec.md` T66 and the
+exclusions table, `integration-contracts.md` and `frontend-handoff.md`. A system message in the
+conversation after approval is optional; it is not implemented, so no workflow node changed. The
+agent already sees the new values through `get_conversation_context`, because the case
+synchronizes to the new profile version (tested).
+
+### Running locally (as verified)
+
+1. Docker PostgreSQL `localhost:55432/strauss`, never Neon.
+2. With `STRAUSS_DATABASE_URL` and `STRAUSS_MIGRATION_DATABASE_URL` set to the local URL:
+   - `alembic -c alembic.ini upgrade head`
+   - `alembic -c alembic_ai.ini upgrade head`
+   - `python -m app.cli.setup_checkpointer`
+   - `python -m app.cli.import_data`
+   - `python -m app.cli.seed_demo`
+   - `STRAUSS_NEW_PASSWORD=… python -m app.cli.set_password --login e001` (repeat for `e002`)
+3. API: uvicorn `app.main:app` on `127.0.0.1:8000` with the asyncio **Selector** loop (Windows),
+   `STRAUSS_AUTH_COOKIE_SECURE=false` for plain-HTTP local development.
+4. Angular: `npm start` (`proxy.conf.json` forwards `/api/v1` to port 8000). Sign in as `e001`,
+   then open **הפרופיל**.
+5. Browser E2E:
+   `E2E_PAYSLIP=1 E2E_LOGIN=e001 E2E_OTHER_LOGIN=e002 E2E_PASSWORD=… npx playwright test e2e/payslip --project=chromium`
 
 ## 9. Frontend (Angular)
 
-**Implemented** (`drive-angular/src/app/features/payslip/`, not yet placed on a page):
+**Implemented and placed on the profile page.**
+
+Minimal real-API infrastructure, the smallest piece the full Angular integration (M5) can adopt
+or replace, in `drive-angular/src/app/core/api/`:
+- `ApiSession`: login and refresh through the HttpOnly cookie, with the CSRF header. The access
+  token is kept **in memory only**.
+- `apiAuthInterceptor`: adds the bearer token to `/api/v1/*` and renews once on a 401. Demo `/api`
+  calls are untouched.
+- `EmployeeApiClient`: `GET /me/profile`, and the employee's working conversation through the
+  idempotent `POST /conversations`, with a `clientRequestId` remembered per employee and month.
+
+Shared Angular files touched (minimal):
+- `main.ts`: registers the interceptor.
+- `sign-in.page.*`: real login for employees; the representative view is still the local demo.
+- `profile.page.*`: inserts `<dr-profile-payslip-section>`, the real salary facts plus the import.
+- `angular.json` and `proxy.conf.json`: the dev proxy.
+
+The chat entry point is **not** wired: the advisor page still runs on demo data (M5). The same
+component is meant to be hosted there:
 
 ```html
 <dr-payslip-import
@@ -163,10 +193,8 @@ synchronous (typically well under a second without the LLM; ≤10 s extraction t
   (closed)="hidePayslipImport()" />
 ```
 
-Wiring after M5 (shared files): place it in `features/profile/profile.page.html` (replacing the
-demo "upload payslip or contract" input), and offer it from the advisor/chat page when the
-context reports missing salary fields; the HTTP interceptor from M5 supplies the bearer token.
-`PAYSLIP_API_BASE_URL` defaults to `/api/v1`; it can be unified with the app's base URL then.
+The legacy demo upload field ("העלאת תלוש או חוזה", never sent to the server) is still in the
+demo profile form. Remove it when M5 replaces the demo form.
 
 ### Design notes (as implemented)
 
@@ -197,9 +225,9 @@ context reports missing salary fields; the HTTP interceptor from M5 supplies the
 | Level | Status |
 |---|---|
 | Independent feature implementation | Done on `feature/payslip-ai-import`: backend unit, router, real-Business and real-HTTP (login, ownership, actual_update) tests pass locally; Angular feature specs pass (vitest). |
-| API/frontend integration | **Not done**: lifespan/router wiring and placing the component on the profile/chat pages wait for integration M5 (§8, §9). |
-| Browser end-to-end (Playwright) | **Not done**: needs the routed component, real auth in Angular (M5) and a running stack. |
-| End-to-end deployment | **Not done / not verified.** |
+| API/frontend integration | **Done** for the profile page (§8, §9). The chat entry point waits for the real chat UI (M5). |
+| Browser end-to-end (Playwright, real stack) | **Passed locally** (`e2e/payslip/payslip-journey.spec.ts`, two consecutive runs): login, profile, upload of the synthetic PDF, extraction, correction, explicit approval, exactly one profile update, refreshed profile, identical replay without effect, and 404 for another employee. |
+| Deployment | **Not done** (out of scope; no Neon, no production). |
 | Real Gemini call | **Not performed.** Only `ScriptedLlm` was used. |
 
 ## 11. Known issues found during this work (outside the payslip feature)
@@ -217,3 +245,6 @@ context reports missing salary fields; the HTTP interceptor from M5 supplies the
   (`app/ai/infrastructure/persistence/store.py` is shared AI code).
 - Local test runs from `src/backend` with explicit test paths must pass `-c pyproject.toml`;
   otherwise pytest roots at the repository, `asyncio_mode=auto` is not loaded and async tests fail.
+- `drive-angular/e2e/visual/home.visual.spec.ts` (homepage vs reference image, ±4px and ≤3% pixel
+  checks) fails locally both with and without the payslip changes (verified by stashing them);
+  pre-existing, unrelated to this feature.
