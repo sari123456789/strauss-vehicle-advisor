@@ -14,9 +14,11 @@ from pathlib import Path
 from typing import Any
 
 from app.ai.application.event_relay import BusinessEventRelay
+from app.ai.application.payslip.service import PayslipImportService
 from app.ai.application.ports.llm import LlmPort
 from app.ai.infrastructure.llm.factory import build_llm_port
 from app.ai.infrastructure.llm.settings import load_llm_settings
+from app.ai.infrastructure.payslip.composition import build_payslip_service
 from app.ai.infrastructure.persistence.schema_status import agent_reachable, agent_schema_status
 from app.ai.infrastructure.persistence.settings import load_database_settings
 from app.ai.infrastructure.runtime import AiRuntime
@@ -295,6 +297,20 @@ async def build_ai_runtime(
         case_lifecycle=services.lifecycle,
         llm=llm if llm is not None else build_llm(),
         worker_id=worker_id,
+    )
+
+
+def build_payslip_imports(
+    services: BusinessServices, runtime: AiRuntime, *, llm: LlmPort, settings: Settings
+) -> PayslipImportService:
+    """Payslip import over the EXISTING runtime: conversation ownership and trusted ToolContext
+    from `ConversationService`, approval through `BusinessToolsPort` (actual_update). The
+    external LLM is used only when `STRAUSS_PAYSLIP_EXTERNAL_LLM=true` (default off)."""
+    return build_payslip_service(
+        conversations=runtime.conversations,
+        business=services.tools,
+        llm=llm,
+        external_llm_enabled=settings.payslip_external_llm,
     )
 
 
