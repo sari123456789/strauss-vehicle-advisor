@@ -21,10 +21,15 @@ OPENAPI_TITLE = "Strauss Vehicle Advisor - Business API"
 OPENAPI_VERSION = "0.1.0"
 
 
-def install_business_api(app: FastAPI, api: BusinessApi) -> None:
-    app.state.business_api = api
+def include_business_routers(app: FastAPI) -> None:
+    """Routes only; the `BusinessApi` is set later (`app.state.business_api`, lifespan)."""
     for module in (auth, profile, cases):
         app.include_router(module.router, prefix=API_PREFIX)
+
+
+def install_business_api(app: FastAPI, api: BusinessApi) -> None:
+    app.state.business_api = api
+    include_business_routers(app)
 
 
 def business_openapi() -> dict[str, Any]:

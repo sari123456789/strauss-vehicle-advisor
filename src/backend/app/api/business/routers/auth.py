@@ -1,7 +1,8 @@
 """`/auth`: sign-in, refresh, sign-out, current actor (architecture §22).
 
 The access token is returned in the body (kept in memory by the client); the refresh token is
-set only as an `HttpOnly; Secure; SameSite=Strict` cookie scoped to `/api/v1/auth`. Refresh
+set only as an `HttpOnly; Secure` cookie scoped to `/api/v1/auth`, `SameSite=Strict` unless
+`HttpConfig.cookie_samesite` says otherwise (`none` for a cross-site deployment). Refresh
 and logout are cookie-authenticated and therefore CSRF-protected (`require_csrf`).
 """
 
@@ -25,7 +26,7 @@ def _session(tokens: SessionTokens, api: BusinessApi, response: Response) -> Ses
         path=http.refresh_cookie_path,
         secure=http.cookie_secure,
         httponly=True,
-        samesite="strict",
+        samesite=http.cookie_samesite,
     )
     return SessionResponse(
         access_token=tokens.access_token,
@@ -45,7 +46,7 @@ def _clear(api: BusinessApi, response: Response) -> None:
         path=http.refresh_cookie_path,
         secure=http.cookie_secure,
         httponly=True,
-        samesite="strict",
+        samesite=http.cookie_samesite,
     )
 
 
