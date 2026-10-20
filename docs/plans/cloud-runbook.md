@@ -16,9 +16,9 @@ None of them was executed during the integration work.
 | Reference import (release 1: 20 vehicles, 14 occupations, 77,988 tax records) | Done |
 | Demo seed (e001–e006, rep01, ops01; six profiles) | Done |
 | Demo passwords for `e001` and `rep01` | Done (kept privately) |
-| **Business migration `0004_representative_answers`** (answers, case facts, outbox, audit) | **Pending — needed by the representative flow; the API refuses to start without it** |
-| **AI migrations** `0001`–`0003` (`agent` schema) | **Pending** |
-| **LangGraph checkpointer tables** (`python -m app.cli.setup_checkpointer`) | **Pending** |
+| Business migration `0004_representative_answers` (answers, case facts, outbox, audit) | **Done** (2026-10-20, approved; verified: version 0004 and the four tables exist) |
+| AI migrations `0001`–`0003` (`agent` schema) | **Done** (verified 2026-10-20: `0003_response_staging`) |
+| LangGraph checkpointer tables | **Done** (verified 2026-10-20) |
 | Passwords for further demo logins (e.g. `e005` for the waiver demo) | Optional |
 
 Neon's sample table `public.playing_with_neon` is unrelated and may be deleted.
