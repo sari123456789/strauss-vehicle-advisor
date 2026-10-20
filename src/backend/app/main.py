@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.ai.application.ports.llm import LlmPort
 from app.api.business.dependencies import BusinessApi, HttpConfig
 from app.api.business.installer import include_business_routers
-from app.api.routers import conversations, health
+from app.api.routers import conversations, health, payslip_imports
 from app.bootstrap import (
     Container,
     ReadinessSources,
@@ -35,6 +35,8 @@ from app.bootstrap import (
     build_business_services,
     build_container,
     build_event_relay,
+    build_llm,
+    build_payslip_imports,
     build_readiness_probe,
     verify_schemas,
 )
@@ -84,12 +86,17 @@ def _lifespan(
                 http=_http_config(settings),
                 representatives=services.representative_answers,
             )
-            runtime = await build_ai_runtime(services, llm=llm, ai_database_url=ai_database_url)
+            model = llm if llm is not None else build_llm()  # one LLM port, shared
+            runtime = await build_ai_runtime(services, llm=model, ai_database_url=ai_database_url)
             stack.push_async_callback(runtime.aclose)
             await verify_schemas(services, runtime)
             app.state.business_services = services
             app.state.ai_runtime = runtime
             app.state.ai_conversations = runtime.conversations
+            # Payslip import: existing conversation ownership + Business port; no new auth.
+            app.state.ai_payslip_imports = build_payslip_imports(
+                services, runtime, llm=model, settings=settings
+            )
             sources = ReadinessSources(services, runtime, settings.worker_in_process)
             if settings.worker_in_process:
                 runtime.in_process.start()
@@ -104,7 +111,13 @@ def _lifespan(
             try:
                 yield
             finally:
-                for name in ("readiness_probe", "event_relay", "ai_conversations", "business_api"):
+                for name in (
+                    "readiness_probe",
+                    "event_relay",
+                    "ai_payslip_imports",
+                    "ai_conversations",
+                    "business_api",
+                ):
                     if hasattr(app.state, name):
                         delattr(app.state, name)
                 logger.info("shutdown_started")
@@ -134,13 +147,14 @@ def create_app(
             CORSMiddleware,
             allow_origins=list(settings.auth_allowed_origins),
             allow_credentials=True,
-            allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+            allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
             allow_headers=CORS_HEADERS,
             expose_headers=["X-Request-ID"],
         )
     app.include_router(health.router, prefix=API_PREFIX)
     include_business_routers(app)
     app.include_router(conversations.router, prefix=API_PREFIX)
+    app.include_router(payslip_imports.router, prefix=API_PREFIX)
     return app
 
 

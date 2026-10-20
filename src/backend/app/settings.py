@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     worker_in_process: bool = False
     """Run the AI turn worker and the Business event relay inside the API process (decision W).
     Enable it on exactly one instance."""
+    payslip_external_llm: bool = False
+    """Send redacted payslip candidate lines to the configured LLM provider. Off by default:
+    real payslips must not reach an external provider without an approved data-handling
+    policy. Enable only with synthetic payslips (docs/proposals/payslip-import.md, D3)."""
 
     @model_validator(mode="before")
     @classmethod

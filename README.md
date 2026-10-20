@@ -10,6 +10,16 @@ one FastAPI application composes the Business API, the AI conversation API, the 
 turn worker and the Business-outbox relay; the Angular app (`drive-angular/`) talks to the real
 API. Integration decisions: `docs/business-decisions.md` §20.
 
+Payslip import (branch `feature/full-system-with-payslip`, merged from `feature/payslip-ai-import`):
+the employee uploads a PDF payslip, reviews and corrects the extracted salary fields and explicitly
+approves them; only then is the profile updated through the Business `actual_update` (version
+check, `operationId` idempotency). Routes: `contracts/openapi/payslip-api.json`; design and limits:
+`docs/proposals/payslip-import.md`. The Angular entry points are the profile page and the advisor
+sidebar, both reusing one `dr-payslip-import` component and the app's single session
+(`SessionService` + `authInterceptor`). External LLM processing of payslips is off by default
+(`STRAUSS_PAYSLIP_EXTERNAL_LLM=false`); drafts live in an in-memory store (lost on restart, single
+process only).
+
 History of the Business module:
 
 - Step 0: setup, provisional shared contracts, fakes, tests.
@@ -183,3 +193,8 @@ In VS Code, select the interpreter `src/backend/.venv` so imports resolve.
 Frontend checks (from `drive-angular/`): `npm run build`, `npm test`, `npm run e2e:responsive`,
 `npm run e2e:visual`. The real-backend journey needs `tests/e2e_server.py` (deterministic keyword
 model) on port 8000 and `E2E_BACKEND=1 E2E_E001_PASSWORD=... E2E_REP01_PASSWORD=... npm run e2e:journey`.
+The payslip journey uses the same server: `E2E_PAYSLIP=1 E2E_PASSWORD=... npx playwright test e2e/payslip --project=chromium`
+(needs `e001` and `e002` with that password; it changes e001's salary, so run it after the journey).
+For an isolated E2E database, set `STRAUSS_AI_DATABASE_URL` and `STRAUSS_AI_MIGRATION_DATABASE_URL`
+as well as the Business URLs: the AI module reads its own settings and otherwise uses the default
+local `strauss` database.

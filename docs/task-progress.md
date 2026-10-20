@@ -152,3 +152,28 @@ owner:
    (`docs/plans/cloud-runbook.md` §1).
 3. Approve the Render/Vercel configuration (runbook §2–§3) once the Render URL is known.
 4. Open a PR or merge into `develop`. This is a separate decision.
+
+## Full system with payslip import (branch `feature/full-system-with-payslip`)
+Merge of `feature/payslip-ai-import` (ee9f14d) into `feature/full-system-integration` (d10d6a9).
+Common base: M4 (2c6c05d).
+- Backend: no overlapping files. The payslip router, settings and bootstrap wiring merged as is.
+  Business calculations, contracts and the AI workflow are unchanged.
+- Angular: one session architecture, M5's `SessionService`, `authInterceptor` and `API_BASE_URL`.
+  The payslip branch's parallel stack was removed: `ApiSession`, `apiAuthInterceptor`,
+  `EmployeeApiClient` and the duplicate profile section.
+  - The payslip client now goes through the shared interceptor.
+  - The profile page shows M5's real profile table plus the payslip import.
+  - The advisor sidebar offers the same component in compact form.
+  - Both entry points use the active advisor conversation (`ConversationStore.ensureActive`).
+- Verified locally (isolated database, deterministic model, no Gemini or Neon):
+  - pytest: 1166 passed, 9 skipped.
+  - ruff, format and mypy: clean.
+  - Angular: build passes; unit tests 34 passed.
+  - Real E2E: the M5 journey and the payslip journey both pass. The profile updated once
+    (v1 to v2), a new AI case sees the new values, and another employee's draft access returns 404.
+- Known issues, also present on `feature/full-system-integration`:
+  - The M5 journey fails at "+ new conversation" for an account with no conversations yet. A race
+    between `ensureActive()` on page load and the click; it reproduces on the pristine branch.
+  - Visual home-page tests (1586×992) fail.
+  - The webkit drawer focus test fails at 768px.
+

@@ -1,10 +1,11 @@
-import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {FIELD_STATUS} from '../../core/api/labels';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {MoneyPipe} from '../../shared/format/money.pipe';
 import {PageHeadingComponent} from '../../shared/ui/page-heading.component';
+import {PayslipImportComponent} from '../payslip/payslip-import.component';
 import {ProfileStore} from '../profile/state/profile.store';
 import {ConversationStore} from './state/conversation.store';
 
@@ -13,7 +14,7 @@ const RUN_KINDS = new Set(['comparison', 'history']);
 
 @Component({
   standalone: true,
-  imports: [RouterLink, FormsModule, CarArtComponent, PageHeadingComponent, MoneyPipe],
+  imports: [RouterLink, FormsModule, CarArtComponent, PageHeadingComponent, MoneyPipe, PayslipImportComponent],
   templateUrl: './advisor.page.html',
 })
 export class AdvisorPage implements OnInit, OnDestroy {
@@ -22,6 +23,8 @@ export class AdvisorPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly fieldStatus = FIELD_STATUS;
+  /** The payslip import panel (same reusable component as the profile page). */
+  readonly payslipOpen = signal(false);
   text = '';
 
   async ngOnInit(): Promise<void> {

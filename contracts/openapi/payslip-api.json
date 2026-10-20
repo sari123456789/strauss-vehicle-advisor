@@ -1,0 +1,735 @@
+{
+  "components": {
+    "schemas": {
+      "ApproveDraftRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedDraftVersion": {
+            "minimum": 1.0,
+            "title": "Expecteddraftversion",
+            "type": "integer"
+          },
+          "expectedProfileVersion": {
+            "minimum": 0.0,
+            "title": "Expectedprofileversion",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedDraftVersion",
+          "expectedProfileVersion",
+          "operationId",
+          "fields"
+        ],
+        "title": "ApproveDraftRequest",
+        "type": "object"
+      },
+      "CorrectDraftRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "corrections": {
+            "items": {
+              "$ref": "#/components/schemas/CorrectionItem"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Corrections",
+            "type": "array"
+          },
+          "expectedDraftVersion": {
+            "minimum": 1.0,
+            "title": "Expecteddraftversion",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedDraftVersion",
+          "corrections"
+        ],
+        "title": "CorrectDraftRequest",
+        "type": "object"
+      },
+      "CorrectionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "value": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "CorrectionItem",
+        "type": "object"
+      },
+      "DraftFieldView": {
+        "additionalProperties": false,
+        "properties": {
+          "alternatives": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceView"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "field": {
+            "$ref": "#/components/schemas/FieldPath"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field",
+          "status",
+          "value",
+          "confidence",
+          "evidence",
+          "alternatives",
+          "issues"
+        ],
+        "title": "DraftFieldView",
+        "type": "object"
+      },
+      "DraftView": {
+        "additionalProperties": false,
+        "properties": {
+          "conversationId": {
+            "format": "uuid",
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "documentIssues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Documentissues",
+            "type": "array"
+          },
+          "draftId": {
+            "format": "uuid",
+            "title": "Draftid",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/DraftFieldView"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "lastError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasterror"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "pageCount": {
+            "title": "Pagecount",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draftId",
+          "conversationId",
+          "version",
+          "status",
+          "mode",
+          "pageCount",
+          "createdAt",
+          "expiresAt",
+          "fields",
+          "documentIssues",
+          "lastError"
+        ],
+        "title": "DraftView",
+        "type": "object"
+      },
+      "EvidenceView": {
+        "additionalProperties": false,
+        "properties": {
+          "lineIndex": {
+            "title": "Lineindex",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "page",
+          "lineIndex",
+          "text"
+        ],
+        "title": "EvidenceView",
+        "type": "object"
+      },
+      "FieldPath": {
+        "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
+        "enum": [
+          "payroll.baseGross",
+          "payroll.commissionsGross",
+          "payroll.bonusGross",
+          "payroll.pensionEmployeeRate",
+          "payroll.studyFundEmployeeRate",
+          "payroll.creditPoints",
+          "employee.occupationId",
+          "employee.entitlementGroup",
+          "employee.qualifyingChildrenCount",
+          "currentArrangement.kind",
+          "currentArrangement.vehicle",
+          "currentArrangement.propulsion",
+          "currentArrangement.participation",
+          "currentArrangement.familyDeduction",
+          "currentArrangement.familyDeductionIncludedInParticipation",
+          "currentArrangement.allowance"
+        ],
+        "title": "FieldPath",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Issue": {
+        "additionalProperties": false,
+        "description": "A business-level observation. Never contains raw exceptions or salary documents.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/IssueCode"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldPath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optionKey": {
+            "anyOf": [
+              {
+                "pattern": "^(vehicle:[A-Z]{2,5}-\\d{2,4}|waiver)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optionkey"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requestId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestid"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "Issue",
+        "type": "object"
+      },
+      "IssueCode": {
+        "enum": [
+          "MISSING_INPUT",
+          "AMBIGUOUS_INPUT",
+          "INELIGIBLE",
+          "VEHICLE_NOT_FOUND",
+          "TAX_KEY_AMBIGUOUS",
+          "SOURCE_CONFLICT",
+          "STALE_REVISION",
+          "PENDING_REPRESENTATIVE",
+          "TOOL_UNAVAILABLE",
+          "UNSUPPORTED_INPUT"
+        ],
+        "title": "IssueCode",
+        "type": "string"
+      },
+      "UpdateInputsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptedFields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldPath"
+            },
+            "title": "Acceptedfields",
+            "type": "array"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "missingInformation": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Missinginformation",
+            "type": "array"
+          },
+          "newCaseVersion": {
+            "minimum": 0.0,
+            "title": "Newcaseversion",
+            "type": "integer"
+          },
+          "newProfileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newprofileversion"
+          },
+          "staleRunIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Stalerunids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "acceptedFields",
+          "newCaseVersion"
+        ],
+        "title": "UpdateInputsResult",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "description": "Access token from /api/v1/auth/login",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Strauss Vehicle Advisor - Payslip Import API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/conversations/{conversationId}/payslip-imports": {
+      "post": {
+        "operationId": "upload_payslip_api_v1_conversations__conversationId__payslip_imports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversationid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/pdf": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Payslip",
+        "tags": [
+          "payslip-imports"
+        ]
+      }
+    },
+    "/api/v1/payslip-imports/{draftId}": {
+      "delete": {
+        "operationId": "cancel_payslip_draft_api_v1_payslip_imports__draftId__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draftId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draftid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Payslip Draft",
+        "tags": [
+          "payslip-imports"
+        ]
+      },
+      "get": {
+        "operationId": "get_payslip_draft_api_v1_payslip_imports__draftId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draftId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draftid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Payslip Draft",
+        "tags": [
+          "payslip-imports"
+        ]
+      },
+      "patch": {
+        "operationId": "correct_payslip_draft_api_v1_payslip_imports__draftId__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draftId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draftid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Correct Payslip Draft",
+        "tags": [
+          "payslip-imports"
+        ]
+      }
+    },
+    "/api/v1/payslip-imports/{draftId}/approve": {
+      "post": {
+        "operationId": "approve_payslip_draft_api_v1_payslip_imports__draftId__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draftId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draftid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateInputsResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Payslip Draft",
+        "tags": [
+          "payslip-imports"
+        ]
+      }
+    }
+  }
+}
