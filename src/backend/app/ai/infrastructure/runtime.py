@@ -5,17 +5,23 @@ tools) and `CaseLifecyclePort` (case creation). The shared bootstrap passes the 
 `BusinessToolsFacade` / `CaseLifecycleAdapter`; tests pass fakes. The LLM is injected too, so
 automated tests use a scripted model and never call a provider.
 
-Usage (bootstrap, API lifespan or a separate worker process):
+Usage in the FastAPI lifespan (in-process worker, cloud plan DECISION W):
 
     runtime = await build_ai_runtime(url, business_tools=..., case_lifecycle=..., llm=...)
+    app.state.ai_conversations = runtime.conversations
+    runtime.in_process.start()
     try:
-        stop = asyncio.Event()
-        await runtime.worker.run_forever(stop)      # or schedule it as a task in-process
+        yield
     finally:
-        await runtime.aclose()
+        await runtime.aclose()                     # stops the worker, then the connections
+
+A separate worker process instead awaits `runtime.worker.run_forever(stop)`.
 """
 
-from dataclasses import dataclass
+import asyncio
+import logging
+from contextlib import suppress
+from dataclasses import dataclass, field
 from uuid import uuid4
 
 from psycopg import AsyncConnection
@@ -44,6 +50,73 @@ from app.contracts.case_lifecycle import CaseLifecyclePort
 
 Pool = AsyncConnectionPool[AsyncConnection[DictRow]]
 
+logger = logging.getLogger("app.ai.worker")
+DEFAULT_IDLE_SECONDS = 1.0
+DEFAULT_STOP_TIMEOUT_SECONDS = 20.0
+
+
+class InProcessWorker:
+    """Runs `TurnWorker.run_forever` as one asyncio task inside the API process (cloud plan
+    DECISION W: Render's free tier has no background workers).
+
+    `start()` from the FastAPI lifespan; `stop()` on shutdown. Stop first asks the loop to
+    finish its current input; after `stop_timeout` it cancels the task. A cancelled attempt
+    writes nothing more: its lease expires and the input is taken over later (as after a
+    crash), and its thread lock is released with its connection.
+    """
+
+    def __init__(
+        self,
+        worker: TurnWorker,
+        *,
+        idle_seconds: float = DEFAULT_IDLE_SECONDS,
+        stop_timeout: float = DEFAULT_STOP_TIMEOUT_SECONDS,
+    ) -> None:
+        self._worker = worker
+        self._idle = idle_seconds
+        self._stop_timeout = stop_timeout
+        self._stop: asyncio.Event | None = None
+        self._task: asyncio.Task[None] | None = None
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    def start(self) -> None:
+        if self.running:
+            raise RuntimeError("the in-process worker is already running")
+        self._stop = asyncio.Event()
+        self._task = asyncio.create_task(
+            self._worker.run_forever(self._stop, idle_seconds=self._idle), name="ai-turn-worker"
+        )
+        self._task.add_done_callback(_log_unexpected_exit)
+        logger.info("in_process_worker_started")
+
+    async def stop(self) -> None:
+        """Idempotent; returns once the task has finished."""
+        task, stop = self._task, self._stop
+        if task is None or stop is None:
+            return
+        stop.set()
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=self._stop_timeout)
+        except TimeoutError:
+            logger.warning("in_process_worker_stop_timeout: cancelling the current attempt")
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        except Exception:  # noqa: BLE001 - already logged by the done callback
+            pass
+        finally:
+            self._task = None
+            self._stop = None
+        logger.info("in_process_worker_stopped")
+
+
+def _log_unexpected_exit(task: "asyncio.Task[None]") -> None:
+    if not task.cancelled() and task.exception() is not None:
+        logger.error("in_process_worker_exited error=%s", type(task.exception()).__name__)
+
 
 @dataclass
 class AiRuntime:
@@ -53,8 +126,14 @@ class AiRuntime:
     runner: LangGraphTurnRunner
     conversations: ConversationService
     worker: TurnWorker
+    in_process: InProcessWorker = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.in_process = InProcessWorker(self.worker)
 
     async def aclose(self) -> None:
+        """Stops the in-process worker (if started), then releases the connections."""
+        await self.in_process.stop()
         await self.pool.close()
         await self.engine.dispose()
 
