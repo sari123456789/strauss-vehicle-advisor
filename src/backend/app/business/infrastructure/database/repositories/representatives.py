@@ -1,4 +1,4 @@
-"""`RepresentativeRequestRepository` over `business.representative_requests` (employee side).
+"""`RepresentativeRequestRepository` over `business.representative_requests`.
 
 `add_or_get_open` never aborts the transaction on a duplicate: the insert uses ON CONFLICT DO
 NOTHING and the existing request (same idempotency key, or the equivalent open request) is
@@ -108,6 +108,25 @@ class SqlRepresentativeRequestRepository:
 
     async def get(self, case_id: UUID, request_id: UUID) -> RepresentativeRequest | None:
         return await self._one(REQUESTS.c.case_id == case_id, REQUESTS.c.id == request_id)
+
+    async def get_by_id(self, request_id: UUID) -> RepresentativeRequest | None:
+        return await self._one(REQUESTS.c.id == request_id)
+
+    async def lock(self, request_id: UUID) -> RepresentativeRequest | None:
+        statement = select(REQUESTS).where(REQUESTS.c.id == request_id).with_for_update()
+        row = (await self._session.execute(statement)).first()
+        return None if row is None else _request(row)
+
+    async def list_all(
+        self, statuses: Collection[RequestStatus] | None = None, *, limit: int
+    ) -> tuple[RepresentativeRequest, ...]:
+        statement = select(REQUESTS)
+        if statuses is not None:
+            statement = statement.where(REQUESTS.c.status.in_([s.value for s in statuses]))
+        rows = await self._session.execute(
+            statement.order_by(REQUESTS.c.created_at, REQUESTS.c.id).limit(limit)
+        )
+        return tuple(_request(r) for r in rows)
 
     async def list_for_case(
         self, case_id: UUID, statuses: Collection[RequestStatus] | None = None

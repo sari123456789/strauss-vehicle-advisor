@@ -8,11 +8,18 @@ scoping supports, but does not replace, Application-level authorization (role, o
 Optimistic concurrency: `update(entity)` writes only if the stored version still equals
 `entity.version` (the version that was read) and returns the entity with version + 1;
 otherwise it raises `VersionConflictError`. There is never a last-write-wins update.
+
+Global row-lock order (B3a), for every operation that holds more than one lock:
+operation claim -> employee profile -> case -> representative requests -> alternatives.
+No operation takes an earlier lock after a later one. A path that starts from a request ID
+reads the request without a lock to find its case, locks the case, and only then locks and
+re-validates the request.
 """
 
 import re
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
 from uuid import UUID
@@ -25,7 +32,12 @@ from app.business.domain.cases import (
 )
 from app.business.domain.employee_profiles import EmployeeProfile
 from app.business.domain.json_values import JsonObject
-from app.business.domain.representatives import RepresentativeRequest, RequestStatus
+from app.business.domain.representatives import (
+    RepresentativeAnswer,
+    RepresentativeFact,
+    RepresentativeRequest,
+    RequestStatus,
+)
 
 _OPERATION_TYPE = re.compile(r"^[a-z_]{3,64}$")
 
@@ -132,6 +144,15 @@ class CaseRepository(Protocol):
         """Owner-scoped read `FOR UPDATE`; taken after the profile lock (see profiles)."""
         ...
 
+    async def get_by_id(self, case_id: UUID) -> ComparisonCase | None:
+        """Unscoped read for representative-side paths only: the caller has already
+        authorized the representative and reached the case through a request."""
+        ...
+
+    async def lock_by_id(self, case_id: UUID) -> ComparisonCase | None:
+        """`get_by_id` with `FOR UPDATE` (same position in the lock order as `lock`)."""
+        ...
+
 
 @runtime_checkable
 class AlternativeRepository(Protocol):
@@ -199,4 +220,78 @@ class RepresentativeRequestRepository(Protocol):
 
     async def update(self, request: RepresentativeRequest) -> RepresentativeRequest:
         """Optimistic on `request_version`; returns the request with request_version + 1."""
+        ...
+
+    async def get_by_id(self, request_id: UUID) -> RepresentativeRequest | None:
+        """Unscoped, unlocked read (representative side, after role authorization)."""
+        ...
+
+    async def lock(self, request_id: UUID) -> RepresentativeRequest | None:
+        """Read `FOR UPDATE`; only while the request's case is already locked."""
+        ...
+
+    async def list_all(
+        self, statuses: Collection[RequestStatus] | None = None, *, limit: int
+    ) -> tuple[RepresentativeRequest, ...]:
+        """Representative queue (demo policy: every representative sees every request),
+        oldest first."""
+        ...
+
+
+@runtime_checkable
+class RepresentativeAnswerRepository(Protocol):
+    async def add(self, answer: RepresentativeAnswer) -> None:
+        """Insert-only; at most one answer per request (a second insert is a duplicate)."""
+        ...
+
+    async def get(self, request_id: UUID) -> RepresentativeAnswer | None: ...
+
+
+@runtime_checkable
+class CaseFactRepository(Protocol):
+    """Case-local representative facts (insert-only, never shared across cases)."""
+
+    async def add(self, fact: RepresentativeFact) -> None: ...
+
+    async def list_for_case(self, case_id: UUID) -> tuple[RepresentativeFact, ...]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class AuditEntry:
+    """Minimal audit record (decision D2/R1): who did what to which case and field. Details
+    hold only the permitted values (the answered fact, never salary data)."""
+
+    entry_id: UUID
+    actor_subject_id: UUID
+    actor_role: str
+    action: str
+    case_id: UUID
+    occurred_at: datetime
+    request_id: UUID | None = None
+    field_code: str | None = None
+    details: JsonObject | None = None
+
+
+@runtime_checkable
+class AuditRepository(Protocol):
+    async def add(self, entry: AuditEntry) -> None:
+        """Insert-only; there is no read API in B3a (restricted access)."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class OutboxEvent:
+    """A business event recorded in the same transaction as the change it reports (D1)."""
+
+    event_id: UUID
+    event_type: str
+    schema_version: int
+    occurred_at: datetime
+    payload: JsonObject
+
+
+@runtime_checkable
+class OutboxRepository(Protocol):
+    async def add(self, event: OutboxEvent) -> None:
+        """Insert-only; the outbox assigns the delivery sequence."""
         ...

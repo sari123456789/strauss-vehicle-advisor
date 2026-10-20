@@ -17,6 +17,10 @@ reported propulsion is a conflict); a vehicle outside the catalogue is regular-t
 the reported propulsion (never inferred, D6); a family deduction reported for it is unclear.
 Pending requests (Q6): an open request tied to an option blocks only that option; an open
 request about the current vehicle blocks only the baseline.
+
+Representative answers (B3a): an applicable representative participation replaces the
+catalogue default of its option (`participationSource="representative"`); a request answered
+`cannot_determine` keeps its option uncalculated (AC33) - see `case_answers.py`.
 """
 
 from collections.abc import Iterable, Sequence
@@ -27,6 +31,10 @@ from typing import Any
 from app.business.application.errors import NotFoundError
 from app.business.application.ports.reference_data import ReferenceDataRepository
 from app.business.application.reference import PinnedReference
+from app.business.application.representatives.case_answers import (
+    CaseAnswers,
+    cannot_determine_issue,
+)
 from app.business.application.vehicles.facts import eligibility_facts
 from app.business.bl.eligibility.evaluator import evaluate_vehicle, evaluate_waiver_option
 from app.business.domain.arrangements import (
@@ -51,12 +59,14 @@ from app.business.domain.occupations import OccupationPolicy
 from app.business.domain.provenance import FieldStatus, FieldValue, SourceType
 from app.business.domain.representatives import (
     RepresentativeFieldCode,
+    RepresentativeParticipation,
     RepresentativeRequest,
 )
 from app.business.domain.vehicles import CatalogueVehicle, Propulsion, Track, VehicleTaxKey
 from app.contracts.common import FieldPath, Issue, IssueCode
 
 PARTICIPATION_SOURCE = "catalogue_default"
+REPRESENTATIVE_PARTICIPATION = "representative"
 VEHICLE_PREFIX = "vehicle:"
 BASELINE_REQUEST_FIELDS = frozenset(
     {RepresentativeFieldCode.VEHICLE_PROPULSION, RepresentativeFieldCode.VEHICLE_TAX_KEY}
@@ -159,12 +169,14 @@ class ScenarioPlanner:
         include_baseline: bool,
         confirmation_required: Iterable[FieldPath],
         open_requests: Sequence[RepresentativeRequest],
+        answers: CaseAnswers | None = None,
     ) -> Plan:
         catalogue = await self._reference_data.list_vehicles(pinned.release.catalogue_version_id)
         by_id = {v.catalogue_id: v for v in catalogue}
         occupation = await self.occupation(pinned, profile)
+        answered = answers or CaseAnswers()
         options = [
-            await self._option(pinned, profile, key, by_id, occupation, open_requests)
+            await self._option(pinned, profile, key, by_id, occupation, open_requests, answered)
             for key in option_keys
         ]
         baseline = None
@@ -187,6 +199,7 @@ class ScenarioPlanner:
         catalogue: dict[str, CatalogueVehicle],
         occupation: OccupationPolicy | None,
         open_requests: Sequence[RepresentativeRequest],
+        answers: CaseAnswers,
     ) -> OptionPlan:
         facts = eligibility_facts(profile)
         rules = pinned.rules
@@ -222,17 +235,30 @@ class ScenarioPlanner:
         )
         if pending:
             return OptionPlan(option_key, decision, None, pending, vehicle, occupation)
+        undetermined = tuple(
+            cannot_determine_issue(option_key, r)
+            for r in answers.cannot_determine
+            if r.option_key == option_key
+        )
+        if undetermined:
+            return OptionPlan(option_key, decision, None, undetermined, vehicle, occupation)
         if vehicle is None:
             assert occupation is not None  # an eligible waiver has a table entry
             spec: AlternativeSpec = WaiverSpec(
                 allowance=_usable(occupation.waiver_allowance, SourceType.CATALOGUE)
             )
         else:
-            spec = await self._vehicle_spec(pinned, profile, vehicle)
+            spec = await self._vehicle_spec(
+                pinned, profile, vehicle, answers.participation.get(option_key)
+            )
         return OptionPlan(option_key, decision, spec, (), vehicle, occupation)
 
     async def _vehicle_spec(
-        self, pinned: PinnedReference, profile: EmployeeProfile, vehicle: CatalogueVehicle
+        self,
+        pinned: PinnedReference,
+        profile: EmployeeProfile,
+        vehicle: CatalogueVehicle,
+        supplied: RepresentativeParticipation | None,
     ) -> AlternativeVehicleSpec:
         record = await self._reference_data.get_value_of_use(
             pinned.release.tax_dataset_version_id, vehicle.tax_key
@@ -250,10 +276,14 @@ class ScenarioPlanner:
             track=vehicle.track,
             propulsion=vehicle.propulsion,
             value_of_use=value_of_use,
-            participation=_usable(vehicle.default_participation, SourceType.CATALOGUE),
+            participation=_usable(vehicle.default_participation, SourceType.CATALOGUE)
+            if supplied is None
+            else _usable(supplied.amount, SourceType.REPRESENTATIVE),
             monthly_company_cost=vehicle.monthly_company_cost,
             group_budget=budget,
-            participation_source=PARTICIPATION_SOURCE,
+            participation_source=PARTICIPATION_SOURCE
+            if supplied is None
+            else REPRESENTATIVE_PARTICIPATION,
         )
 
     # --- current arrangement -----------------------------------------------------------

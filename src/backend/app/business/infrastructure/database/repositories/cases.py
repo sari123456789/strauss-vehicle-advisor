@@ -1,4 +1,6 @@
-"""`CaseRepository` over `business.cases`. Reads are always scoped by the case owner."""
+"""`CaseRepository` over `business.cases`. Employee-side reads are always scoped by the case
+owner; `get_by_id`/`lock_by_id` serve representative paths that are authorized through a
+request (B3a)."""
 
 from dataclasses import replace
 from typing import Any, cast
@@ -73,6 +75,14 @@ class SqlCaseRepository:
             .where(CASES.c.id == case_id, CASES.c.owner_subject_id == owner_subject_id)
             .with_for_update()
         )
+        row = (await self._session.execute(statement)).first()
+        return None if row is None else _case(row)
+
+    async def get_by_id(self, case_id: UUID) -> ComparisonCase | None:
+        return await self._one(CASES.c.id == case_id)
+
+    async def lock_by_id(self, case_id: UUID) -> ComparisonCase | None:
+        statement = select(CASES).where(CASES.c.id == case_id).with_for_update()
         row = (await self._session.execute(statement)).first()
         return None if row is None else _case(row)
 
