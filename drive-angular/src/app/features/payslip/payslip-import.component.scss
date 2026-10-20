@@ -1,0 +1,217 @@
+@use '../../../styles/breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+.payslip {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px var(--gutter);
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text);
+  overflow-wrap: anywhere;
+
+  @include bp.md {
+    padding: 28px 32px;
+  }
+}
+
+.payslip--compact {
+  padding: 16px;
+  gap: 12px;
+}
+
+.payslip__title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.payslip__note,
+.payslip__muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.payslip__warning {
+  margin: 0;
+  color: var(--accent-hover);
+}
+
+.payslip__alert {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+
+  p {
+    margin: 0;
+  }
+}
+
+.payslip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.payslip__drop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px 16px;
+  border: 1px dashed var(--border-strong);
+  cursor: pointer;
+  text-align: center;
+
+  &:focus-within {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  input {
+    min-block-size: var(--tap);
+    color: var(--text-soft);
+  }
+}
+
+.payslip__drop-title {
+  font-weight: 600;
+}
+
+.payslip__status,
+.payslip__done {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  progress {
+    inline-size: 100%;
+    accent-color: var(--accent);
+  }
+}
+
+.payslip__done-title {
+  margin: 0;
+  color: var(--positive);
+  font-weight: 600;
+}
+
+.payslip__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payslip-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 0;
+  border-block-end: 1px solid var(--rule);
+}
+
+.payslip-field__main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+
+  @include bp.md {
+    grid-template-columns: 1fr auto auto;
+  }
+}
+
+.payslip-field__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-block-size: var(--tap);
+
+  input {
+    inline-size: 20px;
+    block-size: 20px;
+    accent-color: var(--accent);
+  }
+}
+
+.payslip-field__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.payslip-chip {
+  justify-self: start;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+
+  &[data-status='extracted'] {
+    border-color: var(--positive);
+    color: var(--positive);
+  }
+
+  &[data-status='needs_review'],
+  &[data-status='conflict'] {
+    border-color: var(--accent);
+    color: var(--accent-hover);
+  }
+
+  &[data-status='rejected'] {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  &[data-status='corrected'] {
+    border-color: var(--text-soft);
+    color: var(--text);
+  }
+}
+
+.payslip-field__issue {
+  margin: 0;
+  color: var(--accent-hover);
+  font-size: 0.875rem;
+}
+
+.payslip-field__evidence {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+}
+
+.payslip-field__alternatives,
+.payslip-field__edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    min-block-size: var(--tap);
+    inline-size: 10rem;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+  }
+}
+
+.payslip-field__edit-btn {
+  align-self: flex-start;
+}
+
+.payslip__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

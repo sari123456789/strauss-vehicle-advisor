@@ -105,6 +105,92 @@
         "title": "AnswerOutcome",
         "type": "string"
       },
+      "AnswerSubmit": {
+        "additionalProperties": false,
+        "properties": {
+          "effectiveFrom": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectivefrom"
+          },
+          "effectiveTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveto"
+          },
+          "expectedRequestVersion": {
+            "minimum": 0.0,
+            "title": "Expectedrequestversion",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/AnswerOutcome"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "const": "ILS",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "operationId",
+          "expectedRequestVersion",
+          "outcome"
+        ],
+        "title": "AnswerSubmit",
+        "type": "object"
+      },
       "AnswerView": {
         "additionalProperties": false,
         "properties": {
@@ -1003,6 +1089,97 @@
         "title": "EnvelopeStatus",
         "type": "string"
       },
+      "Envelope_AnswerView_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[AnswerView]",
+        "type": "object"
+      },
       "Envelope_CaseContext_": {
         "additionalProperties": false,
         "properties": {
@@ -1822,6 +1999,97 @@
         "title": "Envelope[ReadinessResult]",
         "type": "object"
       },
+      "Envelope_RepresentativeRequestView_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepresentativeRequestView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[RepresentativeRequestView]",
+        "type": "object"
+      },
       "Envelope_RequestStatusView_": {
         "additionalProperties": false,
         "properties": {
@@ -2277,6 +2545,101 @@
         "title": "Envelope[UpdateInputsResult]",
         "type": "object"
       },
+      "Envelope_list_RepresentativeRequestView__": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RepresentativeRequestView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[list[RepresentativeRequestView]]",
+        "type": "object"
+      },
       "ErrorCode": {
         "description": "Stable machine-readable failure codes. Never shown raw to employees.",
         "enum": [
@@ -2320,6 +2683,17 @@
         ],
         "title": "ErrorInfo",
         "type": "object"
+      },
+      "ExpectedValueType": {
+        "enum": [
+          "money",
+          "entitlement_group",
+          "propulsion",
+          "tax_key",
+          "boolean"
+        ],
+        "title": "ExpectedValueType",
+        "type": "string"
       },
       "FieldPath": {
         "description": "Allowlisted fields of the actual EmployeeProfile / case working state.",
@@ -3416,6 +3790,10 @@
             "title": "Includecurrent",
             "type": "boolean"
           },
+          "kind": {
+            "$ref": "#/components/schemas/RunKind",
+            "default": "regular"
+          },
           "selection": {
             "anyOf": [
               {
@@ -3506,6 +3884,73 @@
         ],
         "title": "RepresentativeFieldCode",
         "type": "string"
+      },
+      "RepresentativeRequestView": {
+        "additionalProperties": false,
+        "description": "Representative-visible, minimal context only (no employee profile or salary).",
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "entitlementGroup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntitlementGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expectedValueType": {
+            "$ref": "#/components/schemas/ExpectedValueType"
+          },
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "questionText": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Questiontext",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          },
+          "requestVersion": {
+            "minimum": 0.0,
+            "title": "Requestversion",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestStatus"
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VehicleContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "requestVersion",
+          "status",
+          "fieldCode",
+          "expectedValueType",
+          "questionText",
+          "createdAt"
+        ],
+        "title": "RepresentativeRequestView",
+        "type": "object"
       },
       "RequestStatus": {
         "enum": [
@@ -4376,6 +4821,47 @@
           "valueOfUse"
         ],
         "title": "VehicleCandidate",
+        "type": "object"
+      },
+      "VehicleContext": {
+        "additionalProperties": false,
+        "properties": {
+          "catalogueId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2,5}-\\d{2,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogueid"
+          },
+          "commercialName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commercialname"
+          },
+          "registrationYear": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationyear"
+          }
+        },
+        "title": "VehicleContext",
         "type": "object"
       },
       "VehicleQuery": {
@@ -5732,6 +6218,182 @@
         "summary": "My Profile",
         "tags": [
           "profile"
+        ]
+      }
+    },
+    "/api/v1/representative-requests": {
+      "get": {
+        "description": "Oldest first; `status` may repeat (default `open`).",
+        "operationId": "list_requests_api_v1_representative_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/RequestStatus"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_RepresentativeRequestView__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Requests",
+        "tags": [
+          "representatives"
+        ]
+      }
+    },
+    "/api/v1/representative-requests/{requestId}": {
+      "get": {
+        "operationId": "get_request_api_v1_representative_requests__requestId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Requestid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RepresentativeRequestView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Request",
+        "tags": [
+          "representatives"
+        ]
+      }
+    },
+    "/api/v1/representative-requests/{requestId}/answers": {
+      "post": {
+        "operationId": "submit_answer_api_v1_representative_requests__requestId__answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Requestid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerSubmit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AnswerView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Answer",
+        "tags": [
+          "representatives"
         ]
       }
     }

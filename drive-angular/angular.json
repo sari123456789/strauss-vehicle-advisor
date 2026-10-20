@@ -65,7 +65,8 @@
               "buildTarget": "drive:build:production"
             },
             "development": {
-              "buildTarget": "drive:build:development"
+              "buildTarget": "drive:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

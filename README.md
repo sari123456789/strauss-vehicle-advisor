@@ -5,8 +5,22 @@ supplied challenge materials, **not** an approved payroll system. See `CLAUDE.md
 
 ## Status
 
-Business Module only (branch `feature/business-backend`); no AI functionality yet. The Angular
-frontend is developed on the `feature/frontend` branch.
+Full-system integration (branch `feature/full-system-integration`, see `docs/task-progress.md`):
+one FastAPI application composes the Business API, the AI conversation API, the in-process
+turn worker and the Business-outbox relay; the Angular app (`drive-angular/`) talks to the real
+API. Integration decisions: `docs/business-decisions.md` §20.
+
+Payslip import (branch `feature/full-system-with-payslip`, merged from `feature/payslip-ai-import`):
+the employee uploads a PDF payslip, reviews and corrects the extracted salary fields and explicitly
+approves them; only then is the profile updated through the Business `actual_update` (version
+check, `operationId` idempotency). Routes: `contracts/openapi/payslip-api.json`; design and limits:
+`docs/proposals/payslip-import.md`. The Angular entry points are the profile page and the advisor
+sidebar, both reusing one `dr-payslip-import` component and the app's single session
+(`SessionService` + `authInterceptor`). External LLM processing of payslips is off by default
+(`STRAUSS_PAYSLIP_EXTERNAL_LLM=false`); drafts live in an in-memory store (lost on restart, single
+process only).
+
+History of the Business module:
 
 - Step 0: setup, provisional shared contracts, fakes, tests.
 - Step 1: Domain + deterministic Business Logic (payroll, gross-up, benefits, comparisons).
@@ -30,8 +44,9 @@ frontend is developed on the `feature/frontend` branch.
   representative questions. See §17.
 - Step 4D (Business part): authentication (login/refresh/logout, rotating refresh sessions),
   Business HTTP routes over the tools facade, Problem Details, OpenAPI export
-  (`contracts/openapi/business-api.json`). Not yet wired into `app.main`. See §18.
-  Set a demo password: `.venv\Scripts\python.exe -m app.cli.set_password --login e001`.
+  (`contracts/openapi/business-api.json`). See §18.
+- B3a/B3b: representative answers, case-local facts, transactional outbox; representative HTTP
+  routes (`/api/v1/representative-requests`). See §19 and §20.
 
 ## Layout
 
@@ -41,9 +56,12 @@ docs/                     authoritative specs (architecture, agent-spec, integra
 data/source/              original challenge files (byte-for-byte; never edit)
 data/source-manifest.json SHA-256 of every source and normalized document
 contracts/schemas/        generated JSON Schemas of the shared contracts
+contracts/openapi/        business-api.json and ai-api.json (drift-tested; Angular types are generated from them)
 data/rules/               derived demo policy (explicit decisions + mappings, versioned)
-src/backend/              Python backend (package `app`); Alembic migrations in src/backend/migrations
-tests/                    architecture, contract, unit and API tests
+src/backend/              Python backend (package `app`); Alembic migrations in src/backend/migrations(_ai)
+drive-angular/            Angular frontend
+scripts/smoke.py          end-to-end smoke check against a running API
+tests/                    architecture, contract, unit, API and integration tests (+ e2e_server.py)
 compose.yaml              local PostgreSQL
 ```
 
@@ -82,6 +100,35 @@ docker compose up -d postgres         # PostgreSQL 16.4 on localhost:55432, UTF-
 If HTTPS interception (e.g. antivirus web shield) causes `invalid peer certificate: UnknownIssuer` in uv,
 point `SSL_CERT_FILE` at a CA bundle that includes the interception root for that session only. See
 `docs/business-decisions.md` §3.
+
+## Run the whole system locally
+
+From an empty local database (Docker, `localhost:55432`; never Neon). From `src/backend`, after
+copying `.env.example` to `src/backend/.env` and filling the Gemini profile (or leaving
+`STRAUSS_AI_LLM_PROFILES` empty to run without a model):
+
+```powershell
+.venv\Scripts\python.exe -m alembic upgrade head                 # business + auth schemas
+.venv\Scripts\python.exe -m alembic -c alembic_ai.ini upgrade head  # agent schema
+.venv\Scripts\python.exe -m app.cli.setup_checkpointer           # LangGraph tables in agent
+.venv\Scripts\python.exe -m app.cli.import_data                  # reference release (data/source)
+.venv\Scripts\python.exe -m app.cli.seed_demo                    # demo employees and staff
+$env:STRAUSS_NEW_PASSWORD = "<12+ characters>"; .venv\Scripts\python.exe -m app.cli.set_password --login e001
+$env:STRAUSS_NEW_PASSWORD = "<12+ characters>"; .venv\Scripts\python.exe -m app.cli.set_password --login rep01
+.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000 --loop asyncio:SelectorEventLoop
+```
+
+The API refuses to start when a schema is not at its migration head or the checkpointer tables
+are missing (it never migrates by itself); `GET /api/v1/health/ready` reports readiness.
+On Windows `--loop asyncio:SelectorEventLoop` is required (async psycopg cannot use the default
+Proactor loop). Behind HTTPS interception, also set `SSL_CERT_FILE` for the Gemini client.
+
+Frontend (from `drive-angular/`): `npm ci`, then `npm start` — `ng serve` proxies `/api` to
+`http://127.0.0.1:8000` (`proxy.conf.json`). Sign in as `e001` (employee) or `rep01`
+(representative). After a contract change: `npm run api:types`.
+
+End-to-end check against the running API: `scripts/smoke.py --base-url http://127.0.0.1:8000`
+with `SMOKE_E001_PASSWORD`, `SMOKE_E005_PASSWORD` and `SMOKE_REP01_PASSWORD` set.
 
 ## Database and reference-data import
 
@@ -142,3 +189,12 @@ If `py -m uv run` fails with `uv trampoline failed to canonicalize script path`,
 environment directly, e.g. `.venv\Scripts\python.exe -m pytest`.
 
 In VS Code, select the interpreter `src/backend/.venv` so imports resolve.
+
+Frontend checks (from `drive-angular/`): `npm run build`, `npm test`, `npm run e2e:responsive`,
+`npm run e2e:visual`. The real-backend journey needs `tests/e2e_server.py` (deterministic keyword
+model) on port 8000 and `E2E_BACKEND=1 E2E_E001_PASSWORD=... E2E_REP01_PASSWORD=... npm run e2e:journey`.
+The payslip journey uses the same server: `E2E_PAYSLIP=1 E2E_PASSWORD=... npx playwright test e2e/payslip --project=chromium`
+(needs `e001` and `e002` with that password; it changes e001's salary, so run it after the journey).
+For an isolated E2E database, set `STRAUSS_AI_DATABASE_URL` and `STRAUSS_AI_MIGRATION_DATABASE_URL`
+as well as the Business URLs: the AI module reads its own settings and otherwise uses the default
+local `strauss` database.

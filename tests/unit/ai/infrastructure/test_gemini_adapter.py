@@ -115,6 +115,31 @@ def test_client_is_pinned_to_ai_studio_without_sdk_retries(monkeypatch: pytest.M
     assert api._http_options.timeout == 20_000
 
 
+def test_provider_schema_has_no_array_length_keywords() -> None:
+    """Regression: the free-tier model answers 400 INVALID_ARGUMENT to the interpretation
+    schema when it carries minItems/maxItems; lengths are enforced by Pydantic instead."""
+    from app.ai.workflow.models import ComposedText
+
+    for model in (TurnInterpretation, ComposedText):
+        text = str(provider_json_schema(model))
+        assert "maxItems" not in text and "minItems" not in text
+    with pytest.raises(ValueError):
+        TurnInterpretation.model_validate({"intent": "smalltalk", "propulsion": ["electric"] * 5})
+
+
+def test_sdk_client_stays_open_after_garbage_collection() -> None:
+    """Regression (M4): the adapter must keep the `genai.Client`; a collected client closes its
+    HTTP client and every later call failed with "client has been closed"."""
+    import gc
+
+    adapter = GeminiProviderClient(gemini_profile())
+    gc.collect()
+    api = adapter._models._api_client
+    assert adapter._sdk_client is not None and adapter._sdk_client._api_client is api
+    http = getattr(api, "_async_httpx_client", None)
+    assert http is None or not http.is_closed
+
+
 @pytest.mark.parametrize("model", ["gemini-3.1-pro-preview", "gemini-omni-flash", "gemini-2.5-pro"])
 def test_paid_or_unapproved_models_are_refused(model: str) -> None:
     with pytest.raises(ValueError, match="free-tier"):

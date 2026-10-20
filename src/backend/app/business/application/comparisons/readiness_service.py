@@ -9,9 +9,10 @@ Only the facts the goal needs are reported (architecture §14, agent-spec §6):
   `includeCurrent`). `compare_to_current`: additionally the current arrangement.
 
 Calculation goals use the same planner and BL component checks as `compare_scenarios`, so a
-scenario reported ready is one the comparison calculates. Until the shared contract gains a
-`kind` (decision Q1, pending joint approval) readiness evaluates regular calculations: the
-latest actual profile. Listing goals use the listing facts of 4A. Both apply this case's
+scenario reported ready is one the comparison calculates. `request.kind` (E2, approved
+2026-10-20; formerly paused as Q1) selects the same fact basis as the comparison: `regular`
+uses the latest actual profile, `hypothetical` the case copy with its overrides. Listing goals
+use the listing facts of 4A. Both apply this case's
 applicable representative answers (B3a) exactly as `compare_scenarios` does, and disclose a
 differing employee report as `SOURCE_CONFLICT` (informational; readiness is unchanged).
 """
@@ -22,6 +23,7 @@ from typing import Any
 from app.business.application.cases.confirmation import fields_requiring_confirmation
 from app.business.application.comparisons.facts import (
     FactBasis,
+    basis_for,
     effective_profile,
     fact_conflicts,
 )
@@ -100,7 +102,7 @@ class ReadinessService:
                 else:
                     if request.selection is None:
                         raise InvalidInput("a calculation goal needs a selection")
-                    basis = FactBasis.ACTUAL  # regular until Q1 adds `kind` to the contract
+                    basis = basis_for(request.kind)  # E2: the same basis as compare_scenarios
                     profile = effective_profile(basis, case, latest, answers.facts)
                     occupation = await self._planner.occupation(pinned, profile)
                     selected = await resolve_selection(

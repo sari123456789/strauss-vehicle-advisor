@@ -105,17 +105,19 @@ def build_gemini_client(profile: CredentialProfile) -> Any:
     )
 
 
-def build_gemini_models(profile: CredentialProfile) -> Any:
-    """The SDK's async `models` service for one profile."""
-    return build_gemini_client(profile).aio.models
-
-
 class GeminiProviderClient:
     def __init__(self, profile: CredentialProfile, models: Any | None = None) -> None:
         if profile.provider != GEMINI or not is_free_tier_model(GEMINI, profile.model):
             raise ValueError("the profile is not an approved free-tier Gemini profile")
         self._model = profile.model
-        self._models = models if models is not None else build_gemini_models(profile)
+        self._sdk_client: Any | None = None
+        if models is None:
+            # Keep the SDK client alive for as long as its `models` service is used: when the
+            # `genai.Client` is garbage-collected it closes its HTTP client, and every later
+            # call fails with "Cannot send a request, as the client has been closed".
+            self._sdk_client = build_gemini_client(profile)
+            models = self._sdk_client.aio.models
+        self._models = models
 
     async def generate_json(
         self,

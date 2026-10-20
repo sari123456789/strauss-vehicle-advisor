@@ -28,6 +28,7 @@ __all__ = [
     "DEFAULT_IDLE_IN_TRANSACTION_TIMEOUT_MS",
     "AsyncEngine",
     "AsyncSession",
+    "async_sessionmaker",
     "create_engine",
     "create_runtime_engine",
     "create_session_factory",
