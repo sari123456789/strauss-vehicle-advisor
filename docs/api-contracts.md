@@ -135,11 +135,29 @@ worker repeats step 2 with the same operation ID and continues. A case without a
 remains only if the AI never retries; it has no access path. Recovery is to be proven by tests
 when the AI module is built.
 
-**Representative answer (Business, later stage, not implemented):** one Business transaction stores
-authorization/state checks, the answer, the case mutation, version increments, the audit entry and a
-`business.integration_outbox` row. The AI worker pulls events through `BusinessEventFeed`
-(capability injected only into the worker), enqueues each into its own `DurableInputQueue`
-deduplicated by `eventId`, then acknowledges. At-least-once delivery, idempotent consumption.
+**Representative answer (implemented: B3a + M3):** one Business transaction stores the
+authorization and state checks, the answer, the case mutation, version increments, the audit entry
+and a `business.integration_outbox` row. The AI `BusinessEventRelay`
+(`app/ai/application/event_relay.py`) pulls events through `BusinessEventFeed`, which only it
+receives. It enqueues each event into the AI's own `DurableInputQueue`, deduplicated by `eventId`,
+and acknowledges an event only after its enqueue committed. Delivery is at-least-once and
+consumption idempotent.
+
+- **E1 (approved 2026-10-20):** `pending(limit, *, after_sequence=None)`.
+  - The relay pages past events it cannot accept yet, so they never block later events.
+  - The cursor is valid only within one scan. Each scan restarts from `None`, because sequences
+    may become visible out of order.
+- **Failure handling:**
+  - Permanent per-event failures (no bound conversation, or a payload mismatch) are never
+    acknowledged. They back off per event (30 s, 2 min, 10 min, then 1 h) and are quarantined
+    (hourly retries, ERROR log) after 10 attempts. They stay recoverable in the outbox.
+  - Transient failures back off globally (1 s, 5 s, 30 s, 2 min, then 5 min).
+- **Two stages:** delivery retries (relay, outbox) are separate from turn-processing retries
+  (AI `inputs`: retry, dead, needs_reconciliation).
+- **Runtime:** the relay runs inside the API process when `STRAUSS_WORKER_IN_PROCESS=true`, on
+  one instance only. Its counters appear under `/api/v1/health/ready` `info.relay`.
+- **Diagnosis:** to list undelivered events, run
+  `SELECT id, sequence, created_at FROM business.integration_outbox WHERE acknowledged_at IS NULL ORDER BY sequence`.
 
 `DurableInputQueue` semantics (AI-owned, provisional): same `eventId` + same payload → `duplicate`;
 same `eventId` + different payload → `InputPayloadMismatchError`.
@@ -165,3 +183,27 @@ fixtures are validated against the same Pydantic models at construction and by `
 - Representative `fieldCode` allowlist and `expectedValueType`.
 - `ComparisonDetails.inputSnapshot` typed shape (finalized with persistence).
 - HTTP DTO naming for Angular and the SSE envelope (Integration Contracts §8).
+
+## 9. Representative HTTP routes (B3b, full-system integration)
+
+Implemented in `app/api/business/routers/representatives.py` and exported to
+`contracts/openapi/business-api.json`. Paths follow architecture §9. The bodies and views are the
+existing shared contract models; there are no new DTOs. Every route needs a bearer token of an
+active `representative`. Other roles get `403 FORBIDDEN` and anonymous callers get
+`401 UNAUTHENTICATED`, both as Problem Details.
+
+| Method and path | Body / query | Response |
+|---|---|---|
+| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first |
+| `GET /api/v1/representative-requests/{requestId}` | — | `Envelope[RepresentativeRequestView]` |
+| `POST /api/v1/representative-requests/{requestId}/answers` | `AnswerSubmit` | `Envelope[AnswerView]` |
+
+**Answer behavior:**
+- Every response is `200`. A replay with the same `operationId` and payload returns the stored answer.
+- A different payload under the same `operationId` is `409 OPERATION_PAYLOAD_MISMATCH`.
+- A second answer to an already answered request is `409 INVALID_STATE_TRANSITION`.
+- A stale `expectedRequestVersion` is `409 VERSION_CONFLICT`.
+- An invalid value is `422 INVALID_BUSINESS_INPUT`.
+- A committed answer writes its `representative.answered` outbox event in the same transaction.
+
+**Privacy:** the views never contain the employee's identity, salary, profile, case ID or conversation ID.

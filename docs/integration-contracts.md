@@ -177,5 +177,5 @@ The ownership paths in Section 2 map to the repository layout as follows: agent 
 - Business and AI have separate least-privilege database identities and their own Units of Work; no transaction handle, session or credential is shared or exposed to model-controlled code.
 - `CaseLifecyclePort.create_case_for_conversation(actor, command) -> Envelope[CreateCaseResult]` (C1): Business owns and commits its transaction; idempotent by actor, conversation and operation ID; recoverable coordination instead of atomic creation.
 - Business `UnitOfWork` carries no AI input queue (C2); `DurableInputQueue` is AI-internal and provisional (C3).
-- `BusinessEventFeed` / `BusinessEvent` (C4) are provisional shared contracts for at-least-once delivery from the Business Outbox; not implemented yet.
+- `BusinessEventFeed` / `BusinessEvent` (C4): implemented (Business `SqlBusinessEventFeed`, AI `BusinessEventRelay`). E1 (approved 2026-10-20) adds `pending(limit, *, after_sequence=None)` for per-scan paging; see `docs/api-contracts.md` §6.
 - Still provisional until the AI developer starts: C3/C4 shapes, AI conversation statuses, HTTP DTOs and SSE.

@@ -78,6 +78,14 @@
       "title": "ReadinessGoal",
       "type": "string"
     },
+    "RunKind": {
+      "enum": [
+        "regular",
+        "hypothetical"
+      ],
+      "title": "RunKind",
+      "type": "string"
+    },
     "Selection": {
       "additionalProperties": false,
       "properties": {
@@ -171,6 +179,10 @@
       "default": false,
       "title": "Includecurrent",
       "type": "boolean"
+    },
+    "kind": {
+      "$ref": "#/$defs/RunKind",
+      "default": "regular"
     },
     "selection": {
       "anyOf": [

@@ -255,8 +255,7 @@ async def compute(
 ) -> ComparisonResult | None:
     """Readiness gate, then one comparison for every ready option (partial results allowed)."""
     labels = _labels(state, rt)
-    # Readiness always evaluates the actual profile; a `kind` field (proposal Q1) is pending
-    # joint approval, so hypothetical goals are checked against actual facts until then.
+    # Readiness uses the same fact basis as the comparison it prepares (E2: `kind`).
     readiness_env = await rt.tools.check_calculation_readiness(
         ReadinessRequest(
             goal=ReadinessGoal.COMPARE_TO_CURRENT
@@ -265,6 +264,7 @@ async def compute(
             selection=selection,
             include_current=include_current,
             expected_case_version=rt.case_version,
+            kind=kind,
         )
     )
     if readiness_env.status is EnvelopeStatus.ERROR or readiness_env.data is None:

@@ -14,21 +14,26 @@ from typing import Any
 from fastapi import FastAPI
 
 from app.api.business.dependencies import BusinessApi
-from app.api.business.routers import auth, cases, profile
+from app.api.business.routers import auth, cases, profile, representatives
 
 API_PREFIX = "/api/v1"
 OPENAPI_TITLE = "Strauss Vehicle Advisor - Business API"
 OPENAPI_VERSION = "0.1.0"
+ROUTERS = (auth, profile, cases, representatives)
+
+
+def include_business_routers(app: FastAPI) -> None:
+    """Routes only; the `BusinessApi` is set later (`app.state.business_api`, lifespan)."""
+    for module in ROUTERS:
+        app.include_router(module.router, prefix=API_PREFIX)
 
 
 def install_business_api(app: FastAPI, api: BusinessApi) -> None:
     app.state.business_api = api
-    for module in (auth, profile, cases):
-        app.include_router(module.router, prefix=API_PREFIX)
+    include_business_routers(app)
 
 
 def business_openapi() -> dict[str, Any]:
     app = FastAPI(title=OPENAPI_TITLE, version=OPENAPI_VERSION)
-    for module in (auth, profile, cases):
-        app.include_router(module.router, prefix=API_PREFIX)
+    include_business_routers(app)
     return app.openapi()

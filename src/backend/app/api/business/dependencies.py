@@ -8,7 +8,7 @@ verified bearer access token (`AuthService.authenticate`: roles from the store,
 """
 
 from dataclasses import dataclass, field
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, Path, Request
@@ -20,6 +20,7 @@ from app.business.application.cases.case_service import CaseService
 from app.business.application.errors import BusinessError
 from app.business.application.identity.auth_service import AuthService
 from app.business.application.profiles.profile_service import EmployeeProfileService
+from app.business.application.representatives.answer_service import RepresentativeAnswerService
 from app.contracts.business_port import BusinessToolsPort
 from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode
 from app.contracts.tool_context import ActorRef, ToolContext
@@ -35,6 +36,8 @@ class HttpConfig:
     """Must stay true outside local HTTP development."""
     allowed_origins: tuple[str, ...] = field(default_factory=tuple)
     """Browser origins allowed to call the cookie-based auth routes (the Angular app)."""
+    cookie_samesite: Literal["strict", "lax", "none"] = "strict"
+    """`none` only when the Angular app and the API are on different sites (needs `Secure`)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +47,8 @@ class BusinessApi:
     cases: CaseService
     profiles: EmployeeProfileService
     http: HttpConfig = field(default_factory=HttpConfig)
+    representatives: RepresentativeAnswerService | None = None
+    """Representative inbox and answers (B3b); the routes answer 503 when it is not wired."""
 
 
 def business_api(request: Request) -> BusinessApi:
