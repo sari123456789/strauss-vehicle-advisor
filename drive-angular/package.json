@@ -10,7 +10,9 @@
     "e2e:visual": "playwright test e2e/visual --project=chromium",
     "e2e:responsive": "playwright test e2e/responsive",
     "check:bundle": "node scripts/check-production-bundle.mjs",
-    "assets:home": "python -I tools/build-home-assets.py"
+    "assets:home": "python -I tools/build-home-assets.py",
+    "api:types": "openapi-typescript ../contracts/openapi/business-api.json -o src/app/core/api/generated/business.ts && openapi-typescript ../contracts/openapi/ai-api.json -o src/app/core/api/generated/ai.ts",
+    "e2e:journey": "playwright test e2e/integration --project=chromium --workers=1"
   },
   "dependencies": {
     "@angular/common": "^21.0.0",
@@ -29,6 +31,7 @@
     "@axe-core/playwright": "^4.11.0",
     "@playwright/test": "^1.56.1",
     "jsdom": "^26.1.0",
+    "openapi-typescript": "^7.13.0",
     "pixelmatch": "^7.1.0",
     "pngjs": "^7.0.0",
     "typescript": "~5.9.2",

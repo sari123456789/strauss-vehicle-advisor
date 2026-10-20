@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, viewChild} from '@angular/core';
-import {RouterLink, RouterLinkActive} from '@angular/router';
-import {AuthStore} from '../../core/auth/auth.store';
+import {Router, RouterLink, RouterLinkActive} from '@angular/router';
+import {SessionService} from '../../core/auth/session.service';
 import {SheetComponent} from '../ui/sheet/sheet.component';
 
 interface NavLink {
@@ -24,21 +24,29 @@ interface NavLink {
 export class SiteHeaderComponent {
   readonly variant = input<'default' | 'overlay'>('default');
 
-  // Session state still comes from the local demo AuthStore; it is replaced by the server
-  // session once the agreed auth contract (open item O12) is published.
-  private readonly auth = inject(AuthStore);
-  protected readonly signedIn = computed(() => !!this.auth.role());
+  // Server session (bearer token in memory, refresh cookie); links follow the actor's role.
+  private readonly session = inject(SessionService);
+  private readonly router = inject(Router);
+  protected readonly signedIn = this.session.signedIn;
 
+  // Anonymous visitors see the approved design's links (protected pages lead to sign-in).
   private readonly publicLinks: NavLink[] = [
     {path: '/how-it-works', label: 'איך זה עובד'},
     {path: '/catalog', label: 'השוואת רכבים'},
     {path: '/profile', label: 'הנתונים שלי'},
   ];
-  private readonly signedInLinks: NavLink[] = [
+  private readonly employeeLinks: NavLink[] = [
     {path: '/advisor', label: 'היועץ שלי'},
     {path: '/history', label: 'ההשוואות שלי'},
   ];
-  protected readonly links = computed(() => (this.signedIn() ? [...this.publicLinks, ...this.signedInLinks] : this.publicLinks));
+  private readonly representativeLinks: NavLink[] = [
+    {path: '/how-it-works', label: 'איך זה עובד'},
+    {path: '/representative', label: 'מסך נציג'},
+  ];
+  protected readonly links = computed(() => {
+    if (this.session.isRepresentative()) return this.representativeLinks;
+    return this.session.isEmployee() ? [...this.publicLinks, ...this.employeeLinks] : this.publicLinks;
+  });
 
   private readonly menu = viewChild.required<SheetComponent>('menu');
 
@@ -50,8 +58,9 @@ export class SiteHeaderComponent {
     this.menu().close();
   }
 
-  protected signOut(): void {
-    this.auth.logout();
+  protected async signOut(): Promise<void> {
     this.closeMenu();
+    await this.session.logout();
+    await this.router.navigateByUrl('/');
   }
 }

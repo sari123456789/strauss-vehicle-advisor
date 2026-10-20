@@ -30,8 +30,8 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 | M2 | Representative HTTP routes (B3b) | **Done** — commit `01359c7`, pushed |
 | M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — commit `b243575`, pushed |
 | M3B | B4 end-to-end verification + E2 | **Done** — commit `edb4f6f`, pushed |
-| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done except the manual Gemini check** (blocked: the Gemini key is rejected, 403) |
-| M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | Not started |
+| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done except the manual Gemini check** (blocked: the Gemini key is rejected, 403) — commit `2c6c05d` |
+| M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | **Done** — see git log (M5 commit) |
 | M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | Not started |
 
 ## Key decisions taken during implementation
@@ -94,6 +94,22 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   lines are visible.
 - **Local TLS interception:** the Gemini SDK needs `SSL_CERT_FILE` pointing to the exported
   Windows roots, the same as uv.
+- **After M5 (Angular):**
+  - `npm run build`: OK, bundle check passed.
+  - `npm test`: 15 passed (decimal-format 9, plus workflow 6 against `HttpTestingController`).
+  - Playwright chromium: 29 passed. That includes the real-backend journey `e2e/integration/journey.spec.ts`.
+  - Playwright webkit-mobile: 8 passed.
+  - **1 failure that already exists on `develop`:** `home.visual` "logo: top" is 11px off against
+    a 4px tolerance. Verified on the `develop` code with a stash; it comes from the logo change
+    in `b0411be`.
+- **M5 fixes found by the real journey:**
+  - A race in the conversation store: a message could be sent to the previous conversation
+    while a new one was being created. A generation counter and a `switching` state now
+    prevent it.
+  - The representative panel was missing `role=status`.
+- **Local development:** refresh and logout require the browser origin in
+  `STRAUSS_AUTH_ALLOWED_ORIGINS` (CSRF check), for example
+  `http://localhost:4200,http://127.0.0.1:4200`.
 - `ruff check`, `ruff format`, `mypy app`: clean.
 - **Manual check against the local DB (M1):** `ready` 200, e001 login, `/me/profile` 200, and
   `POST /conversations` creates a conversation together with its case.
@@ -123,14 +139,13 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   - Hold two conversations: e001 with CAR-10, e005 with the waiver.
 
 ## Next step (exact)
-M5 (Angular, `drive-angular/`):
-1. Run `npm ci`.
-2. Add the devDependency `openapi-typescript` and the script `npm run api:types`, which writes
-   `src/app/core/api/generated/{business,ai}.ts`.
-3. Add `proxy.conf.json` pointing to `http://127.0.0.1:8000` and set the `API_BASE_URL`
-   default to `/api/v1`.
-4. Implement the auth service, interceptor (refresh + CSRF header) and guards.
-5. Replace the demo stores with API-backed stores: profile, advisor chat with polling, history,
-   catalogue (option-lists), comparison/calculation pages, representative inbox.
-6. Rewrite `tests/workflow.spec.ts` against `HttpTestingController`. Keep the e2e
-   responsive/visual tests with `page.route` fixtures.
+M6:
+1. Update `.env.example` (auth, CORS, worker, log level) and the README (full local run, Windows
+   notes for the SelectorEventLoop and SSL_CERT_FILE).
+2. Update `docs/plans/cloud-runbook.md`. Cover the pending Neon steps, the Render variables and
+   build command, the Vercel rewrite (`vercel.json` once the Render URL is known), the health
+   path and the outbox diagnostics.
+3. Add `docs/business-decisions.md` §20 (integration decisions).
+4. Update `docs/frontend-handoff.md` only if needed. If you do, update its manifest hash too.
+5. Run the full backend suite and the frontend checks one last time.
+6. Push, verify the remote, and write the final report.
