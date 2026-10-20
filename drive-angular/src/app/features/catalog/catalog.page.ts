@@ -1,22 +1,19 @@
 import {Component, OnInit, computed, inject, signal} from '@angular/core';
 import {RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
-import {ELIGIBILITY, ELIGIBILITY_REASON, FIELD_PATH, PROPULSION, optionLabel} from '../../core/api/labels';
+import {FIELD_PATH, optionLabel} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
-import {MoneyPipe} from '../../shared/format/money.pipe';
-import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {PageHeadingComponent} from '../../shared/ui/page-heading.component';
+import {VehicleCardComponent} from '../../shared/ui/vehicle-card.component';
 import {CatalogStore} from './state/catalog.store';
 
 /**
  * Options and eligibility of the active conversation's case, exactly as the Business module
  * returned them (`eligibility`, `reasons`, amounts as decimal strings). No rule runs here.
  */
-@Component({standalone: true, imports: [RouterLink, FormsModule, CarArtComponent, PageHeadingComponent, MoneyPipe], templateUrl: './catalog.page.html'})
+@Component({standalone: true, imports: [RouterLink, FormsModule, PageHeadingComponent, VehicleCardComponent], templateUrl: './catalog.page.html'})
 export class CatalogPage implements OnInit {
   readonly store = inject(CatalogStore);
-  readonly eligibility = ELIGIBILITY;
-  readonly reasons = ELIGIBILITY_REASON;
   readonly fieldPath = FIELD_PATH;
   readonly filter = signal<'all' | 'electric' | 'hybrid' | 'family' | 'waiver'>('all');
   readonly search = signal('');
@@ -38,12 +35,6 @@ export class CatalogPage implements OnInit {
 
   label(option: OptionItem): string {
     return optionLabel(option);
-  }
-
-  kind(option: OptionItem): string {
-    if (option.category === 'waiver') return 'ויתור';
-    if (option.category === 'family') return 'מסלול משפחה';
-    return option.propulsion ? PROPULSION[option.propulsion] : 'רכב חברה';
   }
 
   private matches(option: OptionItem): boolean {
