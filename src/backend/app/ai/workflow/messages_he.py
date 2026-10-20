@@ -259,8 +259,8 @@ HELP = (
     "ולהשוות אותן להסדר הנוכחי. במה נתחיל?"
 )
 GENERAL_FALLBACK = (
-    "זו שאלה טובה. כרגע אין באפשרותי לנסח הסבר מפורט; אפשר לברר מול מחלקת השכר, "
-    "או להמשיך בבדיקת החלופות."
+    "כרגע אין באפשרותי לנסח תשובה מפורטת לשאלה הזו. אפשר להמשיך בבדיקת החלופות, "
+    'למשל: "אילו רכבים מתאימים לי?" או "כמה נטו עם ATTO 3?".'
 )
 ASK_WHICH_VEHICLE = "לאיזו חלופה התכוונת? אפשר לציין את שמה או את מספרה ברשימה."
 BUDGET_EXCEEDED = "הבקשה מורכבת מדי לטיפול בבת אחת. אפשר לפצל אותה לשאלות קטנות יותר?"
@@ -296,3 +296,83 @@ def issue_blocks_text(code: IssueCode) -> str:
         IssueCode.INELIGIBLE: "לא זמין לפי הכללים",
         IssueCode.MISSING_INPUT: "חסר מידע",
     }.get(code, "לא חושב")
+
+
+# --- Vehicles named by the employee (resolved against the catalogue) ---------------------------
+
+
+def vehicle_choices_text(name: str, labels: list[str]) -> str:
+    lines = "\n".join(f"{index}. {label}" for index, label in enumerate(labels, start=1))
+    return f'מצאתי כמה רכבים שמתאימים ל"{name}":\n{lines}\nלאיזה מהם התכוונת?'
+
+
+def vehicle_not_in_catalogue_text(name: str) -> str:
+    return (
+        f'לא מצאתי רכב בשם "{name}" בקטלוג הרכבים של החברה. '
+        'אפשר לבדוק את הכתיב, או לבקש "אילו רכבים מתאימים לי?" כדי לראות את הרשימה.'
+    )
+
+
+def vehicle_not_eligible_text(labels: list[str]) -> str:
+    names = ", ".join(labels)
+    return (
+        f"{names} נמצא בקטלוג הרכבים של החברה, אבל לפי הפרטים השמורים בפרופיל שלך הוא אינו "
+        'בין החלופות שמתאימות לך. אפשר לבקש "אילו רכבים מתאימים לי?" כדי לראות את הרשימה, '
+        "ואם אחד הפרטים בפרופיל אינו נכון, אפשר לתקן אותו כאן בשיחה."
+    )
+
+
+def vehicle_eligibility_unknown_text(labels: list[str]) -> str:
+    names = ", ".join(labels)
+    return f"{names} נמצא בקטלוג, אבל כדי לדעת אם הוא מתאים לך חסר עוד מידע."
+
+
+# --- Where the information comes from ----------------------------------------------------------
+
+SOURCE_LABELS = {
+    "employee": "דיווח העובד",
+    "representative": "נציג התחבורה",
+    "catalogue": "קטלוג הרכבים של החברה",
+    "rules": "כללי החברה",
+    "tax_dataset": "נתוני רשות המסים",
+}
+"""Labels for `SourceType` values."""
+
+
+def data_sources_text(fields: list[tuple[str, str, str | None]]) -> str:
+    """`fields`: (field path, status, source) of the saved profile; never values."""
+    by_source: dict[str, list[str]] = {}
+    missing: list[str] = []
+    for path, status, source in fields:
+        if status == "missing":
+            missing.append(field_label(path))
+            continue
+        label = SOURCE_LABELS.get(source or "", "נשמר בפרופיל מראש")
+        by_source.setdefault(label, []).append(field_label(path))
+    lines = ["כך נאסף המידע שאני משתמש בו:"]
+    for label, names in by_source.items():
+        lines.append(f"• {', '.join(names)}: מהפרופיל השמור שלך. מקור: {label}.")
+    if missing:
+        lines.append(f"• עדיין חסרים בפרופיל: {', '.join(missing)}.")
+    lines.append(
+        "• רשימת הרכבים והזכאות: קטלוג הרכבים וכללי הזכאות של החברה במערכת. "
+        "שווי השימוש: נתוני רשות המסים."
+    )
+    lines.append(
+        "הפרטים האישיים כפי שדווחו, וייתכן שחלקם אינם מעודכנים. אפשר לראות אותם במסך "
+        '"הנתונים שלי", ולתקן כל פרט כאן בשיחה.'
+    )
+    return "\n".join(lines)
+
+
+# --- The transportation representative ---------------------------------------------------------
+
+REPRESENTATIVE_HELP = (
+    "נציג התחבורה עוזר כשחסר פרט שאי אפשר לדעת מהפרופיל: קבוצת הזכאות שלך, הרכב שיש לך היום "
+    "או סוג ההנעה שלו. שאלה על דמי ההשתתפות של רכב מסוים אפשר לשלוח מכפתור "
+    '"שאלה לנציג" במסך ההשוואה. איזה פרט לברר מול הנציג?'
+)
+REPRESENTATIVE_HELP_AGAIN = (
+    "כדי לשלוח שאלה לנציג צריך לדעת איזה פרט חסר, למשל: "
+    '"לא ידועה לי קבוצת הזכאות שלי". אפשר גם להמשיך בינתיים, למשל: "אילו רכבים מתאימים לי?"'
+)

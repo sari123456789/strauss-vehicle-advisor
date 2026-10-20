@@ -23,6 +23,8 @@ class Intent(StrEnum):
     COMPARE_TO_CURRENT = "compare_to_current"
     EXPLAIN_RESULT = "explain_result"
     SHOW_HISTORY = "show_history"
+    DATA_SOURCES = "data_sources"
+    """Where the employee's saved details and the system's reference data come from."""
     UPDATE_FACTS = "update_facts"
     CONFIRM_FACTS = "confirm_facts"
     """The employee confirms that saved details the advisor asked about are still correct."""
