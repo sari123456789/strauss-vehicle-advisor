@@ -151,16 +151,20 @@ class RepresentativeAnswerService:
         self,
         actor: ActorRef,
         *,
-        statuses: Collection[RequestStatus] | None = (RequestStatus.OPEN,),
+        statuses: Collection[RequestStatus | ContractRequestStatus] | None = (RequestStatus.OPEN,),
         limit: int = MAX_LIST,
     ) -> list[RepresentativeRequestView]:
-        """The representative queue, oldest first (demo policy: all requests)."""
+        """The representative queue, oldest first (demo policy: all requests).
+
+        `statuses` accepts the domain or the contract status (same values); `None` lists all.
+        """
         if isinstance(limit, bool) or not 1 <= limit <= MAX_LIST:
             raise InvalidInput(f"limit must be between 1 and {MAX_LIST}")
+        wanted = None if statuses is None else [RequestStatus(s.value) for s in statuses]
         with translate_errors():
             async with self._unit_of_work() as uow:
                 await self._policy.representative(uow, actor)
-                requests = await uow.representative_requests.list_all(statuses, limit=limit)
+                requests = await uow.representative_requests.list_all(wanted, limit=limit)
                 catalogue = await self._catalogue()
                 return [await self._view(uow, r, catalogue) for r in requests]
 

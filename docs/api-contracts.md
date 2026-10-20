@@ -165,3 +165,27 @@ fixtures are validated against the same Pydantic models at construction and by `
 - Representative `fieldCode` allowlist and `expectedValueType`.
 - `ComparisonDetails.inputSnapshot` typed shape (finalized with persistence).
 - HTTP DTO naming for Angular and the SSE envelope (Integration Contracts §8).
+
+## 9. Representative HTTP routes (B3b, full-system integration)
+
+Implemented in `app/api/business/routers/representatives.py` and exported to
+`contracts/openapi/business-api.json`. Paths follow architecture §9. The bodies and views are the
+existing shared contract models; there are no new DTOs. Every route needs a bearer token of an
+active `representative`. Other roles get `403 FORBIDDEN` and anonymous callers get
+`401 UNAUTHENTICATED`, both as Problem Details.
+
+| Method and path | Body / query | Response |
+|---|---|---|
+| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first |
+| `GET /api/v1/representative-requests/{requestId}` | — | `Envelope[RepresentativeRequestView]` |
+| `POST /api/v1/representative-requests/{requestId}/answers` | `AnswerSubmit` | `Envelope[AnswerView]` |
+
+**Answer behavior:**
+- Every response is `200`. A replay with the same `operationId` and payload returns the stored answer.
+- A different payload under the same `operationId` is `409 OPERATION_PAYLOAD_MISMATCH`.
+- A second answer to an already answered request is `409 INVALID_STATE_TRANSITION`.
+- A stale `expectedRequestVersion` is `409 VERSION_CONFLICT`.
+- An invalid value is `422 INVALID_BUSINESS_INPUT`.
+- A committed answer writes its `representative.answered` outbox event in the same transaction.
+
+**Privacy:** the views never contain the employee's identity, salary, profile, case ID or conversation ID.
