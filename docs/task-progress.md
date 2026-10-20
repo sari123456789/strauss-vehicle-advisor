@@ -31,8 +31,8 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 | M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — commit `b243575`, pushed |
 | M3B | B4 end-to-end verification + E2 | **Done** — commit `edb4f6f`, pushed |
 | M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done except the manual Gemini check** (blocked: the Gemini key is rejected, 403) — commit `2c6c05d` |
-| M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | **Done** — see git log (M5 commit) |
-| M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | Not started |
+| M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | **Done** — commit `3d6a0ef` |
+| M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | **Done** — final commit (see git log) |
 
 ## Key decisions taken during implementation
 - Token secret: required outside `development`/`test`; a random per-process secret otherwise.
@@ -110,6 +110,11 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 - **Local development:** refresh and logout require the browser origin in
   `STRAUSS_AUTH_ALLOWED_ORIGINS` (CSRF check), for example
   `http://localhost:4200,http://127.0.0.1:4200`.
+- **Final run (M6):**
+  - Full backend suite: **1088 passed, 5 skipped, 0 failed**. The 5 skips are the opt-in live
+    Gemini test and 4 tests for original-edition source files that are not in the repo.
+  - `ruff check`, `ruff format --check`, `mypy app`, `export_contract_schemas --check`: clean.
+  - Angular: build OK, `npm test` 15 passed.
 - `ruff check`, `ruff format`, `mypy app`: clean.
 - **Manual check against the local DB (M1):** `ready` 200, e001 login, `/me/profile` 200, and
   `POST /conversations` creates a conversation together with its case.
@@ -139,13 +144,11 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   - Hold two conversations: e001 with CAR-10, e005 with the waiver.
 
 ## Next step (exact)
-M6:
-1. Update `.env.example` (auth, CORS, worker, log level) and the README (full local run, Windows
-   notes for the SelectorEventLoop and SSL_CERT_FILE).
-2. Update `docs/plans/cloud-runbook.md`. Cover the pending Neon steps, the Render variables and
-   build command, the Vercel rewrite (`vercel.json` once the Render URL is known), the health
-   path and the outbox diagnostics.
-3. Add `docs/business-decisions.md` §20 (integration decisions).
-4. Update `docs/frontend-handoff.md` only if needed. If you do, update its manifest hash too.
-5. Run the full backend suite and the frontend checks one last time.
-6. Push, verify the remote, and write the final report.
+The integration plan is complete on `feature/full-system-integration`. Remaining items need the
+owner:
+1. Provide a valid billing-free Gemini key, then run the manual Gemini check (see "Open item"
+   above).
+2. Approve the Neon steps: migration 0004, the AI migrations and the checkpointer tables
+   (`docs/plans/cloud-runbook.md` §1).
+3. Approve the Render/Vercel configuration (runbook §2–§3) once the Render URL is known.
+4. Open a PR or merge into `develop`. This is a separate decision.

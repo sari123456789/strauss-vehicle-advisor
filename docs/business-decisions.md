@@ -416,7 +416,7 @@ shared-contract approval, so readiness evaluates regular calculations only.
 
 ### Decisions as implemented
 
-**Q1 (paused).** The proposal is `ReadinessRequest.kind: RunKind = "regular"`, which is optional
+**Q1 (implemented 2026-10-20 as E2, see §20).** The proposal was `ReadinessRequest.kind: RunKind = "regular"`, which is optional
 and backward compatible. The planner already takes the fact basis; only the contract field is
 missing.
 
@@ -787,3 +787,115 @@ is taken after a later one.
   only then calls `acknowledge`.
 - **B3b:** representative HTTP routes over `list_requests`, `get_request` and `submit_answer`
   (after decision R).
+
+## 20. Full-system integration (2026-10-20, approved plan M1–M6 + M3B)
+
+Branch `feature/full-system-integration` (from `origin/develop` `20e9361`). Single-developer
+phase; the §19 coordination items are done. Progress and test results:
+`docs/task-progress.md`.
+
+### Shared contract changes (explicitly approved)
+
+**E1 — `BusinessEventFeed.pending(limit, *, after_sequence=None)`.**
+- **Compatibility:** it is additive, and the earlier calls (`pending(500)`) are unchanged.
+- **Implementations:** `SqlBusinessEventFeed` adds `WHERE sequence > after_sequence ORDER BY sequence`.
+- **Cursor semantics:** the cursor is per scan only. Every scan restarts from `None`, because
+  sequences may become visible out of order. Its only purpose is to let the relay page past
+  events it cannot accept yet.
+
+**E2 — `ReadinessRequest.kind: RunKind = "regular"`.**
+- It is the former Q1. Readiness now uses the same fact basis as `compare_scenarios`
+  (`basis_for(kind)`).
+- The agent passes its goal kind.
+- An omitted kind keeps the previous behavior.
+
+**Not approved (E3):** a representative answer for the waiver or allowance of an occupation that
+is outside the occupation table. There is no authoritative rule, and it would need a contract
+change and a migration. Such answers remain rejected (`field_code_not_answerable_yet`, Q2).
+
+### Composition (M1)
+- **One FastAPI app** (`app.main.create_app`). Its lifespan builds, in order:
+  1. Business services;
+  2. `BusinessApi` (`AuthService` with HS256, issuer `strauss`, audience `strauss-api`);
+  3. the AI runtime over the shared ports;
+  4. a read-only check of both migration heads and the checkpointer tables;
+  5. optionally, the worker and the relay.
+- **Shutdown** is ordered and safe after a partial startup.
+- **Settings:**
+  - `STRAUSS_AUTH_TOKEN_SECRET` is required outside development/test; otherwise a random
+    per-process secret is used.
+  - `STRAUSS_AUTH_ALLOWED_ORIGINS` (CSRF origins and CORS), `STRAUSS_AUTH_COOKIE_SECURE`,
+    `STRAUSS_AUTH_COOKIE_SAMESITE` (`none` requires `Secure`).
+  - `STRAUSS_WORKER_IN_PROCESS` (one instance) and `STRAUSS_LOG_LEVEL`.
+- **Readiness** (`/api/v1/health/ready`) returns booleans and counters only; when not ready, it
+  returns 503 Problem Details.
+- **Deployment step:** `python -m app.cli.setup_checkpointer`. The API never migrates or creates
+  tables by itself.
+
+### Representative routes (M2, B3b)
+- **Routes:** `GET /api/v1/representative-requests` (repeatable `status`, `limit`),
+  `GET /{requestId}`, and `POST /{requestId}/answers`.
+- **Shapes:** they reuse the existing `RepresentativeRequestView`, `AnswerSubmit` and `AnswerView`
+  in the usual `Envelope`, with status 200.
+- **Errors:**
+  - a second answer is 409 `INVALID_STATE_TRANSITION`;
+  - a stale version is 409 `VERSION_CONFLICT`;
+  - an employee gets 403, and an anonymous caller gets 401.
+
+### Outbox → AI relay (M3)
+- **Component:** `app/ai/application/event_relay.py` (`BusinessEventRelay`).
+- **Delivery:**
+  - An event is acknowledged only after `enqueue_representative_answered` committed. A duplicate
+    is also acknowledged, because the queue deduplicates by `uuid5(event_id)`.
+  - A permanent per-event failure (no conversation, or a payload mismatch) is never acknowledged.
+    It backs off per event (30 s, 2 min, 10 min, then 1 h) and is quarantined after 10 attempts
+    (hourly retries, ERROR log). It stays in the outbox, so it is recoverable.
+  - Transient failures back off globally (1 s, 5 s, 30 s, 2 min, then 5 min).
+- **Separation:** delivery retries are independent of turn retries (`agent.inputs`).
+- **Runtime:** the relay runs with the in-process worker. Its counters appear in `info.relay`.
+
+### B4 — waiver and maintenance allowance (M3B)
+- **Already implemented and authoritative:**
+  - The data comes from the workbook sheet "עיסוקים": 14 occupations, each with a mandatory car
+    flag, whether waiver is allowed, and an allowance of 1,200 / 1,500 / 2,000 / 2,600 / 3,000.
+  - The allowance comes from the occupation, never from the entitlement group.
+- **Verified end to end over HTTP and in a conversation:**
+  - E-005: waiver gives "17806" with allowance "2000".
+  - E-003: MG4 gives "13109" with no residual allowance.
+  - T21: a mandatory-car occupation is ineligible.
+  - T23: an occupation outside the table is not resolved, and setting it is refused with 422.
+- **Partial (E3):** only the representative-answer path for occupations outside the table.
+
+### Contracts and smoke (M4)
+- `contracts/openapi/ai-api.json` is exported from the conversation routes, with a drift test.
+- `scripts/smoke.py` runs against any base URL. It also runs in the test suite against the real
+  app over ASGI.
+- **Fix:** `GeminiProviderClient` keeps the `genai.Client` alive. Before this, a
+  garbage-collected client closed its HTTP client, and later calls failed.
+
+### Angular (M5)
+- **Types and errors:** types are generated from both OpenAPI documents (`npm run api:types`),
+  with no hand-written DTOs. Problem Details codes map to Hebrew text, and raw codes are never
+  shown.
+- **Session:** the access token is held in memory. The refresh cookie is sent with the CSRF
+  header, and the session is restored after a reload. A 401 triggers one refresh and a retry.
+  Role guards protect the routes.
+- **Same origin:** `ng serve` proxies `/api`, and Vercel rewrites it (runbook §3).
+- **Screens:**
+  - The chat uses polling (decision P), with resend after a failed turn.
+  - The profile is read-only; corrections go through the chat.
+  - The catalogue and eligibility come from `option-lists`; the browser rule was removed.
+  - The comparison and calculation pages show Business `display` values only.
+  - The history is rebuilt from conversations and stored runs (`recentRuns`, newest 20 per case).
+  - The representative answer form is structured.
+- **Removed:** demo stores, localStorage data and fixed amounts.
+
+### Known limitations
+- **Gemini key:** the configured key is rejected by Google (403 PERMISSION_DENIED, "project denied
+  access"). The automated tests use deterministic models. A valid billing-free AI Studio key is
+  needed for the manual Gemini check.
+- **Pre-existing visual test failure:** `home.visual` "logo: top" (11px against 4px). It is caused
+  by the logo change in `b0411be` and also fails on `develop`.
+- **History limit:** at most 20 runs per case appear in the history (`RECENT_RUNS`).
+
+---
