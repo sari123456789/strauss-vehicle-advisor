@@ -1,0 +1,145 @@
+<section class="payslip" [class.payslip--compact]="compact()" aria-labelledby="payslip-title">
+  <header class="payslip__head">
+    <h2 id="payslip-title" class="payslip__title">ייבוא נתוני שכר מתלוש</h2>
+    <p class="payslip__note">
+      הקובץ נקרא רק כדי לזהות את נתוני השכר ואינו נשמר. שום נתון לא יעודכן בפרופיל לפני שתאשרו.
+    </p>
+  </header>
+
+  @if (store.error(); as error) {
+    <div class="payslip__alert" role="alert">
+      <p>{{ error.message }}</p>
+      <div class="payslip__actions">
+        @if (error.retryable && store.draft() && store.phase() === 'review') {
+          <button type="button" class="btn btn--outline" (click)="store.approve()">לנסות שוב</button>
+        }
+        <button type="button" class="btn btn--ghost" (click)="store.dismissError()">סגירה</button>
+      </div>
+    </div>
+  }
+
+  @switch (store.phase()) {
+    @case ('idle') {
+      <label class="payslip__drop">
+        <span class="payslip__drop-title">בחירת תלוש שכר (PDF)</span>
+        <span class="payslip__muted">תלוש דיגיטלי בלבד, עד 2MB ועד 5 עמודים</span>
+        <input type="file" accept="application/pdf,.pdf" (change)="onFile($event)" data-testid="payslip-file" />
+      </label>
+    }
+    @case ('uploading') {
+      <div class="payslip__status" role="status" aria-live="polite">
+        <span>מעלה את התלוש…</span>
+        <progress max="100" [value]="store.uploadPercent()">{{ store.uploadPercent() }}%</progress>
+      </div>
+    }
+    @case ('extracting') {
+      <div class="payslip__status" role="status" aria-live="polite">
+        <span>קורא את התלוש ומזהה את נתוני השכר…</span>
+        <progress></progress>
+      </div>
+    }
+    @case ('done') {
+      <div class="payslip__done" role="status" aria-live="polite">
+        <p class="payslip__done-title">הפרופיל עודכן.</p>
+        <p class="payslip__muted">אפשר להמשיך בשיחה ולבקש השוואת רכבים לפי הנתונים המעודכנים.</p>
+        <button type="button" class="btn btn--outline" (click)="cancel()">סיום</button>
+      </div>
+    }
+    @default {
+      @if (store.draft(); as draft) {
+        @for (issue of draft.documentIssues; track issue) {
+          @if (documentIssueLabels[issue]) {
+            <p class="payslip__warning">{{ documentIssueLabels[issue] }}</p>
+          }
+        }
+        <p class="payslip__muted">
+          סמנו את השדות שברצונכם לעדכן. ערכים מסומנים לבדיקה כדאי לוודא מול התלוש לפני האישור.
+        </p>
+
+        <ul class="payslip__fields">
+          @for (field of store.fields(); track field.field) {
+            <li class="payslip-field" [attr.data-status]="field.status" [attr.data-field]="field.field">
+              <div class="payslip-field__main">
+                <label class="payslip-field__check">
+                  <input
+                    type="checkbox"
+                    [checked]="store.selected().has(field.field)"
+                    [disabled]="!approvable(field) || store.busy()"
+                    (change)="store.toggle(field.field)"
+                  />
+                  <span class="payslip-field__label">{{ fieldLabels[field.field] }}</span>
+                </label>
+                <span class="payslip-field__value" dir="ltr">{{ display(field.field, field.value) }}</span>
+                <span class="payslip-chip" [attr.data-status]="field.status">{{ statusLabels[field.status] }}</span>
+              </div>
+
+              @for (issue of field.issues; track issue) {
+                <p class="payslip-field__issue">{{ issueLabels[issue] }}</p>
+              }
+              @for (evidence of field.evidence; track evidence.page + '-' + evidence.lineIndex) {
+                <p class="payslip-field__evidence">
+                  <span class="payslip__muted">מקור: עמוד {{ evidence.page }} —</span>
+                  <bdi>{{ evidence.text }}</bdi>
+                </p>
+              }
+
+              @if (field.alternatives.length && field.status !== 'corrected') {
+                <div class="payslip-field__alternatives" role="group" [attr.aria-label]="'בחירת ערך עבור ' + fieldLabels[field.field]">
+                  @for (alternative of field.alternatives; track alternative) {
+                    <button type="button" class="btn btn--outline" [disabled]="store.busy()" (click)="choose(field.field, alternative)">
+                      <span dir="ltr">{{ display(field.field, alternative) }}</span>
+                    </button>
+                  }
+                </div>
+              }
+
+              @if (editing() === field.field) {
+                <form class="payslip-field__edit" (submit)="$event.preventDefault(); saveEdit(field.field)">
+                  <label>
+                    <span class="sr-only">ערך חדש עבור {{ fieldLabels[field.field] }}</span>
+                    <input
+                      type="text"
+                      inputmode="decimal"
+                      dir="ltr"
+                      [value]="editText()"
+                      (input)="editText.set($any($event.target).value)"
+                      [attr.aria-invalid]="editMessage() ? true : null"
+                    />
+                  </label>
+                  @if (isRate(field.field)) {
+                    <span class="payslip__muted">%</span>
+                  }
+                  <button type="submit" class="btn btn--primary" [disabled]="store.busy()">שמירה</button>
+                  <button type="button" class="btn btn--ghost" (click)="editing.set(null)">ביטול</button>
+                  @if (editMessage(); as message) {
+                    <p class="payslip-field__issue" role="alert">{{ message }}</p>
+                  }
+                </form>
+              } @else {
+                <button type="button" class="btn btn--ghost payslip-field__edit-btn" [disabled]="store.busy()" (click)="startEdit(field)">
+                  {{ field.value === null ? 'הזנת ערך' : 'תיקון' }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+
+        <footer class="payslip__footer">
+          <p class="payslip__muted" aria-live="polite">
+            @if (selectedCount() === 0) {
+              לא נבחרו שדות לעדכון.
+            } @else {
+              יעודכנו {{ selectedCount() }} שדות בפרופיל השכר שלכם.
+            }
+          </p>
+          <div class="payslip__actions">
+            <button type="button" class="btn btn--primary" [disabled]="!store.canApprove()" (click)="store.approve()" data-testid="payslip-approve">
+              {{ store.phase() === 'approving' ? 'מעדכן…' : 'אשר ועדכן את הפרופיל' }}
+            </button>
+            <button type="button" class="btn btn--ghost" [disabled]="store.phase() === 'approving'" (click)="cancel()">ביטול</button>
+          </div>
+        </footer>
+      }
+    }
+  }
+</section>

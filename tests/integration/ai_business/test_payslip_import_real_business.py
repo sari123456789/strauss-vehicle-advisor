@@ -4,7 +4,6 @@ The service gets the real `ConversationService` (trusted `ToolContext`) and the 
 `BusinessToolsFacade` only through the shared ports; no Business table is touched directly.
 """
 
-from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -12,8 +11,7 @@ import pytest
 from app.ai.application.payslip.errors import PayslipError, PayslipErrorCode
 from app.ai.application.payslip.models import PAYSLIP_FIELDS, ApproveCommand
 from app.ai.application.payslip.service import PayslipImportService
-from app.ai.infrastructure.payslip.memory_store import InMemoryDraftStore
-from app.ai.infrastructure.payslip.pdf_reader import PypdfTextReader
+from app.ai.infrastructure.payslip.composition import build_payslip_service
 from app.contracts.common import EnvelopeStatus, FieldStatus
 from tests.fakes.payslip import fixture
 from tests.integration.ai_business.conftest import Stack, trace
@@ -21,19 +19,9 @@ from tests.integration.ai_business.conftest import Stack, trace
 MONTH = "2026-10"
 
 
-class _Clock:
-    def now(self) -> datetime:
-        return datetime.now(UTC)
-
-
 def _service(stack: Stack) -> PayslipImportService:
-    return PayslipImportService(
-        reader=PypdfTextReader(),
-        store=InMemoryDraftStore(),
-        conversations=stack.conversations,
-        business=stack.business.tools,
-        clock=_Clock(),
-    )
+    """Composed exactly as the lifespan will do it: existing services, no new composition."""
+    return build_payslip_service(conversations=stack.conversations, business=stack.business.tools)
 
 
 async def test_approved_payslip_updates_the_shared_profile_once(stack: Stack) -> None:

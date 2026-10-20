@@ -1,13 +1,14 @@
 # Proposal and integration handoff: AI-assisted payslip PDF import
 
-**Status:** PROPOSAL. Implemented independently on `feature/payslip-ai-import`; not wired into the
-application. Nothing here is an approved contract until the shared-ownership owners sign off.
+**Status:** Implemented independently on `feature/payslip-ai-import` (backend and Angular feature);
+not yet wired into the shared application (waits for the integration branch M5). Nothing here is an approved contract until the shared-ownership owners sign off.
 **Audience:** the full-system integration developer, the Business developer and the frontend developer.
 
 ## 1. Decisions that need sign-off
 
 | # | Topic | Current authoritative text | Proposal |
 |---|---|---|---|
+| D0 | Profile updates from the UI | Integration note: "profile is read-only in the UI (actual updates go through the chat)". | **APPROVED (feature owner):** payslip import is a narrowly scoped exception. Only after explicit review and confirmation, the selected fields go through the existing `actual_update` (server re-validation, `expectedProfileVersion`, `operationId`). No salary amounts in conversation messages or logs. Entry points: profile page (main) and chat when salary data is missing, both hosting the same component. |
 | D1 | Document upload scope | `docs/architecture.md` §1 (line 25) and `docs/agent-spec.md` T66 / exclusions table: payslip upload is **not** implemented in the initial demo; typed input only. | Add payslip PDF upload as a feature with review and explicit approval. The four authoritative docs are **not** edited on this branch; their owners update them during integration (§8). |
 | D2 | Pension and study-fund rates | `EmployeeProfile` stores **rates** (`payroll.pensionEmployeeRate`, `payroll.studyFundEmployeeRate`), not deduction amounts. | Use a rate only when a percentage is **printed** on the employee line (unit conversion `6.00%` → `"0.06"`). Never derive a rate from amount ÷ salary. Otherwise the field is `rejected/rate_not_printed` or `missing`, and the employee types it. |
 | D3 | External LLM and real payslips | No policy exists for sending payroll documents to an external provider. | `PayslipImportConfig.external_llm_enabled` is `False` by default (rules-only extraction; every field needs review). Enable it **only for synthetic payslips** until an approved data-handling policy explicitly authorizes otherwise. Regex redaction is best-effort and is no justification for sending real data. |
@@ -20,8 +21,10 @@ application. Nothing here is an approved contract until the shared-ownership own
 |---|---|
 | Application (AI Engine) | `src/backend/app/ai/application/payslip/` — `models.py`, `errors.py` (codes + Hebrew messages), `text.py` (normalization, Decimal parsing, best-effort redaction), `candidates.py` (Hebrew label rules), `extraction.py` (structured LLM task), `drafting.py` (rules + AI fusion, contract validation), `ports.py`, `service.py` |
 | Infrastructure (AI Engine) | `src/backend/app/ai/infrastructure/payslip/` — `pdf_reader.py` (pypdf, in memory), `memory_store.py` (demo store) |
+| Composition factory | `src/backend/app/ai/infrastructure/payslip/composition.py` — `build_payslip_service(conversations=, business=, llm=, external_llm_enabled=)` reuses the existing runtime services (no second auth, Business service or store) |
+| Angular feature | `drive-angular/src/app/features/payslip/` — models, typed client (`PAYSLIP_API_BASE_URL` = `/api/v1`), `PayslipImportStore` (one instance per host), `<dr-payslip-import>` component, Hebrew error map, specs |
 | Standalone HTTP router | `src/backend/app/api/routers/payslip_imports.py` (not included by `app.main`) |
-| Tests | `tests/unit/ai/payslip/`, `tests/api/test_payslip_imports_api.py`, `tests/integration/ai_business/test_payslip_import_real_business.py` (marker `db`) |
+| Tests | `tests/unit/ai/payslip/`, `tests/api/test_payslip_imports_api.py`, `tests/integration/ai_business/test_payslip_import_real_business.py` and `test_payslip_http.py` (marker `db`: real login/bearer, ownership, actual_update, case sync); Angular `*.spec.ts` in the feature folder |
 | Synthetic fixtures | `tests/fakes/payslip/fixtures/*.pdf` and generator `tests/fakes/payslip/generate_fixtures.py` |
 
 No existing file was modified: no shared contract, migration, workflow node, bootstrap, `main.py`, router or Angular file changed. No new runtime dependency: `pypdf` was already declared. The package layout respects `tests/architecture` (the payslip code lives inside the existing `application` and `infrastructure` packages of the AI Engine and imports only `app.contracts` and AI ports).
@@ -127,20 +130,17 @@ synchronous (typically well under a second without the LLM; ≤10 s extraction t
 
 ## 8. Integration handoff (shared files — not changed on this branch)
 
-1. **`app/bootstrap.py` / lifespan** — build and store the service:
+1. **Lifespan in `app/main.py`** (composition from integration M1) — one call reusing the runtime:
    ```python
-   app.state.ai_payslip_imports = PayslipImportService(
-       reader=PypdfTextReader(),
-       store=InMemoryDraftStore(),          # single process only (§5)
-       conversations=conversation_service,  # the existing ConversationService
-       business=business_services.tools,    # BusinessToolsPort
-       clock=<existing UTC clock>,
-       llm=<existing QuotaGuardedLlm or None>,
-       config=PayslipImportConfig(external_llm_enabled=<setting, default False>),
+   app.state.ai_payslip_imports = build_payslip_service(
+       conversations=runtime.conversations,   # existing ConversationService
+       business=services.tools,               # existing BusinessToolsPort
+       llm=llm,                               # existing guarded LLM, or None
+       external_llm_enabled=settings.payslip_external_llm,  # new setting, default False
    )
    ```
-   The setting must be read in `app.settings` / `app.ai.infrastructure.llm.settings` (only these
-   may read the environment).
+   The setting is read in `app.settings` (only settings modules may read the environment).
+   The in-memory store requires one API process (already the case with the in-process worker).
 2. **`app/main.py`** — `app.include_router(payslip_imports.router, prefix="/api/v1")`.
 3. **OpenAPI / TypeScript** — regenerate models from the DTOs after joint approval.
 4. **Docs** — update `architecture.md` §1/§19, `agent-spec.md` T66 and exclusions,
@@ -149,7 +149,26 @@ synchronous (typically well under a second without the LLM; ≤10 s extraction t
    `get_conversation_context`; no workflow change is required. A follow-up could post a system
    message "הפרופיל עודכן מתלוש השכר" to the conversation history.
 
-## 9. Frontend handoff (Angular; standalone component, no redesign)
+## 9. Frontend (Angular)
+
+**Implemented** (`drive-angular/src/app/features/payslip/`, not yet placed on a page):
+
+```html
+<dr-payslip-import
+  [conversationId]="conversationId"      <!-- active conversation of the employee -->
+  [profileVersion]="profile.profileVersion"
+  [compact]="false"                     <!-- true inside the chat panel -->
+  (applied)="reloadProfile()"           <!-- emits UpdateInputsResult (new profileVersion) -->
+  (profileStale)="reloadProfile()"      <!-- PROFILE_VERSION_CONFLICT: pass the new version -->
+  (closed)="hidePayslipImport()" />
+```
+
+Wiring after M5 (shared files): place it in `features/profile/profile.page.html` (replacing the
+demo "upload payslip or contract" input), and offer it from the advisor/chat page when the
+context reports missing salary fields; the HTTP interceptor from M5 supplies the bearer token.
+`PAYSLIP_API_BASE_URL` defaults to `/api/v1`; it can be unified with the app's base URL then.
+
+### Design notes (as implemented)
 
 - **Entry point:** a secondary button "העלאת תלוש שכר (PDF)" in the profile side panel, next to
   the salary facts; also allowed from the chat composer's attach action. Accept `application/pdf`,
@@ -177,7 +196,24 @@ synchronous (typically well under a second without the LLM; ≤10 s extraction t
 
 | Level | Status |
 |---|---|
-| Independent feature implementation | Done on `feature/payslip-ai-import`: unit, router and real-Business integration tests pass locally. |
-| API/frontend integration | **Not done** (needs §8 and the Angular component). |
+| Independent feature implementation | Done on `feature/payslip-ai-import`: backend unit, router, real-Business and real-HTTP (login, ownership, actual_update) tests pass locally; Angular feature specs pass (vitest). |
+| API/frontend integration | **Not done**: lifespan/router wiring and placing the component on the profile/chat pages wait for integration M5 (§8, §9). |
+| Browser end-to-end (Playwright) | **Not done**: needs the routed component, real auth in Angular (M5) and a running stack. |
 | End-to-end deployment | **Not done / not verified.** |
 | Real Gemini call | **Not performed.** Only `ScriptedLlm` was used. |
+
+## 11. Known issues found during this work (outside the payslip feature)
+
+- **Intermittent `tests/integration/ai/database/test_conversation_service.py::test_concurrent_duplicate_starts_yield_one_conversation_and_case`**
+  (fails roughly 1 in 2 local runs; code identical to `origin/develop`, untouched by this branch).
+  Observed error: `ConversationConflictError("client request ID reused with different content")`.
+  Likely cause (code analysis; not proven by a fix): `create_conversation` uses `INSERT … ON CONFLICT (id) DO NOTHING`, but
+  `thread_id` and `case_operation_id` are also unique. When five identical starts race, a
+  waiting insert can fail on one of those other unique indexes instead of the `id` arbiter. The
+  resulting `IntegrityError` is reported as `ConversationConflictError`, although the request
+  is a legitimate duplicate.
+  Suggested fix (AI persistence owner): use `ON CONFLICT DO NOTHING` without a conflict target, or
+  on `IntegrityError` re-read by `id` and accept identical content. Not changed here
+  (`app/ai/infrastructure/persistence/store.py` is shared AI code).
+- Local test runs from `src/backend` with explicit test paths must pass `-c pyproject.toml`;
+  otherwise pytest roots at the repository, `asyncio_mode=auto` is not loaded and async tests fail.
