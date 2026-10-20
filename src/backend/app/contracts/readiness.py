@@ -18,6 +18,7 @@ from app.contracts.common import (
     IssueCode,
     OptionCategory,
     OptionKeyStr,
+    RunKind,
 )
 from app.contracts.representatives import RepresentativeFieldCode
 
@@ -75,6 +76,10 @@ class ReadinessRequest(ContractModel):
     selection: Selection | None = None
     include_current: bool = False
     expected_case_version: int = Field(ge=0)
+    kind: RunKind = RunKind.REGULAR
+    """E2 (approved 2026-10-20): the fact basis of the calculation being prepared, exactly as
+    `compare_scenarios` uses it (`regular`: the latest actual profile; `hypothetical`: the case
+    copy with its overrides). Ignored by listing goals. Omitted means `regular`."""
 
 
 class ReadinessResult(ContractModel):

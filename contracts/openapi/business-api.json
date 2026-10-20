@@ -3790,6 +3790,10 @@
             "title": "Includecurrent",
             "type": "boolean"
           },
+          "kind": {
+            "$ref": "#/components/schemas/RunKind",
+            "default": "regular"
+          },
           "selection": {
             "anyOf": [
               {

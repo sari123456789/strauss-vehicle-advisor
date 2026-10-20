@@ -28,8 +28,8 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 |---|---|---|
 | M1 | FastAPI lifespan composition, settings (auth/CORS/worker), readiness, checkpointer CLI, deps | **Done** — commit `4e95a49`, pushed |
 | M2 | Representative HTTP routes (B3b) | **Done** — commit `01359c7`, pushed |
-| M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — see commit below |
-| M3B | B4 end-to-end verification + E2 | Not started |
+| M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — commit `b243575`, pushed |
+| M3B | B4 end-to-end verification + E2 | **Done** — commit after M3 (see git log) |
 | M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | Not started |
 | M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | Not started |
 | M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | Not started |
@@ -70,6 +70,10 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   - Full suite: 1076 passed and 5 skipped, with one failure: the doc-hash baseline for
     `integration-contracts.md`. The baseline was then updated, and the integrity test now
     passes (15 passed, 4 skipped).
+- After M3B: E2 readiness tests 2 passed; B4 end-to-end tests 5 passed (E-005 waiver
+  "17806" with allowance "2000"; E-003 MG4 "13109" with allowance "0"; mandatory-car waiver
+  ineligible; conversation shows only Business amounts; occupation outside the table is not
+  resolved and is refused with 422). Full suite: **1084 passed, 5 skipped, 0 failed**.
 - `ruff check`, `ruff format`, `mypy app`: clean.
 - **Manual check against the local DB (M1):** `ready` 200, e001 login, `/me/profile` 200, and
   `POST /conversations` creates a conversation together with its case.
@@ -79,11 +83,30 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   checkpointer tables, the import and the seed.
 - Demo passwords for e001, e003, e005 and rep01 are in the session scratchpad only (never committed).
 
+## B4 status
+- Complete for all 14 occupations in the authoritative table: eligibility comes from the table
+  and the allowance comes from the occupation, never from the group. Verified through HTTP and
+  through a conversation.
+- Partial sub-case (E3, blocked):
+  - When an occupation is outside the table, the system clarifies (`resolve_occupation`) or
+    escalates.
+  - A representative's waiver or allowance answer for it is still rejected
+    (`field_code_not_answerable_yet`), because no authoritative rule exists.
+
 ## Next step (exact)
-M3B:
-1. Add `kind: RunKind = RunKind.REGULAR` to `ReadinessRequest` (`app/contracts/readiness.py`).
-2. Pass it to the planner in `readiness_service.py`.
-3. Send the goal kind from `app/ai/workflow/nodes/act.py` (`compute`).
-4. Re-export the JSON schemas (`app/cli/export_contract_schemas.py`) and the Business OpenAPI.
-5. Add HTTP and conversation tests for E-005 waiver (net "17806"), E-003 MG4 ("13109"),
-   mandatory-car ineligibility (T21) and the unknown occupation (T23).
+M4:
+1. Add `tests/contract/ai_openapi.py` and `tests/contract/test_ai_openapi.py`, which export the
+   conversation routes to `contracts/openapi/ai-api.json` with a drift test.
+2. Add `scripts/smoke.py`, using httpx with `--base-url`. Passwords come from the env variables
+   `SMOKE_<LOGIN>_PASSWORD`. Steps:
+   1. ready
+   2. e001 login
+   3. conversation
+   4. CAR-10 comparison returns "11693"
+   - 4b. e005 waiver comparison returns "17806"
+   5. message and poll
+   6. representative question, rep01 answer, then a follow-up message
+3. Add an automated ASGI run of the smoke script with ScriptedLlm.
+4. Run a manual Gemini check against the local uvicorn server:
+   - run `--loop asyncio:SelectorEventLoop` with `STRAUSS_WORKER_IN_PROCESS=true`;
+   - use two conversations: e001 with CAR-10 and e005 with the waiver.
