@@ -59,6 +59,9 @@ Linux uses the selector event loop by default; no `--loop` option is needed.
 
 **Environment variables:**
 
+Service URL: `https://strauss-vehicle-advisor-api.onrender.com`. As of 2026-10-20 it still runs the
+old `develop` build (only `/api/v1/health`). It needs a build from the integration code.
+
 | Variable | Value |
 |---|---|
 | `STRAUSS_ENVIRONMENT` | `production` (requires the token secret) |
@@ -99,7 +102,7 @@ that block third-party cookies will lose the session on reload.
 
 ## 4. Post-deploy smoke check
 
-`scripts/smoke.py --base-url https://<render-service>.onrender.com` with `SMOKE_E001_PASSWORD`,
+`scripts/smoke.py --base-url https://strauss-vehicle-advisor-api.onrender.com` with `SMOKE_E001_PASSWORD`,
 `SMOKE_E005_PASSWORD` and `SMOKE_REP01_PASSWORD` set. It checks these steps in order:
 1. readiness;
 2. login;
