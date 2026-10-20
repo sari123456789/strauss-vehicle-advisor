@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.ai.application.event_relay import BusinessEventRelay
 from app.ai.application.ports.llm import LlmPort
 from app.ai.infrastructure.llm.factory import build_llm_port
 from app.ai.infrastructure.llm.settings import load_llm_settings
@@ -295,6 +296,13 @@ async def build_ai_runtime(
         llm=llm if llm is not None else build_llm(),
         worker_id=worker_id,
     )
+
+
+def build_event_relay(services: BusinessServices, runtime: AiRuntime) -> BusinessEventRelay:
+    """The outbox relay: the Business feed is injected only here (decision D4); the AI side
+    enqueues through its own durable input queue (`ConversationService`)."""
+    assert services.event_feed is not None
+    return BusinessEventRelay(services.event_feed, runtime.conversations)
 
 
 # --- Startup verification and readiness --------------------------------------------------------

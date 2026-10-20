@@ -9,7 +9,8 @@ module is cheap. The lifespan composes the runtime in this order:
 1. Business services (one engine), then `BusinessApi` (auth, HTTP settings).
 2. The AI runtime (conversation service, LangGraph runner, turn worker) over the shared ports.
 3. A read-only check that both schemas are at their migration head (never migrates).
-4. When `STRAUSS_WORKER_IN_PROCESS=true`: the in-process turn worker (decision W).
+4. When `STRAUSS_WORKER_IN_PROCESS=true`: the in-process turn worker (decision W) and the
+   Business outbox -> AI input queue relay (enable on one instance only).
 
 Shutdown releases everything in reverse order and is safe after a partial startup.
 """
@@ -33,6 +34,7 @@ from app.bootstrap import (
     build_auth_service,
     build_business_services,
     build_container,
+    build_event_relay,
     build_readiness_probe,
     verify_schemas,
 )
@@ -77,13 +79,18 @@ def _lifespan(
             sources = ReadinessSources(services, runtime, settings.worker_in_process)
             if settings.worker_in_process:
                 runtime.in_process.start()
-                # `runtime.aclose` (registered above) stops the worker first.
+                # `runtime.aclose` (registered above) stops the worker after the relay.
+                relay = build_event_relay(services, runtime)
+                relay.start()
+                stack.push_async_callback(relay.stop)
+                app.state.event_relay = relay
+                sources.extra["relay"] = relay.status
             app.state.readiness_probe = build_readiness_probe(sources)
             logger.info("startup_complete worker_in_process=%s", settings.worker_in_process)
             try:
                 yield
             finally:
-                for name in ("readiness_probe", "ai_conversations", "business_api"):
+                for name in ("readiness_probe", "event_relay", "ai_conversations", "business_api"):
                     if hasattr(app.state, name):
                         delattr(app.state, name)
                 logger.info("shutdown_started")

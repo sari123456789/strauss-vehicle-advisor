@@ -44,7 +44,7 @@
       "sha256": "01897edb781c86ffbb1d1d44c83a15f19e287a896a4c8df9a8ed09ad7ad391fe",
       "originalPath": "docs/strauss-architecture-en-modules-final.md",
       "originalSha256": "03bfe680d43415a8fc8d095df6609e1df8daafd6f726c44a2dcacea911afda2b",
-      "revisionNote": "Internal references renamed to repository file names (main b5e8334). Appended 'Approved implementation update — 2026-10-18: backend package layout' (paths only) and the D1 module-isolation update (owner-approved)."
+      "revisionNote": "Internal references renamed to repository file names (main b5e8334). Appended 'Approved implementation update — 2026-10-18: backend package layout' (paths only) and the D1 module-isolation update (owner-approved). 2026-10-20: C4 status line updated for the implemented feed/relay and the approved E1 after_sequence extension (owner-approved integration plan)."
     },
     {
       "path": "docs/agent-spec.md",
@@ -55,7 +55,7 @@
     },
     {
       "path": "docs/integration-contracts.md",
-      "sha256": "ca1f9d917ab0f1b02e89db1b7f8bf45f7a945ed1b129dd212923e7ff12ff6c04",
+      "sha256": "94417431727219ab37a16496bc6670d20acab4374441e66fe6aa018d28a03fc0",
       "originalPath": "docs/INTEGRATION_CONTRACTS-modules-final.md",
       "originalSha256": "3a4416706419fa41cc42859bcac82d2c5aca15e1c251be16bc56633d23747deb",
       "revisionNote": "Internal references renamed to repository file names (main b5e8334). Appended 'Approved implementation update — 2026-10-18: backend package layout' (paths only) and the D1 module-isolation update (owner-approved)."

@@ -6,6 +6,7 @@ transaction. Delivery is at-least-once:
 
 - `pending(limit)` returns unacknowledged events in `sequence` order and returns them again
   on every call until they are acknowledged. Reading never acknowledges.
+  `after_sequence` (E1) pages within one scan: only events with a greater `sequence`.
 - `acknowledge(ids)` sets `acknowledged_at` once; repeating it, or passing unknown IDs, has
   no further effect. The consumer (the AI worker) acknowledges only after it has durably
   accepted the event into its own queue.
@@ -33,15 +34,17 @@ class SqlBusinessEventFeed:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
 
-    async def pending(self, limit: int) -> list[BusinessEvent]:
+    async def pending(
+        self, limit: int, *, after_sequence: int | None = None
+    ) -> list[BusinessEvent]:
         if isinstance(limit, bool) or not 1 <= limit <= MAX_BATCH:
             raise ValueError(f"limit must be between 1 and {MAX_BATCH}")
-        statement = (
-            select(OUTBOX)
-            .where(OUTBOX.c.acknowledged_at.is_(None))
-            .order_by(OUTBOX.c.sequence)
-            .limit(limit)
-        )
+        if after_sequence is not None and (isinstance(after_sequence, bool) or after_sequence < 0):
+            raise ValueError("after_sequence must be a non-negative integer")
+        statement = select(OUTBOX).where(OUTBOX.c.acknowledged_at.is_(None))
+        if after_sequence is not None:
+            statement = statement.where(OUTBOX.c.sequence > after_sequence)
+        statement = statement.order_by(OUTBOX.c.sequence).limit(limit)
         async with self._sessions() as session, session.begin():
             rows = (await session.execute(statement)).all()
         return [
