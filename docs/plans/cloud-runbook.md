@@ -16,9 +16,9 @@ None of them was executed during the integration work.
 | Reference import (release 1: 20 vehicles, 14 occupations, 77,988 tax records) | Done |
 | Demo seed (e001–e006, rep01, ops01; six profiles) | Done |
 | Demo passwords for `e001` and `rep01` | Done (kept privately) |
-| **Business migration `0004_representative_answers`** (answers, case facts, outbox, audit) | **Pending — needed by the representative flow; the API refuses to start without it** |
-| **AI migrations** `0001`–`0003` (`agent` schema) | **Pending** |
-| **LangGraph checkpointer tables** (`python -m app.cli.setup_checkpointer`) | **Pending** |
+| Business migration `0004_representative_answers` (answers, case facts, outbox, audit) | **Done** (2026-10-20, approved; verified: version 0004 and the four tables exist) |
+| AI migrations `0001`–`0003` (`agent` schema) | **Done** (verified 2026-10-20: `0003_response_staging`) |
+| LangGraph checkpointer tables | **Done** (verified 2026-10-20) |
 | Passwords for further demo logins (e.g. `e005` for the waiver demo) | Optional |
 
 Neon's sample table `public.playing_with_neon` is unrelated and may be deleted.
@@ -59,6 +59,9 @@ Linux uses the selector event loop by default; no `--loop` option is needed.
 
 **Environment variables:**
 
+Service URL: `https://strauss-vehicle-advisor-api.onrender.com`. As of 2026-10-20 it still runs the
+old `develop` build (only `/api/v1/health`). It needs a build from the integration code.
+
 | Variable | Value |
 |---|---|
 | `STRAUSS_ENVIRONMENT` | `production` (requires the token secret) |
@@ -78,16 +81,10 @@ is missing. The API never migrates by itself.
 ## 3. Vercel (Angular)
 
 The frontend calls the same-origin path `/api/v1`. Vercel forwards `/api/*` to Render, so the
-refresh cookie is first-party. This avoids third-party-cookie blocking in Safari and Chrome. Once
-the Render service URL is known, add `drive-angular/vercel.json`:
-
-```json
-{
-  "rewrites": [
-    {"source": "/api/:path*", "destination": "https://<render-service>.onrender.com/api/:path*"}
-  ]
-}
-```
+refresh cookie is first-party. This avoids third-party-cookie blocking in Safari and Chrome. The
+rewrite is committed in `drive-angular/vercel.json` and points to
+`https://strauss-vehicle-advisor-api.onrender.com`. It takes effect when Vercel builds a branch
+that contains it, and the Vercel project's root directory must be `drive-angular`.
 
 - Keep `STRAUSS_AUTH_ALLOWED_ORIGINS` set to the Vercel origin, because the browser's `Origin`
   header is forwarded.
@@ -99,7 +96,7 @@ that block third-party cookies will lose the session on reload.
 
 ## 4. Post-deploy smoke check
 
-`scripts/smoke.py --base-url https://<render-service>.onrender.com` with `SMOKE_E001_PASSWORD`,
+`scripts/smoke.py --base-url https://strauss-vehicle-advisor-api.onrender.com` with `SMOKE_E001_PASSWORD`,
 `SMOKE_E005_PASSWORD` and `SMOKE_REP01_PASSWORD` set. It checks these steps in order:
 1. readiness;
 2. login;

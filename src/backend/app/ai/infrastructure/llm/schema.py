@@ -1,10 +1,14 @@
 """Convert a Pydantic output model into the JSON Schema subset accepted by structured output.
 
-Gemini's structured output supports a subset of JSON Schema (no `$ref`; documented keywords:
-type, properties, required, additionalProperties, enum, format, minimum/maximum, items,
-prefixItems, minItems/maxItems, title, description, anyOf). References are inlined and other
-keywords are dropped. The provider schema only *guides* generation: every response is still
-validated against the full Pydantic model, so dropped constraints are enforced locally.
+Gemini's structured output supports a subset of JSON Schema (no `$ref`; keywords: type,
+properties, required, additionalProperties, enum, format, minimum/maximum, items, prefixItems,
+title, description, anyOf). References are inlined and other keywords are dropped. The provider
+schema only *guides* generation: every response is still validated against the full Pydantic
+model, so dropped constraints are enforced locally.
+
+`minItems`/`maxItems` are dropped although documented: the approved free-tier model rejects the
+interpretation schema with them (`400 INVALID_ARGUMENT`, verified 2026-10-20), while the same
+schema without them is accepted. Array lengths stay enforced by the Pydantic models.
 """
 
 from typing import Any
@@ -23,8 +27,6 @@ _KEPT_KEYS = frozenset(
         "maximum",
         "items",
         "prefixItems",
-        "minItems",
-        "maxItems",
         "title",
         "description",
         "anyOf",
