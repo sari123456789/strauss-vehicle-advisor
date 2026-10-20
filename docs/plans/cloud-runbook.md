@@ -81,16 +81,10 @@ is missing. The API never migrates by itself.
 ## 3. Vercel (Angular)
 
 The frontend calls the same-origin path `/api/v1`. Vercel forwards `/api/*` to Render, so the
-refresh cookie is first-party. This avoids third-party-cookie blocking in Safari and Chrome. Once
-the Render service URL is known, add `drive-angular/vercel.json`:
-
-```json
-{
-  "rewrites": [
-    {"source": "/api/:path*", "destination": "https://<render-service>.onrender.com/api/:path*"}
-  ]
-}
-```
+refresh cookie is first-party. This avoids third-party-cookie blocking in Safari and Chrome. The
+rewrite is committed in `drive-angular/vercel.json` and points to
+`https://strauss-vehicle-advisor-api.onrender.com`. It takes effect when Vercel builds a branch
+that contains it, and the Vercel project's root directory must be `drive-angular`.
 
 - Keep `STRAUSS_AUTH_ALLOWED_ORIGINS` set to the Vercel origin, because the browser's `Origin`
   header is forwarded.
