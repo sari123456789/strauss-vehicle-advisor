@@ -46,6 +46,20 @@ CORS_HEADERS = ["Authorization", "Content-Type", "X-CSRF-Protection", "X-Request
 logger = logging.getLogger("app.main")
 
 
+def _configure_logging(settings: Settings) -> None:
+    """Route the `app.*` loggers (diagnostic codes, worker and relay events) to stderr once.
+
+    Servers configure only their own loggers; without this, application diagnostics such as
+    `llm_call ... outcome=unavailable code=transport_error` would be dropped."""
+    application = logging.getLogger("app")
+    application.setLevel(settings.log_level)
+    if logging.getLogger().handlers or application.handlers:
+        return  # logging is already configured (tests, a hosting platform): leave it alone
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    application.addHandler(handler)
+
+
 def _http_config(settings: Settings) -> HttpConfig:
     return HttpConfig(
         cookie_secure=settings.auth_cookie_secure,
@@ -107,6 +121,7 @@ def create_app(
     """The shared application. `llm` and `ai_database_url` are injection points for tests
     (a scripted model, a test database); production reads both from the environment."""
     settings = settings or get_settings()
+    _configure_logging(settings)
     container: Container = build_container(settings)
     app = FastAPI(
         title="Strauss Vehicle Advisor API",

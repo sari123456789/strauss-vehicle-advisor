@@ -29,8 +29,8 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
 | M1 | FastAPI lifespan composition, settings (auth/CORS/worker), readiness, checkpointer CLI, deps | **Done** — commit `4e95a49`, pushed |
 | M2 | Representative HTTP routes (B3b) | **Done** — commit `01359c7`, pushed |
 | M3 | Outbox → AI relay (`BusinessEventRelay`) + E1 | **Done** — commit `b243575`, pushed |
-| M3B | B4 end-to-end verification + E2 | **Done** — commit after M3 (see git log) |
-| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | Not started |
+| M3B | B4 end-to-end verification + E2 | **Done** — commit `edb4f6f`, pushed |
+| M4 | `ai-api.json` contract + drift test, `scripts/smoke.py`, manual Gemini check | **Done except the manual Gemini check** (blocked: the Gemini key is rejected, 403) |
 | M5 | Angular on the real API (auth, profile, chat polling, history, catalogue, comparison, representative) + test migration | Not started |
 | M6 | `.env.example`, README, cloud runbook, business-decisions §20, final push and report | Not started |
 
@@ -74,6 +74,26 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   "17806" with allowance "2000"; E-003 MG4 "13109" with allowance "0"; mandatory-car waiver
   ineligible; conversation shows only Business amounts; occupation outside the table is not
   resolved and is refused with 422). Full suite: **1084 passed, 5 skipped, 0 failed**.
+- **After M4:**
+  - `tests/contract/test_ai_openapi.py` passes (drift and bearer checks).
+  - The smoke script passes all 7 steps against the real app (ASGI, ScriptedLlm).
+  - Unit, API, contract, architecture, smoke and composition tests: 726 passed, 4 skipped.
+- **Manual smoke against local uvicorn** (local DB, worker on):
+  - Steps 1–4b PASS: ready, login, conversation, CAR-10 "11693", waiver "17806".
+  - Steps 5–6 cannot pass with the current Gemini key, which Google rejects with
+    `403 PERMISSION_DENIED` ("Your project has been denied access"). The key in `.env` also
+    does not have the usual AI Studio format.
+  - The system degrades correctly: the reply is `assistant_unavailable`, there is no crash and
+    no invented answer.
+- **Bug found and fixed in M4:** `GeminiProviderClient` did not keep the `genai.Client` alive.
+  - After garbage collection the SDK closed its HTTP client, and every later call failed with
+    "client has been closed" (`unexpected_RuntimeError`).
+  - A regression test was added.
+- **Diagnostics:** `app.*` loggers are now routed to stderr when the server has no logging
+  configured. The level is set by `STRAUSS_LOG_LEVEL`, default INFO. `llm_call ... code=...`
+  lines are visible.
+- **Local TLS interception:** the Gemini SDK needs `SSL_CERT_FILE` pointing to the exported
+  Windows roots, the same as uv.
 - `ruff check`, `ruff format`, `mypy app`: clean.
 - **Manual check against the local DB (M1):** `ready` 200, e001 login, `/me/profile` 200, and
   `POST /conversations` creates a conversation together with its case.
@@ -93,20 +113,24 @@ AI conversation resumes → history. Same architecture and payroll rules; no new
   - A representative's waiver or allowance answer for it is still rejected
     (`field_code_not_answerable_yet`), because no authoritative rule exists.
 
+## Open item needing the user
+- A valid Gemini API key for a billing-free AI Studio project is needed. It goes in
+  `src/backend/.env` as `STRAUSS_AI_LLM_PROFILE_DEV_API_KEY`.
+- Then rerun the manual smoke:
+  - Start the server:
+    `SSL_CERT_FILE=<windows-roots.pem> STRAUSS_WORKER_IN_PROCESS=true uvicorn app.main:app --loop asyncio:SelectorEventLoop`
+  - Run `python scripts/smoke.py` with `SMOKE_*_PASSWORD` set.
+  - Hold two conversations: e001 with CAR-10, e005 with the waiver.
+
 ## Next step (exact)
-M4:
-1. Add `tests/contract/ai_openapi.py` and `tests/contract/test_ai_openapi.py`, which export the
-   conversation routes to `contracts/openapi/ai-api.json` with a drift test.
-2. Add `scripts/smoke.py`, using httpx with `--base-url`. Passwords come from the env variables
-   `SMOKE_<LOGIN>_PASSWORD`. Steps:
-   1. ready
-   2. e001 login
-   3. conversation
-   4. CAR-10 comparison returns "11693"
-   - 4b. e005 waiver comparison returns "17806"
-   5. message and poll
-   6. representative question, rep01 answer, then a follow-up message
-3. Add an automated ASGI run of the smoke script with ScriptedLlm.
-4. Run a manual Gemini check against the local uvicorn server:
-   - run `--loop asyncio:SelectorEventLoop` with `STRAUSS_WORKER_IN_PROCESS=true`;
-   - use two conversations: e001 with CAR-10 and e005 with the waiver.
+M5 (Angular, `drive-angular/`):
+1. Run `npm ci`.
+2. Add the devDependency `openapi-typescript` and the script `npm run api:types`, which writes
+   `src/app/core/api/generated/{business,ai}.ts`.
+3. Add `proxy.conf.json` pointing to `http://127.0.0.1:8000` and set the `API_BASE_URL`
+   default to `/api/v1`.
+4. Implement the auth service, interceptor (refresh + CSRF header) and guards.
+5. Replace the demo stores with API-backed stores: profile, advisor chat with polling, history,
+   catalogue (option-lists), comparison/calculation pages, representative inbox.
+6. Rewrite `tests/workflow.spec.ts` against `HttpTestingController`. Keep the e2e
+   responsive/visual tests with `page.route` fixtures.

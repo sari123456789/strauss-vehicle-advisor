@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = True
     auth_cookie_samesite: Literal["strict", "lax", "none"] = "strict"
     """`none` only for a cross-site deployment (requires `auth_cookie_secure`)."""
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    """Level of the application loggers (`app.*`). They log identifiers, codes and durations
+    only - never credentials, tokens, salary values or message text."""
     worker_in_process: bool = False
     """Run the AI turn worker and the Business event relay inside the API process (decision W).
     Enable it on exactly one instance."""
