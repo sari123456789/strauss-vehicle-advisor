@@ -18,6 +18,7 @@ import {PayslipImportComponent} from '../payslip/payslip-import.component';
 import {ProfileStore} from '../profile/state/profile.store';
 import {ConversationStore} from './state/conversation.store';
 import {ComparisonsStore} from '../comparisons/state/comparisons.store';
+import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 
 /** Message kinds that carry a Business comparison run the employee can open in detail. */
 const RUN_KINDS = new Set(['comparison', 'history']);
@@ -39,6 +40,9 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly payslipOpen = signal(false);
   /** Sent here from the comparison page because the current state could not be calculated. */
   readonly needsCurrent = inject(ComparisonsStore).needsCurrent;
+  readonly currentCarImage = computed(() =>
+    vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
+  );
   /** The saved current-car details the employee is asked to confirm, in plain words. */
   readonly currentDetails = computed(() => {
     const a = this.profile.profile()?.currentArrangement;

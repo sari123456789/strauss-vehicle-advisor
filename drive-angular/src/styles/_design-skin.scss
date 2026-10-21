@@ -565,3 +565,41 @@ tbody tr:hover {
   color: #a33a2b;
   background: #fbeceb;
 }
+
+// "My details" panel in the chat: the car photo fills the bottom of the card, inside its edges.
+.workspace > .summary {
+  overflow: hidden;
+}
+
+.summary .summary-car {
+  position: relative;
+  margin: 20px -16px -23px;
+}
+
+.summary .summary-car img,
+.summary .summary-car drive-car {
+  display: block;
+  inline-size: 100%;
+  margin: 0;
+}
+
+.summary .summary-car img,
+.summary .summary-car .car-art {
+  inline-size: 100%;
+  aspect-ratio: 16 / 10;
+  block-size: auto;
+  margin: 0;
+  object-fit: cover;
+  max-width: none;
+}
+
+.summary .summary-car span {
+  position: absolute;
+  inset-block-end: 10px;
+  inset-inline-start: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 600;
+}
