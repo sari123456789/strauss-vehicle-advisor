@@ -528,6 +528,9 @@ def test_queue_filters_search_and_keyset_paging(business_db: str) -> None:
 
             single = await w.answers.list_requests(other, search=str(ids[0]), statuses=None)
             assert [v.request_id for v in single] == [ids[0]]
+            # LIKE wildcards are matched literally, so they never act as "match everything".
+            assert await w.answers.list_requests(other, search="%", statuses=None) == []
+            assert await w.answers.list_requests(other, search="_", statuses=None) == []
 
             # Keyset paging with page size 2 returns each request once, in queue order.
             paged: list[UUID] = []

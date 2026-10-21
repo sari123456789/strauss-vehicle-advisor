@@ -193,7 +193,7 @@ token of an active `representative`. Other roles get `403 FORBIDDEN` and anonymo
 
 | Method and path | Body / query | Response |
 |---|---|---|
-| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `assignment` (`all` default, `unclaimed`, `mine`, `others`), `fieldCode`, `search` (max 100), `after` (request ID cursor), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first, stable by (createdAt, requestId) |
+| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `assignment` (`all` default, `unclaimed`, `mine`, `others`), `fieldCode`, `search` (max 100), `after` (exclusive cursor: the request ID that ends the previous page; unknown ID → `422 INVALID_BUSINESS_INPUT`), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first, stable by (createdAt, requestId) |
 | `GET /api/v1/representative-requests/summary` | — | `Envelope[RepresentativeSummary]` (whole queue, not one page) |
 | `GET /api/v1/representative-requests/{requestId}` | — | `Envelope[RepresentativeRequestView]` |
 | `POST /api/v1/representative-requests/{requestId}/claim` | `ClaimRequest` | `Envelope[ClaimResult]` |
@@ -211,6 +211,7 @@ token of an active `representative`. Other roles get `403 FORBIDDEN` and anonymo
 - Release is handler-only (`403 FORBIDDEN` otherwise), checked on `expectedAssignmentVersion`.
   A stale version is `409 VERSION_CONFLICT`. Releasing an unclaimed request is `409`.
 - Cancelling a request (an alternative change) cancels its active assignment in the same transaction.
+  No production use case deactivates an alternative yet, so this path is covered by tests only.
 - Each claim, release and cancel writes an audit entry (`representative_assignment.*`).
 
 **Answer behavior:**

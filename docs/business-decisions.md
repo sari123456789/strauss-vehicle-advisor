@@ -905,7 +905,15 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
 - **Rules:** an open, unclaimed request can be claimed by one representative. The handler answers
   or releases it. Others see the handler's display name and cannot answer or release it. Logout does
   not release a claim. There is no lease and no expiry. Cancelling a request cancels its active
-  assignment in the same transaction. A cancelled request cannot be claimed.
+  assignment in the same transaction. A cancelled request cannot be claimed. **Reachability:**
+  `deactivate_alternative` has no production caller yet (only tests call it), so no HTTP or agent
+  path cancels a request today. No cancellation workflow was added without approval.
+- **Search:** case-insensitive substring match on the question text or the request ID. `%` and `_`
+  are matched literally. `after` is an exclusive keyset cursor on (createdAt, requestId).
+- **Angular impact (open):** the existing representative page posts answers without claiming. Under
+  this rule each such answer returns `409 INVALID_STATE_TRANSITION`. The frontend must claim before it
+  answers, or the business must decide otherwise. The backend does not auto-claim, because the
+  claimed-before-answer rule is a requirement.
 - **Data:** `business.request_assignments` (migration `0005_request_assignments`). At most one row
   per request is `active`, enforced by the partial unique index `uq_request_assignments_one_active`.
   Released, completed and cancelled rows are kept as history.
