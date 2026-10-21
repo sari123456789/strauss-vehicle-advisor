@@ -37,7 +37,10 @@ export class ComparisonPage implements OnInit {
     await this.store.compare(this.catalog.selected());
     const r = this.store.result();
     // Without the current state there is no difference to show: confirm the details in the chat first.
-    if (r && !r.current?.net) await this.router.navigate(['/advisor'], {queryParams: {needs: 'current'}});
+    if (r && !r.current?.net) {
+      this.store.needsCurrent.set(true);
+      await this.router.navigate(['/advisor']);
+    }
   }
 
   label(alternative: ScenarioResult): string {
