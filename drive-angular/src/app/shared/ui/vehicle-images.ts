@@ -1,7 +1,7 @@
 /**
  * Representative photo per catalogue vehicle (`catalogueId` -> file in `public/assets/vehicles/`),
  * from `vehicle-images/catalogue.csv`. The photos are third-party images without a
- * redistribution licence, so they are git-ignored and exist only on a local demo machine; when a
+ * redistribution licence, and are committed for the demo; when a
  * file is absent the card falls back to the generic car art. Never used to infer vehicle data.
  */
 const VEHICLE_IMAGE_FILES: Readonly<Record<string, string>> = {
