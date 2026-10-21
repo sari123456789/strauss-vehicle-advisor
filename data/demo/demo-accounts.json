@@ -37,6 +37,7 @@
   ],
   "staff": [
     {"login": "rep01", "roles": ["representative"], "displayName": "נציג/ת תחבורה (דמו)"},
+    {"login": "rep02", "roles": ["representative"], "displayName": "נציג אנונימי"},
     {"login": "ops01", "roles": ["import_operator"], "displayName": "מפעיל/ת ייבוא (דמו)"}
   ]
 }
