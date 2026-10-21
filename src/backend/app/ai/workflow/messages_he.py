@@ -217,6 +217,12 @@ def comparison_text(
                 lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}{delta}")
         else:
             lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
+    if len(calculated) > 1:
+        best = max(calculated, key=lambda s: int(s.net.display))
+        lines.append(
+            f"הכי משתלם לך בנטו: {labels.get(best.option_key, best.option_key)} "
+            f"({shekels(best.net)} בחודש)."
+        )
     if result.kind.value == "hypothetical":
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
