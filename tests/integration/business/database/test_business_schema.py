@@ -87,7 +87,7 @@ def test_schema_contents_and_downgrade_keeps_reference_data_identical(
     assert _reference_checksums(clean_database) == before
     assert sql(clean_database, lineage) == [(1,)]
     assert sql(clean_database, "SELECT version_num FROM public.alembic_version") == [
-        ("0004_representative_answers",)
+        ("0005_request_assignments",)
     ]
 
 

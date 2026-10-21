@@ -85,6 +85,7 @@ def _lifespan(
                 profiles=services.profiles,
                 http=_http_config(settings),
                 representatives=services.representative_answers,
+                assignments=services.representative_assignments,
             )
             model = llm if llm is not None else build_llm()  # one LLM port, shared
             runtime = await build_ai_runtime(services, llm=model, ai_database_url=ai_database_url)

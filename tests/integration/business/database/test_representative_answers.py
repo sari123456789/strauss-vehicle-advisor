@@ -33,6 +33,7 @@ from app.business.application.ports.unit_of_work import TransientConflictError
 from app.business.application.representatives.answer_service import (
     RepresentativeAnswerService,
 )
+from app.business.application.representatives.assignment_service import AssignmentService
 from app.business.application.representatives.question_service import (
     RepresentativeQuestionService,
 )
@@ -46,6 +47,8 @@ from app.contracts.representatives import (
     AnswerApplication,
     AnswerOutcome,
     AnswerSubmit,
+    ClaimRequest,
+    ClaimResult,
     CreateQuestionRequest,
     RepresentativeAnsweredEvent,
     RepresentativeRequestLookup,
@@ -82,6 +85,7 @@ class World:
     s: Services
     answers: RepresentativeAnswerService
     questions: RepresentativeQuestionService
+    claims: AssignmentService
     representative: ActorRef
 
 
@@ -93,13 +97,22 @@ async def world(s: Services) -> World:
         s,
         RepresentativeAnswerService(s.p.uow, policy, s.p.reference, clock),
         RepresentativeQuestionService(s.p.uow, policy, s.p.reference, clock),
+        AssignmentService(s.p.uow, policy, clock),
         rep,
     )
 
 
 async def ask(
-    w: World, ctx: ToolContext, field: str, option: str | None = None, *, version: int = 0
+    w: World,
+    ctx: ToolContext,
+    field: str,
+    option: str | None = None,
+    *,
+    version: int = 0,
+    claimed: bool = True,
 ) -> UUID:
+    """Create a representative request; by default the test representative claims it, since
+    answering requires the claim (open, unclaimed requests are answered only by their handler)."""
     result = await w.questions.create_representative_question(
         ctx,
         CreateQuestionRequest.model_validate(
@@ -112,7 +125,18 @@ async def ask(
             }
         ),
     )
+    if claimed:
+        await claim(w, result.data.request_id)
     return result.data.request_id
+
+
+async def claim(w: World, request_id: UUID, *, rep: ActorRef | None = None) -> ClaimResult:
+    result = await w.claims.claim_request(
+        rep or w.representative,
+        request_id,
+        ClaimRequest.model_validate({"operationId": str(uuid4()), "expectedRequestVersion": 0}),
+    )
+    return result
 
 
 def answer(
@@ -143,6 +167,16 @@ def money(raw: str) -> AnswerSubmit:
 
 
 def count(url: str, table: str, request_id: UUID) -> int:
+    """Rows of one table for a request. Audit rows are counted for the answer only: a claim
+    writes its own `representative_assignment.claimed` audit row, which is not an answer."""
+    if table == "audit_entries":
+        rows = sql(
+            url,
+            "SELECT count(*) FROM business.audit_entries "
+            "WHERE request_id = %s AND action = 'representative_answer.submitted'",
+            str(request_id),
+        )
+        return int(rows[0][0])
     column = "payload->>'requestId'" if table == "integration_outbox" else "request_id::text"
     rows = sql(url, f"SELECT count(*) FROM business.{table} WHERE {column} = %s", str(request_id))
     return int(rows[0][0])
@@ -574,6 +608,14 @@ def test_only_active_representatives_and_only_minimal_context(business_db: str) 
                 "vehicle",
                 "entitlementGroup",
                 "createdAt",
+                "updatedAt",
+                "handlingStatus",
+                "handlerDisplayName",
+                "claimedAt",
+                "assignmentVersion",
+                "canClaim",
+                "canAnswer",
+                "canRelease",
             }
             assert view.vehicle is not None and view.vehicle.catalogue_id == "CAR-10"
             assert view.vehicle.commercial_name and view.entitlement_group == "ג"
@@ -688,7 +730,8 @@ def test_feed_redelivers_until_acknowledged_and_audit_is_minimal(business_db: st
             rows = sql(
                 business_db,
                 "SELECT actor_subject_id, actor_role, action, field_code, details "
-                "FROM business.audit_entries WHERE request_id = %s",
+                "FROM business.audit_entries WHERE request_id = %s "
+                "AND action = 'representative_answer.submitted'",
                 first,
             )
             ((subject, role, action, field, details),) = rows

@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expectedAssignmentVersion": {
+      "minimum": 0,
+      "title": "Expectedassignmentversion",
+      "type": "integer"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "operationId",
+    "expectedAssignmentVersion"
+  ],
+  "title": "ReleaseRequest",
+  "type": "object"
+}

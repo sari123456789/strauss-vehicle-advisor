@@ -276,6 +276,16 @@
         "title": "ArrangementKind",
         "type": "string"
       },
+      "AssignmentFilter": {
+        "enum": [
+          "all",
+          "unclaimed",
+          "mine",
+          "others"
+        ],
+        "title": "AssignmentFilter",
+        "type": "string"
+      },
       "Assumption": {
         "additionalProperties": false,
         "properties": {
@@ -561,6 +571,54 @@
           "profileMismatch"
         ],
         "title": "CaseContext",
+        "type": "object"
+      },
+      "ClaimRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedRequestVersion": {
+            "minimum": 0.0,
+            "title": "Expectedrequestversion",
+            "type": "integer"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operationId",
+          "expectedRequestVersion"
+        ],
+        "title": "ClaimRequest",
+        "type": "object"
+      },
+      "ClaimResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assignmentId": {
+            "format": "uuid",
+            "title": "Assignmentid",
+            "type": "string"
+          },
+          "assignmentVersion": {
+            "minimum": 0.0,
+            "title": "Assignmentversion",
+            "type": "integer"
+          },
+          "claimedAt": {
+            "format": "date-time",
+            "title": "Claimedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "assignmentVersion",
+          "claimedAt"
+        ],
+        "title": "ClaimResult",
         "type": "object"
       },
       "ClearChange": {
@@ -1269,6 +1327,97 @@
           "traceId"
         ],
         "title": "Envelope[CaseContext]",
+        "type": "object"
+      },
+      "Envelope_ClaimResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClaimResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ClaimResult]",
         "type": "object"
       },
       "Envelope_ComparisonDetails_": {
@@ -1999,6 +2148,97 @@
         "title": "Envelope[ReadinessResult]",
         "type": "object"
       },
+      "Envelope_ReleaseResult_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[ReleaseResult]",
+        "type": "object"
+      },
       "Envelope_RepresentativeRequestView_": {
         "additionalProperties": false,
         "properties": {
@@ -2088,6 +2328,97 @@
           "traceId"
         ],
         "title": "Envelope[RepresentativeRequestView]",
+        "type": "object"
+      },
+      "Envelope_RepresentativeSummary_": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepresentativeSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[RepresentativeSummary]",
         "type": "object"
       },
       "Envelope_RequestStatusView_": {
@@ -2747,6 +3078,17 @@
         },
         "title": "HTTPValidationError",
         "type": "object"
+      },
+      "HandlingStatus": {
+        "description": "Assignment ownership as seen by the current representative — derived, not stored.",
+        "enum": [
+          "unclaimed",
+          "assigned_to_me",
+          "assigned_to_other",
+          "completed"
+        ],
+        "title": "HandlingStatus",
+        "type": "string"
       },
       "HypotheticalOverride": {
         "additionalProperties": false,
@@ -3873,6 +4215,48 @@
         "title": "ReadinessResult",
         "type": "object"
       },
+      "ReleaseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expectedAssignmentVersion": {
+            "minimum": 0.0,
+            "title": "Expectedassignmentversion",
+            "type": "integer"
+          },
+          "operationId": {
+            "format": "uuid",
+            "title": "Operationid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operationId",
+          "expectedAssignmentVersion"
+        ],
+        "title": "ReleaseRequest",
+        "type": "object"
+      },
+      "ReleaseResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assignmentId": {
+            "format": "uuid",
+            "title": "Assignmentid",
+            "type": "string"
+          },
+          "releasedAt": {
+            "format": "date-time",
+            "title": "Releasedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "releasedAt"
+        ],
+        "title": "ReleaseResult",
+        "type": "object"
+      },
       "RepresentativeFieldCode": {
         "description": "Server-recognized facts a representative may supply (provisional allowlist).",
         "enum": [
@@ -3887,8 +4271,46 @@
       },
       "RepresentativeRequestView": {
         "additionalProperties": false,
-        "description": "Representative-visible, minimal context only (no employee profile or salary).",
+        "description": "Representative-visible, minimal context only (no employee profile or salary).\n\nBackward-compatible: all new fields are Optional with safe defaults so existing\nAngular consumers continue to work without changes.",
         "properties": {
+          "assignmentVersion": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignmentversion"
+          },
+          "canAnswer": {
+            "default": false,
+            "title": "Cananswer",
+            "type": "boolean"
+          },
+          "canClaim": {
+            "default": false,
+            "title": "Canclaim",
+            "type": "boolean"
+          },
+          "canRelease": {
+            "default": false,
+            "title": "Canrelease",
+            "type": "boolean"
+          },
+          "claimedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimedat"
+          },
           "createdAt": {
             "format": "date-time",
             "title": "Createdat",
@@ -3910,6 +4332,27 @@
           "fieldCode": {
             "$ref": "#/components/schemas/RepresentativeFieldCode"
           },
+          "handlerDisplayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handlerdisplayname"
+          },
+          "handlingStatus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandlingStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "questionText": {
             "maxLength": 1000,
             "minLength": 1,
@@ -3928,6 +4371,18 @@
           },
           "status": {
             "$ref": "#/components/schemas/RequestStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
           },
           "vehicle": {
             "anyOf": [
@@ -3950,6 +4405,51 @@
           "createdAt"
         ],
         "title": "RepresentativeRequestView",
+        "type": "object"
+      },
+      "RepresentativeSummary": {
+        "additionalProperties": false,
+        "description": "Accurate counts over the entire queue, independent of pagination.",
+        "properties": {
+          "answered": {
+            "title": "Answered",
+            "type": "integer"
+          },
+          "assignedToMe": {
+            "title": "Assignedtome",
+            "type": "integer"
+          },
+          "assignedToOthers": {
+            "title": "Assignedtoothers",
+            "type": "integer"
+          },
+          "cancelled": {
+            "title": "Cancelled",
+            "type": "integer"
+          },
+          "cannotDetermine": {
+            "title": "Cannotdetermine",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unclaimed": {
+            "title": "Unclaimed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "unclaimed",
+          "assignedToMe",
+          "assignedToOthers",
+          "answered",
+          "cannotDetermine",
+          "cancelled"
+        ],
+        "title": "RepresentativeSummary",
         "type": "object"
       },
       "RequestStatus": {
@@ -6223,7 +6723,7 @@
     },
     "/api/v1/representative-requests": {
       "get": {
-        "description": "Oldest first; `status` may repeat (default `open`).",
+        "description": "Queue list with optional filters. Oldest first, stable by (createdAt, requestId).\n\n`status`: business status filter (repeatable, default open).\n`assignment`: all (default) | unclaimed | mine | others.\n`fieldCode`: filter by representative field code.\n`search`: case-insensitive substring of the question text or the request ID.\n`after`: next page = requests after this request ID (the last ID of the previous page).\n`limit`: page size (max 200).",
         "operationId": "list_requests_api_v1_representative_requests_get",
         "parameters": [
           {
@@ -6243,6 +6743,72 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignment",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AssignmentFilter"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignment"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fieldCode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RepresentativeFieldCode"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fieldcode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
             }
           },
           {
@@ -6286,6 +6852,33 @@
           }
         ],
         "summary": "List Requests",
+        "tags": [
+          "representatives"
+        ]
+      }
+    },
+    "/api/v1/representative-requests/summary": {
+      "get": {
+        "description": "Accurate counts over the entire queue, independent of pagination.",
+        "operationId": "get_summary_api_v1_representative_requests_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RepresentativeSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Summary",
         "tags": [
           "representatives"
         ]
@@ -6341,6 +6934,7 @@
     },
     "/api/v1/representative-requests/{requestId}/answers": {
       "post": {
+        "description": "Submit an answer (handler only — must claim first).",
         "operationId": "submit_answer_api_v1_representative_requests__requestId__answers_post",
         "parameters": [
           {
@@ -6392,6 +6986,124 @@
           }
         ],
         "summary": "Submit Answer",
+        "tags": [
+          "representatives"
+        ]
+      }
+    },
+    "/api/v1/representative-requests/{requestId}/claim": {
+      "post": {
+        "description": "Claim an open, unclaimed request.  Idempotent by operationId.",
+        "operationId": "claim_request_api_v1_representative_requests__requestId__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Requestid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ClaimResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Claim Request",
+        "tags": [
+          "representatives"
+        ]
+      }
+    },
+    "/api/v1/representative-requests/{requestId}/release": {
+      "post": {
+        "description": "Release a claimed request (handler only).  Idempotent by operationId.",
+        "operationId": "release_request_api_v1_representative_requests__requestId__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Requestid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ReleaseResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Release Request",
         "tags": [
           "representatives"
         ]

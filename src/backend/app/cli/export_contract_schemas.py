@@ -51,6 +51,11 @@ EXPORTED_MODELS: dict[str, type[BaseModel]] = {
     "RepresentativeRequestView": reps.RepresentativeRequestView,
     "AnswerSubmit": reps.AnswerSubmit,
     "RepresentativeAnsweredEvent": reps.RepresentativeAnsweredEvent,
+    "ClaimRequest": reps.ClaimRequest,
+    "ClaimResult": reps.ClaimResult,
+    "ReleaseRequest": reps.ReleaseRequest,
+    "ReleaseResult": reps.ReleaseResult,
+    "RepresentativeSummary": reps.RepresentativeSummary,
     "CreateCaseCommand": CreateCaseCommand,
     "CreateCaseResult": CreateCaseResult,
 }

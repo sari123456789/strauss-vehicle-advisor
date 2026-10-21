@@ -7,24 +7,35 @@ returned instead.
 
 from collections.abc import Collection
 from dataclasses import replace
+from types import SimpleNamespace
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import Table, select, update
+from sqlalchemy import Table, Text, and_, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.business.application.ports.repositories import VersionConflictError
+from app.business.application.ports.repositories import (
+    QueueEntry,
+    QueueQuery,
+    QueueScope,
+    VersionConflictError,
+)
 from app.business.domain.representatives import (
+    AssignmentStatus,
     ExpectedValueType,
     RepresentativeFieldCode,
     RepresentativeRequest,
     RequestStatus,
 )
+from app.business.infrastructure.database.models.answers import RequestAssignmentRow
 from app.business.infrastructure.database.models.cases import RepresentativeRequestRow
+from app.business.infrastructure.database.repositories.assignments import assignment_from_row
 from app.business.infrastructure.database.repositories.codec import freeze_document, thaw
 
 REQUESTS = cast(Table, RepresentativeRequestRow.__table__)
+ASSIGNMENTS = cast(Table, RequestAssignmentRow.__table__)
+"""Joined as the ACTIVE assignment only (the partial unique index keeps it to at most one)."""
 
 
 def _request(row: Any) -> RepresentativeRequest:
@@ -47,6 +58,34 @@ def _request(row: Any) -> RepresentativeRequest:
         alternative_version=row.alternative_version,
         option_key=row.option_key,
     )
+
+
+def _queue_scope_conditions(query: QueueQuery) -> list[Any]:
+    viewer = query.viewer_id
+    if query.scope is QueueScope.UNCLAIMED:
+        return [
+            REQUESTS.c.status == RequestStatus.OPEN.value,
+            ASSIGNMENTS.c.id.is_(None),
+        ]
+    if query.scope is QueueScope.MINE:
+        return [ASSIGNMENTS.c.claimed_by == viewer]
+    if query.scope is QueueScope.OTHERS:
+        return [ASSIGNMENTS.c.id.is_not(None), ASSIGNMENTS.c.claimed_by != viewer]
+    return []
+
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _queue_entry(row: Any) -> QueueEntry:
+    mapping = row._mapping
+    assignment = None
+    if mapping["a_id"] is not None:
+        assignment = assignment_from_row(
+            SimpleNamespace(**{c.name: mapping[f"a_{c.name}"] for c in ASSIGNMENTS.c})
+        )
+    return QueueEntry(request=_request(row), assignment=assignment)
 
 
 class SqlRepresentativeRequestRepository:
@@ -117,16 +156,40 @@ class SqlRepresentativeRequestRepository:
         row = (await self._session.execute(statement)).first()
         return None if row is None else _request(row)
 
-    async def list_all(
-        self, statuses: Collection[RequestStatus] | None = None, *, limit: int
-    ) -> tuple[RepresentativeRequest, ...]:
-        statement = select(REQUESTS)
-        if statuses is not None:
-            statement = statement.where(REQUESTS.c.status.in_([s.value for s in statuses]))
-        rows = await self._session.execute(
-            statement.order_by(REQUESTS.c.created_at, REQUESTS.c.id).limit(limit)
+    async def list_queue(self, query: QueueQuery) -> tuple[QueueEntry, ...]:
+        assignment_columns = [c.label(f"a_{c.name}") for c in ASSIGNMENTS.c]
+        join = REQUESTS.outerjoin(
+            ASSIGNMENTS,
+            and_(
+                ASSIGNMENTS.c.request_id == REQUESTS.c.id,
+                ASSIGNMENTS.c.status == AssignmentStatus.ACTIVE.value,
+            ),
         )
-        return tuple(_request(r) for r in rows)
+        statement = select(REQUESTS, *assignment_columns).select_from(join)
+        if query.statuses is not None:
+            statement = statement.where(REQUESTS.c.status.in_([s.value for s in query.statuses]))
+        scope = _queue_scope_conditions(query)
+        if scope:
+            statement = statement.where(*scope)
+        if query.field_code is not None:
+            statement = statement.where(REQUESTS.c.field_code == query.field_code)
+        if query.search:
+            pattern = f"%{_escape_like(query.search)}%"
+            statement = statement.where(
+                or_(
+                    REQUESTS.c.question_text.ilike(pattern, escape="\\"),
+                    REQUESTS.c.id.cast(Text).ilike(pattern, escape="\\"),
+                )
+            )
+        if query.after_created_at is not None and query.after_id is not None:
+            statement = statement.where(
+                tuple_(REQUESTS.c.created_at, REQUESTS.c.id)
+                > tuple_(query.after_created_at, query.after_id)
+            )
+        rows = await self._session.execute(
+            statement.order_by(REQUESTS.c.created_at, REQUESTS.c.id).limit(query.limit)
+        )
+        return tuple(_queue_entry(row) for row in rows)
 
     async def list_for_case(
         self, case_id: UUID, statuses: Collection[RequestStatus] | None = None

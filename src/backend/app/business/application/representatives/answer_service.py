@@ -45,6 +45,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from app.business.application.errors import (
+    ForbiddenError,
     InfrastructureUnavailable,
     InvalidInput,
     InvalidStateTransition,
@@ -60,6 +61,8 @@ from app.business.application.ports.repositories import (
     AuditEntry,
     OperationKey,
     OutboxEvent,
+    QueueQuery,
+    QueueScope,
     Replay,
     ScopeKind,
 )
@@ -82,6 +85,7 @@ from app.business.domain.representatives import (
     CASE_FACT_PATHS,
     AnswerApplication,
     AnswerOutcome,
+    AssignmentStatus,
     ExpectedValueType,
     NotApplicableReason,
     RepresentativeAnswer,
@@ -89,6 +93,7 @@ from app.business.domain.representatives import (
     RepresentativeFieldCode,
     RepresentativeParticipation,
     RepresentativeRequest,
+    RequestAssignment,
     RequestStatus,
     applicable_facts,
     covers,
@@ -100,6 +105,8 @@ from app.contracts.representatives import AnswerOutcome as ContractOutcome
 from app.contracts.representatives import (
     AnswerSubmit,
     AnswerView,
+    AssignmentFilter,
+    HandlingStatus,
     RepresentativeRequestView,
     VehicleContext,
 )
@@ -119,6 +126,7 @@ DEFERRED_FIELDS = frozenset(
 MONEY = re.compile(r"^\d{1,9}(\.\d{1,2})?$")
 """Whole shekels or agorot, e.g. "350" or "350.00"; never a float."""
 MAX_LIST = 200
+MAX_SEARCH = 100
 MAX_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 0.05
 
@@ -152,21 +160,55 @@ class RepresentativeAnswerService:
         actor: ActorRef,
         *,
         statuses: Collection[RequestStatus | ContractRequestStatus] | None = (RequestStatus.OPEN,),
+        assignment_filter: AssignmentFilter | None = None,
+        field_code: ContractFieldCode | None = None,
+        search: str | None = None,
+        after_id: UUID | None = None,
         limit: int = MAX_LIST,
     ) -> list[RepresentativeRequestView]:
-        """The representative queue, oldest first (demo policy: all requests).
+        """The representative queue, oldest first, filtered and paginated in the database.
 
-        `statuses` accepts the domain or the contract status (same values); `None` lists all.
+        `statuses`: business status filter; None = all.
+        `assignment_filter`: all (default), unclaimed, mine or others.
+        `field_code`, `search` (case-insensitive substring of the question or request ID).
+        `after_id`: exclusive cursor, the last request ID of the previous page.
         """
         if isinstance(limit, bool) or not 1 <= limit <= MAX_LIST:
             raise InvalidInput(f"limit must be between 1 and {MAX_LIST}")
-        wanted = None if statuses is None else [RequestStatus(s.value) for s in statuses]
+        if search is not None and len(search) > MAX_SEARCH:
+            raise InvalidInput(f"search must be at most {MAX_SEARCH} characters")
+        wanted = None if statuses is None else frozenset(RequestStatus(s.value) for s in statuses)
+        scope = QueueScope.ALL if assignment_filter is None else QueueScope(assignment_filter.value)
         with translate_errors():
             async with self._unit_of_work() as uow:
-                await self._policy.representative(uow, actor)
-                requests = await uow.representative_requests.list_all(wanted, limit=limit)
+                representative = await self._policy.representative(uow, actor)
+                after_created_at = None
+                if after_id is not None:
+                    cursor = await uow.representative_requests.get_by_id(after_id)
+                    if cursor is None:
+                        raise InvalidInput(
+                            "unknown pagination cursor", safe_details={"field": "after"}
+                        )
+                    after_created_at = cursor.created_at
+                entries = await uow.representative_requests.list_queue(
+                    QueueQuery(
+                        viewer_id=representative.subject_id,
+                        limit=limit,
+                        statuses=wanted,
+                        scope=scope,
+                        field_code=None if field_code is None else field_code.value,
+                        search=search or None,
+                        after_created_at=after_created_at,
+                        after_id=after_id,
+                    )
+                )
                 catalogue = await self._catalogue()
-                return [await self._view(uow, r, catalogue) for r in requests]
+                return [
+                    await self._view(
+                        uow, entry.request, catalogue, actor=actor, assignment=entry.assignment
+                    )
+                    for entry in entries
+                ]
 
     async def get_request(self, actor: ActorRef, request_id: UUID) -> RepresentativeRequestView:
         with translate_errors():
@@ -175,7 +217,10 @@ class RepresentativeAnswerService:
                 found = await uow.representative_requests.get_by_id(request_id)
                 if found is None:
                     raise NotFoundError()
-                return await self._view(uow, found, await self._catalogue())
+                assignment = await uow.assignments.get_active(request_id)
+                return await self._view(
+                    uow, found, await self._catalogue(), actor=actor, assignment=assignment
+                )
 
     async def _catalogue(self) -> dict[str, CatalogueVehicle]:
         release = await self._reference_data.latest_release()
@@ -189,10 +234,51 @@ class RepresentativeAnswerService:
         uow: BusinessUnitOfWork,
         request: RepresentativeRequest,
         catalogue: dict[str, CatalogueVehicle],
+        *,
+        actor: ActorRef,
+        assignment: RequestAssignment | None,
     ) -> RepresentativeRequestView:
         group = None
         if request.field_code is RepresentativeFieldCode.ALTERNATIVE_PARTICIPATION:
             group = await self._group(uow, request.case_id)
+
+        # Determine handling status and permissions.
+        is_terminal = request.status is not RequestStatus.OPEN
+        if is_terminal:
+            handling_status = HandlingStatus.COMPLETED
+            can_claim = False
+            can_answer = False
+            can_release = False
+            handler_display_name = None
+            claimed_at = None
+            assignment_version = None
+        elif assignment is None:
+            handling_status = HandlingStatus.UNCLAIMED
+            can_claim = True
+            can_answer = False
+            can_release = False
+            handler_display_name = None
+            claimed_at = None
+            assignment_version = None
+        elif assignment.claimed_by == actor.subject_id:
+            handling_status = HandlingStatus.ASSIGNED_TO_ME
+            can_claim = False
+            can_answer = True
+            can_release = True
+            handler_account = await uow.users.get(assignment.claimed_by)
+            handler_display_name = handler_account.display_name if handler_account else None
+            claimed_at = assignment.claimed_at
+            assignment_version = assignment.assignment_version
+        else:
+            handling_status = HandlingStatus.ASSIGNED_TO_OTHER
+            can_claim = False
+            can_answer = False
+            can_release = False
+            handler_account = await uow.users.get(assignment.claimed_by)
+            handler_display_name = handler_account.display_name if handler_account else None
+            claimed_at = assignment.claimed_at
+            assignment_version = assignment.assignment_version
+
         return RepresentativeRequestView(
             request_id=request.request_id,
             request_version=request.request_version,
@@ -203,6 +289,14 @@ class RepresentativeAnswerService:
             vehicle=_vehicle_context(request, catalogue),
             entitlement_group=None if group is None else ContractEntitlementGroup(group.value),
             created_at=request.created_at,
+            updated_at=request.updated_at,
+            handling_status=handling_status,
+            handler_display_name=handler_display_name,
+            claimed_at=claimed_at,
+            assignment_version=assignment_version,
+            can_claim=can_claim,
+            can_answer=can_answer,
+            can_release=can_release,
         )
 
     async def _group(self, uow: BusinessUnitOfWork, case_id: UUID) -> EntitlementGroup | None:
@@ -255,12 +349,25 @@ class RepresentativeAnswerService:
                 claim = await uow.operations.claim(key, request_hash)
                 if isinstance(claim, Replay) and claim.result is not None:
                     return AnswerView.model_validate(dict(claim.result))
+                # Lock order (global, see ports/repositories.py): case -> request -> assignment.
                 case = await uow.cases.lock_by_id(found.case_id)
                 request = await uow.representative_requests.lock(request_id)
                 if case is None or request is None or request.case_id != case.case_id:
                     raise NotFoundError()
                 if request.status is not RequestStatus.OPEN:
                     raise InvalidStateTransition("this request is no longer open")
+                # Only the current handler may answer; the handler is checked under the locks.
+                active_assignment = await uow.assignments.lock_active(request_id)
+                if active_assignment is None:
+                    raise InvalidStateTransition(
+                        "claim this request before answering it",
+                        safe_details={"reason": "must_claim_before_answering"},
+                    )
+                if active_assignment.claimed_by != representative.subject_id:
+                    raise ForbiddenError(
+                        "this request is claimed by another representative",
+                        safe_details={"reason": "request_claimed_by_another"},
+                    )
                 if submit.expected_request_version != request.request_version:
                     raise VersionConflict("the request changed in the meantime; reload first")
                 if case.lifecycle_status is CaseLifecycleStatus.CLOSED:
@@ -298,6 +405,12 @@ class RepresentativeAnswerService:
                 await uow.representative_answers.add(answer)
                 await uow.audit.add(_audit(representative, answer, request, applied))
                 await uow.outbox.add(_event(answer, stored_request, stored_case))
+                # Complete the assignment in the same transaction as the answer.
+                await uow.assignments.update_status(
+                    active_assignment,
+                    new_status=AssignmentStatus.COMPLETED,
+                    completed_at=now,
+                )
                 view = answer_view(answer)
                 await uow.operations.complete(
                     key, freeze_object(view.model_dump(mode="json", by_alias=True))
