@@ -47,8 +47,6 @@ test('employee journey and representative answer', async ({page, browser}) => {
   await page.getByRole('link', {name: /להשוואת הנטו/}).click();
   const card = page.locator('article.result').filter({hasText: 'ATTO 3'});
   await expect(card).toContainText('11,693', {timeout: 30_000});
-  await card.getByRole('button', {name: 'שאלה לנציג על דמי ההשתתפות'}).click();
-  await expect(page.getByRole('status').filter({hasText: 'השאלה נשלחה לנציג'})).toBeVisible();
 
   // A reload keeps the session (refresh cookie) and the history comes from the server.
   await page.goto('/#/history');
@@ -58,17 +56,4 @@ test('employee journey and representative answer', async ({page, browser}) => {
   await expect(firstDetails).toBeVisible({timeout: 30_000});
   await firstDetails.click();
   await expect(page.locator('aside.panel .amount')).toBeVisible({timeout: 30_000});
-
-  // The representative answers in a separate browser context.
-  const repContext = await browser.newContext();
-  const rep = await repContext.newPage();
-  await signIn(rep, 'rep01', REP01!);
-  await expect(rep).toHaveURL(/#\/representative/);
-  const open = rep.locator('button.request').filter({hasText: 'ממתינה למענה'}).first();
-  await expect(open).toBeVisible({timeout: 30_000});
-  await open.click();
-  await rep.getByLabel('סכום חודשי (₪)').fill('350');
-  await rep.getByRole('button', {name: /שליחת תשובה/}).click();
-  await expect(rep.getByRole('status').filter({hasText: 'התשובה נשמרה'})).toBeVisible({timeout: 30_000});
-  await repContext.close();
 });

@@ -62,20 +62,6 @@ export class ComparisonsStore {
     });
   }
 
-  /** Employee-side representative question about an option's participation. */
-  async askParticipation(optionKey: string, label: string): Promise<void> {
-    await this.run(async () => {
-      const context = await this.context();
-      await this.api.askRepresentative(
-        context,
-        'alternative.participation',
-        optionKey,
-        `מה דמי ההשתתפות החודשיים לרכב ${label}?`,
-      );
-      this.notice.set('השאלה נשלחה לנציג התחבורה. התשובה תופיע בשיחה עם היועץ, ואפשר להמשיך בינתיים.');
-    });
-  }
-
   private async context(): Promise<CaseContext> {
     const conversation = await this.conversations.ensureActive();
     if (!conversation.caseId) throw new Error('conversation without case');
