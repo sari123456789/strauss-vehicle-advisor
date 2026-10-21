@@ -168,17 +168,9 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
             "לפי הפרטים שלך לא מצאתי כרגע רכבים זמינים. "
             "אם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
         )
-    lines = ["אלה הרכבים שמגיעים לך 👇"]
-    for index, item in enumerate(eligible, start=1):
-        details = []
-        if item.propulsion:
-            details.append(PROPULSION_LABELS[item.propulsion])
-        if item.group:
-            details.append(f"קבוצה {item.group.value}")
-        if item.track and item.track.value == "family":
-            details.append("מסלול משפחתי")
-        suffix = f" ({', '.join(details)})" if details else ""
-        lines.append(f"{index}. {option_label(item)}{suffix}")
+    # The vehicles themselves are shown in the chat's side panel, not listed in the message.
+    count = "רכב אחד" if len(eligible) == 1 else f"{len(eligible)} רכבים"
+    lines = [f"מצאתי {count} שמגיעים לך — אפשר לראות אותם בכפתור למטה."]
     if not scope_complete or unchecked:
         lines.append("שימו לב: חלק מהמסלולים עוד לא נבדקו, כי חסר לי מידע עליהם.")
     lines.append("על איזה מהם לחשב את הנטו? אפשר לבחור אחד, כמה, או את כולם.")
