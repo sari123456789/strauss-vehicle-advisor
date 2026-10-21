@@ -10,8 +10,6 @@ import {RouterLink} from '@angular/router';
         <span class="brand__mark">DRIVE</span>
         <span class="brand__tag">יועץ הרכב שלך</span>
       </a>
-      <!-- Kept while the legacy demo pages still show illustrative figures; remove with them. -->
-      <p class="site-footer__note">נתוני הדגמה בלבד · חישוב אמיתי יתקבל מהשרת</p>
       <a class="site-footer__link" routerLink="/representative">מסך נציג</a>
     </footer>
   `,
@@ -39,10 +37,8 @@ import {RouterLink} from '@angular/router';
     }
     .brand__mark { font-size: 22px; font-weight: 500; letter-spacing: 0.28em; margin-right: -0.28em; line-height: 1.1; }
     .brand__tag { direction: rtl; font-size: 11px; letter-spacing: 0.15em; color: var(--text-muted); margin-top: 4px; }
-    .site-footer__note { margin: 0; color: var(--text-muted); order: 3; inline-size: 100%; }
     .site-footer__link { display: inline-flex; align-items: center; min-block-size: var(--tap); padding-inline: 4px; }
     .site-footer__link:hover { color: var(--accent); }
-    @media (min-width: 768px) { .site-footer__note { order: 0; inline-size: auto; } }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -532,6 +532,13 @@ async def _selection(
     categories = [OptionCategory.REGULAR, OptionCategory.FAMILY]
     if rt.interpretation.include_waiver:
         categories.append(OptionCategory.WAIVER)
+    # Car names for the result text (no option list was shown in this conversation).
+    listing = await rt.tools.list_eligible_options(
+        ListOptionsRequest(categories=categories, expected_case_version=rt.case_version)
+    )
+    if listing.data is not None:
+        for item in listing.data.items:
+            rt.labels.setdefault(item.option_key, he.option_label(item))
     return Selection(
         mode=SelectionMode.ALL_ELIGIBLE,
         categories=categories,
