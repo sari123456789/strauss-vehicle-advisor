@@ -24,6 +24,8 @@ export class AppComponent {
     {initialValue: ''},
   );
   protected readonly isHome = computed(() => this.url() === '/');
+  /** The chat is a full workspace: no site footer under it. */
+  protected readonly isChat = computed(() => this.url().startsWith('/advisor'));
   /** "Back to the chat" button: for a signed-in employee on every page except the chat itself. */
   protected readonly showChatButton = computed(
     () => this.session.isEmployee() && !this.url().startsWith('/advisor') && !this.url().startsWith('/sign-in'),

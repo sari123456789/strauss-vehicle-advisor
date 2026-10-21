@@ -1,5 +1,6 @@
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {SessionService} from '../../core/auth/session.service';
 
 @Component({
   selector: 'dr-site-footer',
@@ -10,7 +11,9 @@ import {RouterLink} from '@angular/router';
         <span class="brand__mark">DRIVE</span>
         <span class="brand__tag">יועץ הרכב שלך</span>
       </a>
-      <a class="site-footer__link" routerLink="/representative">מסך נציג</a>
+      @if (session.isRepresentative()) {
+        <a class="site-footer__link" routerLink="/representative">מסך נציג</a>
+      }
     </footer>
   `,
   styles: `
@@ -42,4 +45,6 @@ import {RouterLink} from '@angular/router';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SiteFooterComponent {}
+export class SiteFooterComponent {
+  protected readonly session = inject(SessionService);
+}
