@@ -169,11 +169,16 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
             "אם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
         )
     # The vehicles themselves are shown in the chat's side panel, not listed in the message.
-    count = "רכב אחד" if len(eligible) == 1 else f"{len(eligible)} רכבים"
-    lines = [f"מצאתי {count} שמגיעים לך — אפשר לראות אותם בכפתור למטה."]
+    if len(eligible) == 1:
+        lines = ["יש רכב אחד שמתאים לך 🚗 שמתי אותו בכפתור למטה, אפשר להציץ."]
+    else:
+        lines = [
+            f"איזה כיף, יש לך {len(eligible)} רכבים לבחור מהם 🚗 "
+            "שמתי את כולם בכפתור למטה, אפשר להציץ בנחת."
+        ]
     if not scope_complete or unchecked:
-        lines.append("שימו לב: חלק מהמסלולים עוד לא נבדקו, כי חסר לי מידע עליהם.")
-    lines.append("על איזה מהם לחשב את הנטו? אפשר לבחור אחד, כמה, או את כולם.")
+        lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
+    lines.append('רוצה שאבדוק כמה יישאר לך נטו? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
     return "\n".join(lines)
 
 
