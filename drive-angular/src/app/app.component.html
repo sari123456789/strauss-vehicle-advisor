@@ -1,5 +1,8 @@
 <a class="skip-link" href="#main-content" (click)="skipToMain($event, main)">דילוג לתוכן הראשי</a>
 <dr-site-header [variant]="isHome() ? 'overlay' : 'default'" />
+@if (step() >= 0) {
+  <dr-journey-steps [current]="step()" />
+}
 <main id="main-content" #main tabindex="-1">
   <router-outlet />
 </main>

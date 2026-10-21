@@ -603,3 +603,14 @@ tbody tr:hover {
   font-size: 13px;
   font-weight: 600;
 }
+
+// Journey: the next step is always one clear primary button.
+.conversation .next-step {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+a.primary.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
