@@ -1,3 +1,9 @@
+@if (navigating()) {
+  <div class="nav-loading" role="status">
+    <span class="nav-loading__bar"></span>
+    @if (slow()) {<span class="nav-loading__note">רגע, מתחברים לשרת… בפעם הראשונה זה יכול לקחת עד דקה.</span>}
+  </div>
+}
 <a class="skip-link" href="#main-content" (click)="skipToMain($event, main)">דילוג לתוכן הראשי</a>
 <dr-site-header [variant]="isHome() ? 'overlay' : 'default'" />
 @if (step() >= 0) {

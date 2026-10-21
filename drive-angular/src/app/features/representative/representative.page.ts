@@ -1,9 +1,9 @@
-import {Component, OnInit, inject} from '@angular/core';
+import {Component, OnDestroy, OnInit, inject} from '@angular/core';
+import {DatePipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {FIELD_CODE, REQUEST_STATUS} from '../../core/api/labels';
-import type {RepresentativeRequestView} from '../../core/api/types';
-import {PageHeadingComponent} from '../../shared/ui/page-heading.component';
-import {AnswerDraft, InquiriesStore} from './state/inquiries.store';
+import type {HandlingStatus, RepresentativeRequestView} from '../../core/api/types';
+import {AnswerDraft, InquiriesStore, QueueTab} from './state/inquiries.store';
 
 const GROUPS = ['א', 'ב', 'ג', 'ד'];
 const PROPULSIONS = [
@@ -13,31 +13,94 @@ const PROPULSIONS = [
   {value: 'electric', label: 'חשמלי'},
 ];
 
+const HANDLING: Record<HandlingStatus, string> = {
+  unclaimed: 'ממתינה לטיפול',
+  assigned_to_me: 'בטיפולי',
+  assigned_to_other: 'בטיפול נציג אחר',
+  completed: 'נענתה',
+};
+
 /**
- * Representative inbox: minimal request context only (never the employee's identity or salary)
- * and a structured answer form per `expectedValueType`. The employee's conversation continues
- * automatically once the answer is saved.
+ * Representative request centre: the shared queue with counts, tabs, search and topic filter,
+ * and a detail panel to claim, answer or release one request. Only minimal request context is
+ * shown (never the employee's identity or salary); every rule is enforced by the server.
  */
-@Component({standalone: true, imports: [FormsModule, PageHeadingComponent], templateUrl: './representative.page.html'})
-export class RepresentativePage implements OnInit {
+@Component({standalone: true, imports: [FormsModule, DatePipe], templateUrl: './representative.page.html', styleUrl: './representative.page.scss'})
+export class RepresentativePage implements OnInit, OnDestroy {
   readonly store = inject(InquiriesStore);
   readonly fieldCode = FIELD_CODE;
+  readonly fieldCodes = Object.entries(FIELD_CODE);
   readonly requestStatus = REQUEST_STATUS;
   readonly groups = GROUPS;
   readonly propulsions = PROPULSIONS;
+  readonly tabs: {id: QueueTab; label: string; count: () => number | null}[] = [
+    {id: 'all', label: 'כל הפניות', count: () => this.total()},
+    {id: 'unclaimed', label: 'ממתינות', count: () => this.store.summary()?.unclaimed ?? null},
+    {id: 'mine', label: 'בטיפולי', count: () => this.store.summary()?.assignedToMe ?? null},
+    {id: 'others', label: 'בטיפול אחרים', count: () => this.store.summary()?.assignedToOthers ?? null},
+    {id: 'answered', label: 'נענו', count: () => this.answered()},
+  ];
   /** The server's money format (whole shekels or agorot); the server validates it again. */
   readonly moneyPattern = '^\\d{1,9}(\\.\\d{1,2})?$';
   draft: AnswerDraft = this.empty();
+  searchText = '';
   sent = false;
 
   ngOnInit(): void {
     void this.store.load();
+    this.store.watch();
   }
 
-  select(request: RepresentativeRequestView): void {
+  ngOnDestroy(): void {
+    this.store.unwatch();
+  }
+
+  total(): number | null {
+    const s = this.store.summary();
+    return s ? s.unclaimed + s.assignedToMe + s.assignedToOthers + s.answered + s.cannotDetermine : null;
+  }
+
+  answered(): number | null {
+    const s = this.store.summary();
+    return s ? s.answered + s.cannotDetermine : null;
+  }
+
+  /** Short reference for the table (the full ID stays in the detail panel). */
+  ref(request: RepresentativeRequestView): string {
+    return request.requestId.replace(/-/g, '').slice(0, 6).toUpperCase();
+  }
+
+  handling(request: RepresentativeRequestView): HandlingStatus {
+    if (request.status !== 'open') return 'completed';
+    return request.handlingStatus ?? 'unclaimed';
+  }
+
+  handlingLabel(request: RepresentativeRequestView): string {
+    if (request.status !== 'open') return this.requestStatus[request.status];
+    return HANDLING[this.handling(request)];
+  }
+
+  handler(request: RepresentativeRequestView): string {
+    if (this.handling(request) === 'assigned_to_me') return 'אני';
+    return request.handlerDisplayName ?? '—';
+  }
+
+  open(request: RepresentativeRequestView): void {
     this.store.select(request.requestId);
     this.draft = this.empty();
     this.sent = false;
+  }
+
+  async claim(request: RepresentativeRequestView): Promise<void> {
+    if (await this.store.claim(request)) this.open(request);
+  }
+
+  async release(request: RepresentativeRequestView): Promise<void> {
+    await this.store.release(request);
+  }
+
+  search(): void {
+    this.store.setSearch(this.searchText);
   }
 
   /** Values the server cannot apply yet (decisions Q2/Q3) can only be "cannot determine". */

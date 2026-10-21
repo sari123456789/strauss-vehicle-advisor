@@ -1,1 +1,141 @@
-<section class="container"><drive-heading title="כל הפניות, במקום אחד." subtitle="משלימים מידע כדי שהעובד יוכל להמשיך בבחירה."/><div class="chips"><span class="panel">{{store.openCount()}} פניות פתוחות</span><button class="outline" type="button" (click)="store.load()">רענון</button></div>@if(store.error();as error){<div class="notice amber" role="alert">{{error}}</div>}<div class="representative-grid"><aside class="panel"><h3>רשימת פניות</h3>@if(store.loading() && !store.inquiries().length){<p class="muted" role="status">טוענים…</p>}@for(q of store.inquiries();track q.requestId){<button class="request" type="button" [class.selected]="store.selectedId()===q.requestId" (click)="select(q)"><strong>{{fieldCode[q.fieldCode]}}</strong><span>{{q.vehicle?.commercialName ?? q.vehicle?.catalogueId ?? ''}}</span><small>{{requestStatus[q.status]}}</small></button>}@empty{@if(!store.loading()){<p class="empty">אין פניות כרגע.</p>}}</aside><article class="panel">@if(store.selected();as q){<h2>פרטי הפנייה</h2><p class="gold">{{fieldCode[q.fieldCode]}}@if(q.entitlementGroup){<span> · קבוצת זכאות {{q.entitlementGroup}}</span>}</p>@if(q.vehicle){<p>רכב: {{q.vehicle.commercialName ?? q.vehicle.catalogueId}} @if(q.vehicle.registrationYear){<span>({{q.vehicle.registrationYear}})</span>}</p>}<blockquote>{{q.questionText}}</blockquote>@if(q.status!=='open'){<div class="notice positive" role="status">הפנייה {{requestStatus[q.status]}}.@if(store.lastAnswer();as a){<span> התשובה נשמרה@if(a.application==='not_applicable'){<span>, אך אינה חלה על התאריך הרלוונטי לחישוב</span>}.</span>}</div>}@else{<form (ngSubmit)="submit(q)"><label>תוצאה<select name="outcome" [(ngModel)]="draft.outcome"><option value="answered" [disabled]="!valueAllowed(q)">יש תשובה</option><option value="cannot_determine">לא ניתן לקבוע</option></select></label>@if(draft.outcome==='answered' && valueAllowed(q)){<div class="grid two">@switch(q.expectedValueType){@case('money'){<label>סכום חודשי (₪)<input name="value" inputmode="decimal" dir="ltr" [pattern]="moneyPattern" [(ngModel)]="draft.value" required placeholder="350"></label>}@case('entitlement_group'){<label>קבוצת זכאות<select name="value" [(ngModel)]="draft.value" required>@for(g of groups;track g){<option [value]="g">{{g}}</option>}</select></label>}@case('propulsion'){<label>סוג הנעה<select name="value" [(ngModel)]="draft.value" required>@for(p of propulsions;track p.value){<option [value]="p.value">{{p.label}}</option>}</select></label>}}<label>בתוקף מתאריך (רשות)<input name="from" type="date" [(ngModel)]="draft.effectiveFrom"></label><label>בתוקף עד תאריך (רשות)<input name="to" type="date" [(ngModel)]="draft.effectiveTo"></label></div>}<label>הערה (רשות, אינה משמשת כערך לחישוב)<textarea name="note" [(ngModel)]="draft.note" rows="3"></textarea></label><button class="primary" [disabled]="store.loading()">שליחת תשובה ←</button>@if(sent){<p class="positive" role="status">התשובה נשמרה. שיחת העובד תתעדכן אוטומטית.</p>}</form>}}@else{<p class="muted">בחרו פנייה מהרשימה.</p>}</article></div></section>
+<section class="rep">
+  <div class="rep__main">
+    <header class="rep__head">
+      <span class="live" role="status"><i aria-hidden="true"></i>מתעדכן אוטומטית@if (store.refreshedAt(); as t) { · {{ t | date: 'HH:mm' }}}</span>
+      <h1>מרכז <span>הפניות</span></h1>
+      <p>כל הפניות, כל הנציגים — תמונת מצב משותפת</p>
+    </header>
+
+    <div class="tiles">
+      <div class="tile"><span class="tile__icon">⏱</span><b>{{ store.summary()?.unclaimed ?? '–' }}</b><small>ממתינות לטיפול</small></div>
+      <div class="tile tile--mine"><span class="tile__icon">👤</span><b>{{ store.summary()?.assignedToMe ?? '–' }}</b><small>בטיפולי</small></div>
+      <div class="tile tile--others"><span class="tile__icon">👥</span><b>{{ store.summary()?.assignedToOthers ?? '–' }}</b><small>בטיפול נציגים אחרים</small></div>
+      <div class="tile tile--done"><span class="tile__icon">💬</span><b>{{ answered() ?? '–' }}</b><small>נענו</small></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tabs" role="tablist">
+        @for (t of tabs; track t.id) {
+          <button type="button" role="tab" [class.is-active]="store.tab() === t.id" [attr.aria-selected]="store.tab() === t.id" (click)="store.setTab(t.id)">
+            {{ t.label }}@if (t.count() !== null) { ({{ t.count() }})}
+          </button>
+        }
+      </div>
+      <select aria-label="סינון לפי נושא" [ngModel]="store.fieldCode() ?? ''" (ngModelChange)="store.setFieldCode($event)">
+        <option value="">כל הנושאים</option>
+        @for (f of fieldCodes; track f[0]) {<option [value]="f[0]">{{ f[1] }}</option>}
+      </select>
+      <form class="search" (ngSubmit)="search()">
+        <input name="search" [(ngModel)]="searchText" maxlength="100" placeholder="חיפוש לפי מספר פנייה או תוכן השאלה" aria-label="חיפוש פניות" />
+        <button type="submit" aria-label="חיפוש">⌕</button>
+      </form>
+    </div>
+
+    @if (store.error(); as error) {<div class="notice amber" role="alert">{{ error }}</div>}
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>מס׳ פנייה</th><th>נושא הפנייה</th><th>מועד פתיחה</th><th>סטטוס</th><th>נציג מטפל</th><th>פעולה</th></tr>
+        </thead>
+        <tbody>
+          @for (q of store.inquiries(); track q.requestId) {
+            <tr [class.is-selected]="store.selectedId() === q.requestId" (click)="open(q)">
+              <td class="ref">#{{ ref(q) }}</td>
+              <td>
+                <b>{{ fieldCode[q.fieldCode] }}</b>
+                @if (q.vehicle?.commercialName) {<small>{{ q.vehicle?.commercialName }}</small>}
+              </td>
+              <td class="when">{{ q.createdAt | date: 'HH:mm' }}<small>{{ q.createdAt | date: 'dd.MM.yyyy' }}</small></td>
+              <td><span class="badge" [attr.data-state]="handling(q)">{{ handlingLabel(q) }}</span></td>
+              <td>{{ handler(q) }}</td>
+              <td (click)="$event.stopPropagation()">
+                @switch (handling(q)) {
+                  @case ('unclaimed') {<button class="act act--claim" type="button" [disabled]="store.loading() || q.canClaim === false" (click)="claim(q)">לקיחת פנייה</button>}
+                  @case ('assigned_to_me') {<button class="act act--claim" type="button" (click)="open(q)">המשך טיפול</button>}
+                  @case ('assigned_to_other') {<button class="act act--locked" type="button" disabled>🔒 תפוסה</button>}
+                  @default {<button class="act act--view" type="button" (click)="open(q)">צפייה</button>}
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">@if (store.loading()) {טוענים…} @else {אין פניות בתצוגה הזו.}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="rep__detail">
+    @if (store.selected(); as q) {
+      <header class="detail__head">
+        <h2>פרטי הפנייה #{{ ref(q) }}</h2>
+        <button class="text-button" type="button" (click)="store.select(null)">חזרה לרשימה ›</button>
+      </header>
+      <div class="detail__who">
+        <span class="badge" [attr.data-state]="handling(q)">{{ handlingLabel(q) }}</span>
+        @if (handling(q) === 'assigned_to_other') {<small>מטפל/ת: {{ q.handlerDisplayName }}</small>}
+      </div>
+
+      <h3>שאלת העובד</h3>
+      <blockquote>{{ q.questionText }}</blockquote>
+
+      <div class="facts">
+        <div><small>נושא</small><b>{{ fieldCode[q.fieldCode] }}</b></div>
+        @if (q.vehicle) {<div><small>רכב</small><b>{{ q.vehicle.commercialName ?? q.vehicle.catalogueId }}@if (q.vehicle.registrationYear) { ({{ q.vehicle.registrationYear }})}</b></div>}
+        @if (q.entitlementGroup) {<div><small>קבוצת זכאות</small><b>{{ q.entitlementGroup }}</b></div>}
+      </div>
+
+      @switch (handling(q)) {
+        @case ('unclaimed') {
+          <div class="notice">כדי לענות, קודם לוקחים את הפנייה לטיפול. נציגים אחרים יראו שהיא בטיפולך.</div>
+          <button class="primary full" type="button" [disabled]="store.loading()" (click)="claim(q)">לקיחת הפנייה לטיפול</button>
+        }
+        @case ('assigned_to_other') {
+          <div class="notice amber">הפנייה בטיפול {{ q.handlerDisplayName ?? 'נציג אחר' }}. רק הנציג המטפל יכול לענות או לשחרר אותה.</div>
+        }
+        @case ('assigned_to_me') {
+          <form class="answer" (ngSubmit)="submit(q)">
+            <h3>תשובה לעובד</h3>
+            <label>תוצאה
+              <select name="outcome" [(ngModel)]="draft.outcome">
+                <option value="answered" [disabled]="!valueAllowed(q)">יש תשובה</option>
+                <option value="cannot_determine">לא ניתן לקבוע</option>
+              </select>
+            </label>
+            @if (draft.outcome === 'answered' && valueAllowed(q)) {
+              @switch (q.expectedValueType) {
+                @case ('money') {<label>סכום חודשי (₪)<input name="value" inputmode="decimal" dir="ltr" [pattern]="moneyPattern" [(ngModel)]="draft.value" required placeholder="350" /></label>}
+                @case ('entitlement_group') {<label>קבוצת זכאות<select name="value" [(ngModel)]="draft.value" required>@for (g of groups; track g) {<option [value]="g">{{ g }}</option>}</select></label>}
+                @case ('propulsion') {<label>סוג הנעה<select name="value" [(ngModel)]="draft.value" required>@for (p of propulsions; track p.value) {<option [value]="p.value">{{ p.label }}</option>}</select></label>}
+              }
+              <div class="two">
+                <label>בתוקף מתאריך (אופציונלי)<input name="from" type="date" [(ngModel)]="draft.effectiveFrom" /></label>
+                <label>בתוקף עד (אופציונלי)<input name="to" type="date" [(ngModel)]="draft.effectiveTo" /></label>
+              </div>
+            }
+            <label>הערה לעובד (אופציונלי)<textarea name="note" [(ngModel)]="draft.note" rows="3" placeholder="כתבו הערה לעובד…"></textarea></label>
+            <button class="primary full" [disabled]="store.loading()">שליחת תשובה ➤</button>
+            <button class="outline full" type="button" [disabled]="store.loading()" (click)="release(q)">שחרור הפנייה לנציגים אחרים</button>
+          </form>
+        }
+        @default {
+          <div class="notice positive" role="status">הפנייה {{ requestStatus[q.status] }}.@if (store.lastAnswer(); as a) { התשובה נשמרה@if (a.application === 'not_applicable') {, אך אינה חלה על התאריך הרלוונטי לחישוב}.}</div>
+        }
+      }
+      @if (sent) {<p class="positive" role="status">התשובה נשמרה. שיחת העובד תתעדכן אוטומטית.</p>}
+
+      <h3>היסטוריית סטטוס</h3>
+      <ol class="history">
+        <li><time>{{ q.createdAt | date: 'dd.MM HH:mm' }}</time><b>נפתחה</b><small>הפנייה נפתחה מהשיחה של העובד</small></li>
+        @if (q.claimedAt) {<li><time>{{ q.claimedAt | date: 'dd.MM HH:mm' }}</time><b>נלקחה לטיפול</b><small>{{ handler(q) }}</small></li>}
+        @if (q.status !== 'open' && q.updatedAt) {<li><time>{{ q.updatedAt | date: 'dd.MM HH:mm' }}</time><b>{{ requestStatus[q.status] }}</b></li>}
+      </ol>
+    } @else {
+      <div class="detail__empty">
+        <b>בחרו פנייה מהרשימה</b>
+        <p>פנייה שממתינה לטיפול אפשר לקחת בלחיצה על "לקיחת פנייה". אחר כך עונים כאן.</p>
+      </div>
+    }
+  </aside>
+</section>

@@ -43,7 +43,7 @@ export class SiteHeaderComponent {
   ];
   private readonly representativeLinks: NavLink[] = [
     {path: '/how-it-works', label: 'איך זה עובד'},
-    {path: '/representative', label: 'מסך נציג'},
+    {path: '/representative', label: 'מרכז הפניות'},
   ];
   protected readonly links = computed(() => {
     if (this.session.isRepresentative()) return this.representativeLinks;
