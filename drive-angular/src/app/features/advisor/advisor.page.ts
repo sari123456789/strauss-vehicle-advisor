@@ -30,6 +30,8 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly fieldStatus = FIELD_STATUS;
   /** The payslip import panel (same reusable component as the profile page). */
   readonly payslipOpen = signal(false);
+  /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
+  readonly panelCards = signal<OptionItem[] | null>(null);
   text = '';
 
   async ngOnInit(): Promise<void> {
@@ -78,6 +80,10 @@ export class AdvisorPage implements OnInit, OnDestroy {
       const option = typeof key === 'string' ? byKey.get(key) : undefined;
       return option ? [option] : [];
     });
+  }
+
+  openVehicles(cards: OptionItem[]): void {
+    this.panelCards.set(cards);
   }
 
   runOf(message: {kind: string; payload: Record<string, unknown>}): string | null {
