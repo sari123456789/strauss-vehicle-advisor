@@ -205,3 +205,125 @@ $nav-inline: 1200px;
   flex-direction: column;
   margin-top: 24px;
 }
+
+// ---------- Light header from design/drive-design-proof (all pages) ----------
+// Was home-only during stage 1; every page now uses the light theme.
+:host {
+  --bg: #fbfbfb;
+  --text: #171719;
+  --text-muted: #747981;
+  --accent: #ae7546;
+  --accent-hover: #925a32;
+  --accent-line: #e0e1e4;
+  --on-accent: #fff;
+  --border: #e7e8ea;
+
+  color: var(--text);
+  font-family: 'Assistant', var(--font-sans);
+}
+
+:host .site-header {
+  background: linear-gradient(110deg, #f8f8f8 0%, #fff 70%);
+  border-bottom-color: var(--accent-line);
+}
+
+// The original DRIVE logo image replaces the text mark on every page.
+.brand__drive-logo {
+  display: none;
+}
+
+:host .brand__mark {
+  display: none;
+}
+
+:host .brand__drive-logo {
+  display: block;
+  block-size: 30px;
+  inline-size: auto;
+  object-fit: contain;
+}
+
+:host .site-nav__link {
+  color: #111;
+  font-weight: 600;
+}
+
+:host .site-header__auth {
+  border-radius: 8px;
+  border-color: var(--accent);
+  background: #fff;
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+:host .site-header__menu {
+  color: var(--text);
+}
+
+@include bp.lg {
+  :host .site-header {
+    // The home hero sits under the header; keep it legible over the light canvas.
+    background: linear-gradient(110deg, rgba(248, 248, 248, .92) 0%, rgba(255, 255, 255, .92) 70%);
+  }
+
+  :host .brand__drive-logo {
+    block-size: 48px;
+  }
+
+  :host .site-nav__link.is-active {
+    border-bottom: 3px solid #ab7b4d;
+  }
+}
+
+// ---------- Design proof layout (desktop): Strauss logo and nav on the right, DRIVE logo on the left ----------
+@include bp.lg {
+  :host .brand__logo {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  // Still inside the brand link; only its position moves next to the sign-in/out button.
+  :host .brand__text {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--gutter-inline-end) + 230px);
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    transform: translateY(-50%);
+  }
+
+  :host .brand__tag {
+    margin: 0;
+    padding-left: 12px;
+    border-left: 1px solid #444;
+    color: #111;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  :host .site-nav {
+    justify-content: flex-start;
+    gap: 34px;
+    padding-inline-start: calc(var(--gutter-inline-start) + 150px);
+  }
+
+  :host .site-nav__link {
+    font-size: 17px;
+  }
+
+  // Home: the header floats over the hero without its own background, as in the design.
+  :host(.is-overlay) .site-header {
+    background: transparent;
+    border-bottom-color: transparent;
+  }
+}
+
+// Narrow desktops: drop the tagline so the nav and the DRIVE logo never overlap.
+@media (min-width: 1024px) and (max-width: 1499.98px) {
+  :host .brand__tag {
+    display: none;
+  }
+}

@@ -13,6 +13,7 @@ from app.ai.application.ports.graph_runner import (
 )
 from app.ai.application.ports.llm import LlmOutcome, LlmTaskKind
 from app.ai.infrastructure.llm.guarded import DisabledLlm
+from app.ai.workflow import messages_he as he
 from app.ai.workflow.models import (
     FactField,
     FactMode,
@@ -366,7 +367,7 @@ async def test_previous_comparison_is_shown_as_stale_without_recalculation() -> 
     llm.interpret(interpretation(Intent.SHOW_HISTORY))
     outcome = await say(runner, "תראה לי את ההשוואה הקודמת")
     assert "compare_scenarios" not in port.tools()
-    assert "אינה עדכנית" in text_of(outcome)
+    assert "אינו עדכני" in text_of(outcome)
 
 
 async def test_general_question_keeps_the_goal_and_falls_back_safely() -> None:
@@ -403,7 +404,7 @@ async def test_rate_limit_is_reported_with_retry_hint() -> None:
     llm.script(LlmTaskKind.INTERPRET, failure(LlmOutcome.RATE_LIMITED, 30))
     outcome = await say(runner, "שלום")
     assert outcome.messages[0].payload == {"outcome": "rate_limited", "retryAfterSeconds": 30}
-    assert "עומס זמני" in text_of(outcome)
+    assert he.LLM_RATE_LIMITED in text_of(outcome)
 
 
 async def test_invalid_model_output_is_retried_once_then_reported() -> None:

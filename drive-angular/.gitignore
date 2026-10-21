@@ -7,3 +7,7 @@ setup.py
 e2e/.results/
 e2e/visual/__diff__/
 playwright-report/
+
+# Vehicle photos: third-party images without a redistribution licence (see vehicle-images/README.txt).
+# Local demo only - never commit or deploy them until the rights are checked.
+public/assets/vehicles/

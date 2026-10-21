@@ -1,31 +1,34 @@
-// Design tokens. Colors sampled from design/reference/brown-reference.png (approved homepage design).
+// Design tokens. Light pearl/copper palette from design/drive-design-proof/src/styles.scss.
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bg: #0f1011;
-  --bg-raised: #131516;
-  --surface: #16191b;
-  --text: #f5f3ef;
-  --text-soft: #cccac6;
-  --text-muted: #a4a4a0;
-  --border: #2f3032;
-  --border-strong: #4b4e50;
-  --rule: #242627;
+  --bg: #fbfbfb;
+  --bg-raised: #fff;
+  --surface: #fff;
+  --text: #171719;
+  --text-soft: #3a3b3f;
+  --text-muted: #6b7079;
+  --border: #e1e3e8;
+  --border-strong: #cfd1d9;
+  --rule: #e7e8ea;
 
-  // Brown accent. #a57650 on --bg ≈ 4.8:1; --on-accent on --accent ≈ 4.8:1 (both pass WCAG AA for text).
-  --accent: #a57650;
-  --accent-hover: #b88a63;
-  --accent-line: #8a6341;
-  --on-accent: #0f1011;
+  // Copper accent. #925a32 is used for accent text on light surfaces (≈ 5.9:1 on #fff).
+  --accent: #ae7546;
+  --accent-hover: #925a32;
+  --accent-line: #d7b28d;
+  --accent-text: #925a32;
+  --accent-pale: #fbf1e8;
+  --on-accent: #fff;
 
-  --positive: #96f192;
-  --danger: #f0a49a;
+  --positive: #0d5c39;
+  --danger: #a43d16;
 
-  --font-sans: 'Heebo', 'Segoe UI', Arial, sans-serif;
+  --font-sans: 'Assistant', 'Heebo', 'Segoe UI', Arial, sans-serif;
+  --font-display: 'Heebo', 'Assistant', 'Segoe UI', Arial, sans-serif;
 
   // Minimum touch target (WCAG 2.5.5 AAA size used as the project rule).
   --tap: 44px;
-  --radius: 2px;
+  --radius: 9px;
   --gutter: 16px;
   --gutter-inline-start: max(var(--gutter), env(safe-area-inset-right));
   --gutter-inline-end: max(var(--gutter), env(safe-area-inset-left));

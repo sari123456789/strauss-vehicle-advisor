@@ -1,60 +1,76 @@
 <section class="hero" aria-labelledby="home-title">
   <img
     class="hero__photo"
-    src="/assets/home/hero-car-1240.webp"
-    srcset="/assets/home/hero-car-800.webp 800w, /assets/home/hero-car-1240.webp 1240w, /assets/home/hero-car-1672.webp 1672w"
-    sizes="(min-width: 1024px) 77vw, 100vw"
-    width="1672"
-    height="941"
-    alt="רכב חשמלי כסוף בתאורת סטודיו"
+    src="/assets/design/art/home-car-scene.png"
+    srcset="/assets/design/art/home-car-scene.png 934w"
+    sizes="(min-width: 1024px) 56vw, 100vw"
+    width="934"
+    height="677"
+    alt="רכב כסוף בתנועה"
     fetchpriority="high"
     decoding="async" />
 
   <div class="hero__copy">
-    <p class="hero__eyebrow">הבחירה שלך. המספרים ברורים.</p>
-    <h1 class="hero__title" id="home-title">
-      <span class="hero__line">הרכב הבא שלך.</span>
-      <span class="hero__line hero__line--accent">מה יקרה לנטו שלך?</span>
-    </h1>
-    <p class="hero__lead">משווים רכבים, מבינים את ההשפעה על השכר ובוחרים נכון.</p>
+    <p class="hero__eyebrow">
+      <b>DRIVE</b>
+      <i class="hero__eyebrow-rule" aria-hidden="true"></i>
+      <span>כל הדרך לבחירה שמתאימה לך</span>
+    </p>
+    <h1 class="hero__title" id="home-title">הרכב הבא <span class="hero__line--accent">שלך</span></h1>
+    <p class="hero__lead">ייעוץ חכם ופשוט לבחירת רכב חברה<br />והבנת ההשפעה על השכר נטו שלך.</p>
     <a class="hero__cta" routerLink="/advisor">
-      <span>בואו נבדוק את הנטו שלי</span>
-      <svg class="hero__cta-arrow" viewBox="0 0 24 16" aria-hidden="true" focusable="false">
-        <path d="M23 8H2M8 1.5L1.5 8 8 14.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      <span class="hero__cta-text">
+        <b>בואו נדבר</b>
+        <small>ייעוץ אישי בצ׳אט</small>
+      </span>
+      <svg class="hero__cta-chevron" viewBox="0 0 12 22" aria-hidden="true" focusable="false">
+        <path d="M10.5 1.5l-9 9.5 9 9.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
+      <span class="hero__cta-disc" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M21 15a3 3 0 0 1-3 3H8l-5 4V5a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3Z M7 8h10 M7 12h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
     </a>
-    <a class="hero__link" routerLink="/catalog">לצפייה ברכבים</a>
+
+    <ul class="benefits">
+      <li><img src="/assets/design/icons/home-compass.png" alt="" width="49" height="48" /><b>תהליך פשוט</b><span>מלווים אותך בכל שלב</span></li>
+      <li><img src="/assets/design/icons/home-database.png" alt="" width="43" height="39" /><b>השפעה על השכר נטו</b><span>תמונה מלאה וברורה</span></li>
+      <li><img src="/assets/design/icons/home-car.png" alt="" width="54" height="38" /><b>מגוון דגמים</b><span>בהתאמה לצרכים שלך</span></li>
+    </ul>
   </div>
 
   <dr-slide-indicator class="hero__indicator" />
 </section>
 
 <section class="options" aria-labelledby="options-title">
-  <h2 class="options__title" id="options-title">כל האפשרויות, בתמונה אחת</h2>
-  <ul class="options__list">
+  <h2 class="sr-only" id="options-title">כל האפשרויות, בתמונה אחת</h2>
+  <ul class="strip">
     <li>
-      <dr-option-card
-        variant="current"
-        title="הרכב הנוכחי"
-        label="נטו חודשי משוער"
-        link="/comparison"
-        imageSrc="/assets/home/car-current.webp"
-        [imageWidth]="278"
-        [imageHeight]="172" />
+      <a class="strip__item" routerLink="/advisor">
+        <span class="strip__text"><b>קבלו תשובות מיידיות</b><small>בצ׳אט עם המומחים שלנו</small></span>
+        <img class="strip__icon" src="/assets/design/icons/home-document.png" alt="" width="44" height="57" />
+      </a>
     </li>
     <li>
-      <dr-option-card
-        variant="electric"
-        title="מעבר לחשמלי"
-        label="נטו חודשי משוער"
-        link="/catalog"
-        [selected]="true"
-        imageSrc="/assets/home/car-electric.webp"
-        [imageWidth]="287"
-        [imageHeight]="172" />
+      <a class="strip__item" routerLink="/profile">
+        <span class="strip__text"><b>התאימו לצרכים שלכם</b><small>סוג, מרחב ואבזור וצריכה</small></span>
+        <img class="strip__icon" src="/assets/design/icons/home-sliders.png" alt="" width="50" height="50" />
+      </a>
     </li>
     <li>
-      <dr-option-card variant="waiver" title="ויתור על רכב" label="נטו חודשי משוער" link="/comparison" />
+      <a class="strip__item" routerLink="/comparison">
+        <span class="strip__text"><b>השוו בין דגמים</b><small>לפי ההשפעה על השכר נטו</small></span>
+        <img class="strip__icon" src="/assets/design/icons/home-bars.png" alt="" width="47" height="52" />
+      </a>
+    </li>
+    <li>
+      <a class="strip__item strip__item--gold" routerLink="/catalog">
+        <span class="strip__text"><b>גלו את האפשרויות בשבילכם</b></span>
+        <svg class="strip__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11 M4 11h16v6H4z M7 17v2 M17 17v2 M7 14h1 M16 14h1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
     </li>
   </ul>
 </section>

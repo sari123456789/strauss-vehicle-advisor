@@ -23,7 +23,16 @@ from app.ai.workflow.state import (
     TurnRuntime,
     stable_id,
 )
-from app.contracts.catalogue import EligibilityStatus, ListOptionsRequest, OptionFilters
+from app.contracts.catalogue import (
+    EligibilityStatus,
+    ListOptionsRequest,
+    OptionFilters,
+    OptionItem,
+    ResolvePurpose,
+    ResolveStatus,
+    ResolveVehicleRequest,
+    VehicleQuery,
+)
 from app.contracts.common import (
     EnvelopeStatus,
     ErrorCode,
@@ -67,6 +76,9 @@ LIST_RELEASE_CHANGED = "result_set_release_changed"
 
 _COMPUTE_INTENTS = frozenset({Intent.CALCULATE_OPTIONS, Intent.COMPARE_TO_CURRENT})
 _CATALOGUE_ID = re.compile(r"^[A-Z]{2,5}-\d{2,4}$")
+_DIGITS = re.compile(r"\d")
+_NON_WORD = re.compile(r"[^\w]+")
+RECENT_FOR_GENERAL = 6
 
 
 def _labels(state: ConversationState, rt: TurnRuntime) -> dict[str, str]:
@@ -75,14 +87,37 @@ def _labels(state: ConversationState, rt: TurnRuntime) -> dict[str, str]:
         for alternative in rt.case.alternatives:
             labels.setdefault(alternative.option_key, alternative.catalogue_id or "")
     labels.setdefault("waiver", "ויתור על רכב חברה")
+    labels.update(state.get("option_labels", {}))
+    labels.update(rt.labels)
     return labels
+
+
+def _recent(state: ConversationState) -> list[dict[str, str]]:
+    """Recent messages for a general answer, digits masked: the model never sees amounts."""
+    turn = state.get("turn")
+    history = (turn.get("recentMessages") if turn else None) or []
+    return [
+        {
+            "role": "assistant" if m.get("role") == "assistant" else "employee",
+            "text": _DIGITS.sub("#", m.get("text", ""))[:500],
+        }
+        for m in history[-RECENT_FOR_GENERAL:]
+    ]
+
+
+def _general(state: ConversationState, rt: TurnRuntime, fallback: str) -> None:
+    turn = state.get("turn")
+    question = str(turn.get("text") or "") if turn else ""
+    rt.compose = ComposeRequest("general", question, fallback=fallback, recent=_recent(state))
 
 
 def _resolve_refs(
     refs: list[OptionReference], displayed: list[DisplayedOption]
-) -> tuple[list[str], bool]:
-    """Option keys for the references, and whether any reference could not be resolved."""
+) -> tuple[list[str], list[str], bool]:
+    """Option keys for the references, names not found in the displayed list (to look up in
+    the catalogue), and whether any other reference could not be resolved."""
     keys: list[str] = []
+    names: list[str] = []
     unresolved = False
     for ref in refs:
         value = ref.value.strip()
@@ -90,15 +125,107 @@ def _resolve_refs(
             keys.append(displayed[int(value) - 1]["optionKey"])
         elif ref.kind == "catalogue_id" and _CATALOGUE_ID.match(value.upper()):
             keys.append(f"vehicle:{value.upper()}")
-        elif ref.kind == "name":
+        elif ref.kind == "name" and value:
             matches = [o for o in displayed if value.casefold() in o["label"].casefold()]
             if len(matches) == 1:
                 keys.append(matches[0]["optionKey"])
-            else:
+            elif matches:
                 unresolved = True
+            else:
+                names.append(value)
         else:
             unresolved = True
-    return list(dict.fromkeys(keys)), unresolved
+    return list(dict.fromkeys(keys)), names, unresolved
+
+
+def _normalized(text: str | None) -> str:
+    return " ".join(_NON_WORD.sub(" ", (text or "").casefold()).split())
+
+
+def _name_matches(name: str, item: OptionItem) -> bool:
+    """The employee's words name this catalogue item: they contain its model name, or are a
+    part of its full label (e.g. "ATTO 3", "BYD ATTO 3", "קיה")."""
+    wanted = _normalized(name)
+    model = _normalized(item.commercial_name)
+    label = _normalized(he.option_label(item))
+    if not wanted:
+        return False
+    return (bool(model) and f" {model} " in f" {wanted} ") or wanted in label
+
+
+async def _resolve_names(
+    rt: TurnRuntime, names: list[str], updates: dict[str, Any]
+) -> list[str] | None:
+    """Option keys for vehicle names not on the displayed list, through the business tools.
+
+    Eligibility comes only from `list_eligible_options`; a name that is not eligible is looked
+    up with `resolve_vehicle` (catalogue only) to tell "not eligible" from "not in the
+    catalogue". None when the employee was answered instead (choice, not eligible, not found).
+    """
+    envelope = await rt.tools.list_eligible_options(
+        ListOptionsRequest(
+            categories=[OptionCategory.REGULAR, OptionCategory.FAMILY],
+            expected_case_version=rt.case_version,
+        )
+    )
+    if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
+        _error(rt, envelope, updates)
+        return None
+    data = envelope.data
+    eligible = [i for i in data.items if i.eligibility is EligibilityStatus.ELIGIBLE]
+    keys: list[str] = []
+    for name in names:
+        matches = [i for i in eligible if _name_matches(name, i)]
+        exact = [i for i in matches if _normalized(i.commercial_name) == _normalized(name)]
+        matches = exact or matches
+        if len(matches) == 1:
+            keys.append(matches[0].option_key)
+            rt.labels[matches[0].option_key] = he.option_label(matches[0])
+            continue
+        if matches:
+            shown = matches[:10]
+            updates["displayed_options"] = [
+                DisplayedOption(optionKey=i.option_key, label=he.option_label(i)) for i in shown
+            ]
+            updates["result_set_id"] = str(data.result_set_id)
+            rt.reply(
+                he.vehicle_choices_text(name, [he.option_label(i) for i in shown]),
+                "clarification",
+            )
+            return None
+        await _explain_not_listed(rt, name, data.unchecked_categories, data.missing_information)
+        return None
+    return keys
+
+
+async def _explain_not_listed(
+    rt: TurnRuntime, name: str, unchecked: list[OptionCategory], missing: list[Issue]
+) -> None:
+    """A named vehicle that is not among the eligible options: not in the catalogue, not
+    eligible, or eligibility unknown because information is missing."""
+    found = await rt.tools.resolve_vehicle(
+        ResolveVehicleRequest(
+            purpose=ResolvePurpose.ALTERNATIVE, query=VehicleQuery(commercial_name=name[:80])
+        )
+    )
+    data = found.data
+    in_catalogue = []
+    if found.status is not EnvelopeStatus.ERROR and data is not None:
+        if data.status is not ResolveStatus.NOT_FOUND:
+            in_catalogue = [c for c in data.candidates if c.catalogue_id]
+    if not in_catalogue:
+        rt.reply(he.vehicle_not_in_catalogue_text(name), "info")
+        return
+    labels = list(
+        dict.fromkeys(f"{c.manufacturer_name} {c.commercial_name}".strip() for c in in_catalogue)
+    )[:5]
+    fields = [i.field.value for i in missing if i.field is not None]
+    if unchecked or fields:
+        rt.reply(he.vehicle_eligibility_unknown_text(labels), "info")
+        if fields:
+            rt.reply(he.ask_for_fields(fields[:2]), "question", fields=fields[:2])
+        return
+    rt.reply(he.vehicle_not_eligible_text(labels), "info")
 
 
 def _has_reason(issues: list[Issue], reason: str) -> bool:
@@ -324,7 +451,10 @@ async def compute(
         return None
     result = envelope.data
     updates["latest_run_id"] = str(result.run_id)
-    rt.reply(he.comparison_text(result, labels), "comparison", runId=str(result.run_id))
+    full = not state.get("disclaimer_shown")
+    text = he.comparison_text(result, labels, full_disclaimer=full)
+    rt.reply(text, "comparison", runId=str(result.run_id))
+    updates["disclaimer_shown"] = True
     if _has_reason(envelope.issues, LIST_BUILT_FROM_OTHER_FACTS):
         updates["result_set_id"] = None
         rt.reply(he.OPTIONS_CHANGED, "options_changed")
@@ -366,17 +496,28 @@ def _goal_keys(goal: ActiveGoal | None) -> list[str]:
     return list(goal.get("optionKeys") or []) if goal else []
 
 
-def _selection(
-    state: ConversationState, rt: TurnRuntime, *, resume: ActiveGoal | None = None
+async def _selection(
+    state: ConversationState,
+    rt: TurnRuntime,
+    updates: dict[str, Any],
+    *,
+    resume: ActiveGoal | None = None,
 ) -> Selection | None:
     """The options to calculate. A resumed goal (after a confirmation or a what-if change)
-    keeps the employee's explicit selection unless this message names other options."""
+    keeps the employee's explicit selection unless this message names other options. A vehicle
+    named before any list was shown is looked up among the eligible catalogue options."""
     assert rt.interpretation is not None
     displayed = state.get("displayed_options", [])
-    keys, unresolved = _resolve_refs(list(rt.interpretation.option_refs), displayed)
+    keys, names, unresolved = _resolve_refs(list(rt.interpretation.option_refs), displayed)
     if unresolved:
         rt.reply(he.ASK_WHICH_VEHICLE, "clarification")
         return None
+    if names:
+        found = await _resolve_names(rt, names, updates)
+        if found is None:
+            return None
+        keys = list(dict.fromkeys([*keys, *found]))
+        updates["option_labels"] = {**state.get("option_labels", {}), **rt.labels}
     if not keys and not rt.interpretation.all_options:
         keys = _goal_keys(resume)
     if keys:
@@ -411,7 +552,10 @@ async def _show_run(
     result = envelope.data.result
     labels = _labels(state, rt)
     stale = result.freshness is Freshness.STALE
-    rt.reply(he.history_text(result, labels, stale=stale), "history", runId=run_id, stale=stale)
+    full = not state.get("disclaimer_shown")
+    text = he.history_text(result, labels, stale=stale, full_disclaimer=full)
+    rt.reply(text, "history", runId=run_id, stale=stale)
+    updates["disclaimer_shown"] = True
     if explain:
         values, descriptions = comparison_placeholders(result, labels)
         turn = state.get("turn")
@@ -424,6 +568,8 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     turn = state.get("turn")
     assert interpretation is not None and extraction is not None and turn is not None
     intent = interpretation.intent
+    if intent is not Intent.ASK_REPRESENTATIVE and state.get("representative_help_shown"):
+        updates["representative_help_shown"] = False
     if extraction.clarifications and intent is not Intent.LIST_OPTIONS:
         rt.reply(he.clarification_text(extraction.clarifications), "clarification")
         return
@@ -440,7 +586,7 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
         or resume_after_confirm
     ):
         resuming = intent in (Intent.UPDATE_FACTS, Intent.CONFIRM_FACTS)
-        selection = _selection(state, rt, resume=previous if resuming else None)
+        selection = await _selection(state, rt, updates, resume=previous if resuming else None)
         if selection is None:
             return
         include_current = intent is Intent.COMPARE_TO_CURRENT or bool(
@@ -477,6 +623,8 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
         await _show_run(state, rt, updates, explain=True)
     elif intent is Intent.SHOW_HISTORY:
         await _show_run(state, rt, updates, explain=False)
+    elif intent is Intent.DATA_SOURCES:
+        rt.reply(he.data_sources_text(_profile_sources(rt)), "info")
     elif intent is Intent.UPDATE_FACTS:
         if not (actual_now or hypothetical_now):
             rt.reply(he.UNCLEAR, "clarification")
@@ -495,17 +643,20 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
         )
         rt.reply(he.CANCELLED, "info")
     elif intent is Intent.ASK_REPRESENTATIVE:
-        fields = [f for f in state.get("unknown_fields", []) if f in REPRESENTATIVE_FIELDS]
+        named = [f.value for f in interpretation.unknown_fields]
+        known = [*named, *state.get("unknown_fields", [])]
+        fields = [f for f in dict.fromkeys(known) if f in REPRESENTATIVE_FIELDS]
         if fields:
             await _create_question(state, rt, fields[0], None, updates)
+        elif state.get("representative_help_shown"):
+            rt.reply(he.REPRESENTATIVE_HELP_AGAIN, "clarification")
         else:
-            rt.reply("על איזה פרט לפנות לנציג התחבורה?", "clarification")
+            rt.reply(he.REPRESENTATIVE_HELP, "clarification")
+            updates["representative_help_shown"] = True
     elif intent is Intent.GENERAL_QUESTION:
-        rt.compose = ComposeRequest(
-            "general", str(turn.get("text") or ""), fallback=he.GENERAL_FALLBACK
-        )
-    elif intent is Intent.SMALLTALK:
-        rt.reply(he.HELP, "info")
+        _general(state, rt, he.GENERAL_FALLBACK)
+    elif intent is Intent.SMALLTALK:  # a greeting or thanks gets a natural, fitting reply
+        _general(state, rt, he.HELP)
     else:
         rt.reply(he.UNCLEAR, "clarification")
 
@@ -605,3 +756,43 @@ async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime])
         rt.reply(he.BUDGET_EXCEEDED, "error", code="TOOL_BUDGET_EXCEEDED")
     rt.compose = None
     return updates
+
+
+_SOURCE_FIELDS = (
+    FieldPath.BASE_GROSS,
+    FieldPath.COMMISSIONS_GROSS,
+    FieldPath.BONUS_GROSS,
+    FieldPath.PENSION_EMPLOYEE_RATE,
+    FieldPath.STUDY_FUND_EMPLOYEE_RATE,
+    FieldPath.CREDIT_POINTS,
+    FieldPath.OCCUPATION_ID,
+    FieldPath.ENTITLEMENT_GROUP,
+    FieldPath.QUALIFYING_CHILDREN_COUNT,
+    FieldPath.CURRENT_KIND,
+    FieldPath.CURRENT_VEHICLE,
+)
+
+
+def _profile_sources(rt: TurnRuntime) -> list[tuple[str, str, str | None]]:
+    """(field, status, source) of the saved profile facts; values are never read."""
+    assert rt.case is not None
+    profile = rt.case.profile
+    arrangement = profile.current_arrangement
+    nodes: dict[FieldPath, Any] = {
+        FieldPath.BASE_GROSS: profile.base_gross,
+        FieldPath.COMMISSIONS_GROSS: profile.commissions_gross,
+        FieldPath.BONUS_GROSS: profile.bonus_gross,
+        FieldPath.PENSION_EMPLOYEE_RATE: profile.pension_employee_rate,
+        FieldPath.STUDY_FUND_EMPLOYEE_RATE: profile.study_fund_employee_rate,
+        FieldPath.CREDIT_POINTS: profile.credit_points,
+        FieldPath.OCCUPATION_ID: profile.occupation_id,
+        FieldPath.ENTITLEMENT_GROUP: profile.entitlement_group,
+        FieldPath.QUALIFYING_CHILDREN_COUNT: profile.qualifying_children_count,
+        FieldPath.CURRENT_KIND: arrangement.kind,
+        FieldPath.CURRENT_VEHICLE: arrangement.vehicle,
+    }
+    result: list[tuple[str, str, str | None]] = []
+    for path in _SOURCE_FIELDS:
+        node = nodes[path]
+        result.append((path.value, node.status.value, node.source.value if node.source else None))
+    return result

@@ -1,5 +1,6 @@
 """Input handling: duplicate detection, context loading, interpretation and validated updates."""
 
+import math
 from typing import Any
 from uuid import UUID
 
@@ -151,7 +152,10 @@ async def interpret(state: ConversationState, runtime: Runtime[TurnRuntime]) -> 
             _LLM_FAILURE_TEXT.get(result.outcome, he.LLM_UNAVAILABLE),
             "assistant_unavailable",
             outcome=result.outcome.value,
-            retryAfterSeconds=result.retry_after_seconds,
+            # Whole seconds: staged payloads accept no floats (a float failed the whole turn).
+            retryAfterSeconds=None
+            if result.retry_after_seconds is None
+            else math.ceil(result.retry_after_seconds),
         )
         rt.halt = True
         return {"route": "stop"}

@@ -219,14 +219,15 @@ async def test_b2_full_conversation_compares_through_the_real_business(stack: St
     atto = compared.alternatives[0]
     assert atto.net is not None and atto.delta is not None
     [result_text] = [m.text for m in after.messages if m.kind == "comparison"]
-    assert result_text.count("•") == 1  # one alternative shown, not the whole catalogue
+    # one alternative shown (as a sentence), not the whole catalogue
+    assert result_text.count("הנטו המשוער שלך יוצא") == 1 and "•" not in result_text
     current_raw, alternative_raw, delta_raw = SPEC_RAW
     assert three(compared.current.net.raw) == Decimal(current_raw)
     assert three(atto.net.raw) == Decimal(alternative_raw)
     assert three(atto.delta.raw) == Decimal(delta_raw)
     text = text_of(after)
-    assert "הנטו המשוער היום: 11,032 ₪" in text
-    assert "נטו משוער 11,693 ₪ (הפרש +661 ₪ לעומת היום)" in text
+    assert "היום הנטו המשוער שלך הוא בערך 11,032 ₪ בחודש." in text
+    assert "יוצא בערך 11,693 ₪ בחודש (+661 ₪ לעומת היום)." in text
     assert shown_amounts(after) <= business_displays(stack.spy.results("compare_scenarios"))
     assert not RAW_CODES.search(text)
     run_id = compared.run_id

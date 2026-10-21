@@ -24,6 +24,11 @@ from app.ai.workflow.state import (
 )
 
 
+def _readable(text: str) -> bool:
+    """Hebrew or Latin letters only: a stray token in another script (seen live) is dropped."""
+    return all(not ch.isalpha() or "\u0590" <= ch <= "\u05ff" or ch.isascii() for ch in text)
+
+
 async def compose(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
     rt = runtime.context
     request = rt.compose
@@ -31,12 +36,13 @@ async def compose(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
         return {}
     text: str | None = None
     if rt.compose_with_llm:
+        data: dict[str, Any]
         if request.kind == "comparison":
             system = COMPOSE_SYSTEM
             data = {"question": request.question, "placeholders": request.descriptions}
         else:
             system = GENERAL_SYSTEM
-            data = {"question": request.question}
+            data = {"question": request.question, "RECENT": request.recent}
         result = await rt.call_llm(
             LlmTask(
                 kind=LlmTaskKind.COMPOSE,
@@ -46,7 +52,7 @@ async def compose(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
                 max_output_tokens=400,
             )
         )
-        if result.ok and result.value is not None:
+        if result.ok and result.value is not None and _readable(result.value.text):
             text = render_grounded(result.value.text, request.values)
     if text is not None:
         rt.reply(text, "explanation")

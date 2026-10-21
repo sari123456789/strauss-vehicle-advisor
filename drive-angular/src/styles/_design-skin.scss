@@ -1,0 +1,560 @@
+// Visual skin from design/drive-design-proof for the pages still styled by _legacy-demo.scss.
+// Loaded after legacy-demo and overrides it by cascade order only: class names, templates and behavior are unchanged.
+// Remove a block here together with the matching legacy block once a page gets its own component styles.
+@use 'breakpoints' as bp;
+
+@font-face { font-family: Heebo; src: url('/assets/design/fonts/heebo-400.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Heebo; src: url('/assets/design/fonts/heebo-500.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+@font-face { font-family: Heebo; src: url('/assets/design/fonts/heebo-700.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+@font-face { font-family: Heebo; src: url('/assets/design/fonts/heebo-800.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+@font-face { font-family: Heebo; src: url('/assets/design/fonts/heebo-900.ttf') format('truetype'); font-weight: 900; font-display: swap; }
+@font-face { font-family: Assistant; src: url('/assets/design/fonts/assistant-400.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: Assistant; src: url('/assets/design/fonts/assistant-500.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+@font-face { font-family: Assistant; src: url('/assets/design/fonts/assistant-600.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: Assistant; src: url('/assets/design/fonts/assistant-700.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+@font-face { font-family: Assistant; src: url('/assets/design/fonts/assistant-800.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+
+$surface-shadow: 0 8px 28px rgba(32, 28, 24, 0.05);
+$copper-gradient: linear-gradient(110deg, #c18a5b, #9a633a);
+$copper-gradient-hover: linear-gradient(110deg, #b37b4a, #8a5530);
+
+// ---------- Page canvas and type ----------
+body {
+  background: radial-gradient(ellipse at 52% 40%, #fff 0%, #fafafa 58%, #f2f2f3 100%) fixed;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+}
+
+h1 {
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+h2,
+h3 {
+  font-weight: 700;
+}
+
+.heading h1 {
+  font-size: clamp(30px, 3.2vw, 50px);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.heading p {
+  font-size: clamp(17px, 1.6vw, 25px);
+  color: var(--text-soft);
+}
+
+.eyebrow,
+.heading .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  inline-size: fit-content;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: var(--accent-pale);
+  color: var(--accent-text);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.gold {
+  color: var(--accent-text);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+// ---------- Form controls ----------
+input:not([type='checkbox']):not([type='radio']):not([type='file']),
+select,
+textarea {
+  inline-size: 100%;
+  min-block-size: 50px;
+  margin-top: 6px;
+  padding: 10px 16px;
+  border: 1px solid #d1d4dc;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='file']):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-line);
+  outline-offset: 0;
+}
+
+textarea {
+  resize: vertical;
+}
+
+// Keep the catalog search at its legacy width (the generic rule above is more specific).
+.toolbar input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+  inline-size: 320px;
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .toolbar input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+    inline-size: 100%;
+  }
+}
+
+label {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+// ---------- Buttons ----------
+.primary {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: $copper-gradient;
+  color: #fff;
+  font-weight: 700;
+}
+
+.primary:hover {
+  background: $copper-gradient-hover;
+}
+
+.outline {
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.outline:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-pale);
+}
+
+.btn--outline {
+  border-radius: 9px;
+  background: #fff;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.btn--outline:hover {
+  background: var(--accent-pale);
+}
+
+.btn--primary {
+  background: $copper-gradient;
+  color: #fff;
+}
+
+.text-link {
+  color: var(--accent-text);
+  border-bottom-color: var(--accent-line);
+}
+
+.text-button {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+// ---------- Surfaces ----------
+.panel {
+  border: 1px solid #e4e6eb;
+  border-radius: 17px;
+  background: linear-gradient(125deg, #fff 0%, #fdfdfd 68%, #fff 100%);
+  box-shadow: $surface-shadow;
+}
+
+.selected {
+  border-color: #b07a46 !important;
+}
+
+.panel.selected {
+  background: linear-gradient(120deg, #fcf9f6, #faf6f1);
+}
+
+.container {
+  max-width: 1554px;
+  margin-block: 16px;
+  margin-inline: auto;
+  padding: clamp(22px, 2.5vw, 34px) clamp(16px, 2.2vw, 30px) clamp(30px, 3vw, 48px);
+  border-radius: 18px;
+  background: linear-gradient(110deg, #fff, #fdfdfd);
+  box-shadow: $surface-shadow;
+}
+
+.notice {
+  border: 1px solid #e3e5ea;
+  border-radius: 12px;
+  background: #f7f8fa;
+  color: var(--text-soft);
+}
+
+.notice.amber {
+  border-color: #ead8c8;
+  background: #fbf0e6;
+  color: #7d4f25;
+}
+
+.notice.positive {
+  border-color: #cfe6d6;
+  background: #edf7f0;
+  color: var(--positive);
+}
+
+.chips > .panel {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 11px;
+  background: #f3f9f4;
+  color: #267234;
+  box-shadow: none;
+}
+
+.chips .outline.selected {
+  background: $copper-gradient;
+  color: #fff;
+}
+
+blockquote {
+  border-right: 3px solid var(--accent);
+  border-radius: 10px;
+  background: #f7f8fa;
+}
+
+.upload {
+  border-color: var(--border-strong);
+  border-radius: 12px;
+  background: #fcfcfd;
+}
+
+.tabs .active {
+  border-bottom: 3px solid #ab7b4d;
+}
+
+.circle {
+  border-color: var(--accent-line);
+  background: #fff;
+  color: var(--accent-text);
+}
+
+// ---------- Tables (comparison / history / profile / calculation) ----------
+.table-wrap {
+  border: 1px solid #dadde5;
+  border-radius: 12px;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th,
+td {
+  border: 0;
+  border-top: 1px solid #e3e5eb;
+  font-size: 17px;
+}
+
+thead th {
+  border-top: 0;
+  background: linear-gradient(110deg, #fbf0e5, #f7ede3);
+  color: var(--text);
+  font-weight: 700;
+}
+
+tbody th {
+  background: #fcfcfd;
+  font-weight: 400;
+}
+
+tbody td + td,
+tbody th + td {
+  border-inline-start: 1px solid #eeeef2;
+}
+
+tbody tr:hover {
+  background: #fcf7f1;
+}
+
+// ---------- Sign-in: art beside a white form card ----------
+.login {
+  gap: clamp(20px, 3vw, 50px);
+}
+
+.login > div {
+  max-width: 711px;
+  width: 100%;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 9px 32px rgba(119, 119, 119, 0.07);
+}
+
+.login form .primary {
+  min-height: 60px;
+  font-size: 22px;
+}
+
+.login form p.muted {
+  text-align: center;
+  font-size: 15px;
+}
+
+// ---------- Advisor: history / conversation / profile columns ----------
+.workspace {
+  // RTL: history (right) 344 · conversation 812 · profile (left) 383 at the 1586px reference.
+  grid-template-columns: minmax(200px, 344fr) minmax(0, 812fr) minmax(240px, 383fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.workspace > .progress,
+.workspace > .conversation,
+.workspace > .summary {
+  border: 1px solid #e4e6eb;
+  border-radius: 17px;
+  background: linear-gradient(125deg, #fff, #fdfdfd);
+  box-shadow: $surface-shadow;
+}
+
+.progress {
+  padding: 24px 14px;
+}
+
+.progress > .primary {
+  inline-size: 100%;
+  min-height: 56px;
+  font-size: 20px;
+}
+
+.progress > a:not(.outline) {
+  margin: 0;
+  padding: 16px 12px;
+  border-bottom: 1px solid #dcdde1;
+  font-size: 17px;
+}
+
+.progress > a.selected {
+  border-radius: 11px;
+  border-bottom-color: transparent;
+  border-inline-start: 2px solid #ae7f53;
+  background: linear-gradient(120deg, #f2ebe3, #ede4db);
+}
+
+.progress > a.outline {
+  margin-top: 20px;
+  inline-size: 100%;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding: 24px clamp(14px, 1.6vw, 24px);
+}
+
+.conversation .heading {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.conversation .heading .eyebrow {
+  display: none;
+}
+
+.messages {
+  flex: 1;
+  max-height: min(62vh, 620px);
+}
+
+.message p {
+  padding: 13px 18px;
+  border: 1px solid #e1e2e7;
+  border-radius: 16px;
+  background: linear-gradient(115deg, #eff0f2, #e9eaed);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.message.user p {
+  border-color: #d4ac88;
+  background: #fcf7f1;
+  color: var(--text);
+}
+
+.avatar {
+  border: 0;
+  background: linear-gradient(110deg, #bb8f63, #8c5f37);
+  color: #fff;
+  height: 41px;
+  min-width: 41px;
+  font-weight: 700;
+}
+
+.chat-input {
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid #e5e6ec;
+  border-radius: 17px;
+  background: #fcfcfd;
+}
+
+.chat-input input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+  margin: 0;
+  border: 1px solid #cdd0d7;
+  border-radius: 12px;
+  min-block-size: 56px;
+}
+
+.chat-input .primary {
+  flex: none;
+  inline-size: 56px;
+  min-block-size: 56px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.summary {
+  padding: 23px 16px;
+}
+
+.summary h3 {
+  font-size: 26px;
+}
+
+.summary p {
+  color: var(--text-muted);
+}
+
+.summary strong {
+  display: block;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8e8eb;
+  font-size: 21px;
+}
+
+// Vehicle cards (catalog grid and advisor strip).
+.vehicle {
+  border-radius: 12px;
+}
+
+.vehicle dd {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.vehicle .car-art.compact {
+  object-fit: contain;
+  background: #fff;
+}
+
+// ---------- Comparison: continuous columns with net boxes ----------
+.grid.three:has(> .result) {
+  gap: 5px;
+}
+
+.result {
+  border-radius: 11px;
+}
+
+.result h2 {
+  font-size: 25px;
+}
+
+.result .amount {
+  margin: 6px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f2f3f5;
+  font-weight: 700;
+  font-size: 35px;
+  color: #111;
+}
+
+.result.selected .amount {
+  background: linear-gradient(110deg, #edf2eb, #e9f0eb);
+  color: #245325;
+}
+
+.positive {
+  color: var(--positive);
+  font-weight: 700;
+}
+
+.actions .primary,
+.actions .outline {
+  min-height: 53px;
+  font-size: 19px;
+}
+
+.calculation-grid aside .amount {
+  font-weight: 700;
+  color: #111;
+}
+
+// ---------- Representative: queue (right) and detail (left) ----------
+.representative-grid {
+  grid-template-columns: minmax(0, 1064fr) minmax(320px, 476fr);
+  gap: 12px;
+}
+
+.request {
+  border: 1px solid #e3e5eb;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+.request:hover {
+  background: #fcf7f1;
+}
+
+.request.selected {
+  background: #fcf2e7;
+}
+
+.request small {
+  inline-size: fit-content;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #fcebd4;
+  color: #995e26;
+}
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .representative-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace {
+    display: block;
+  }
+
+  .workspace > .progress {
+    margin-bottom: 12px;
+  }
+
+  .container {
+    margin: 10px;
+  }
+}

@@ -101,6 +101,12 @@ class ConversationState(TypedDict, total=False):
     """Saved facts (`FieldPath` values) the advisor asked the employee to confirm."""
     occupation_candidates: list[OccupationCandidateRef]
     """Official occupations shown for an ambiguous description, awaiting a choice."""
+    representative_help_shown: bool
+    """The last reply explained what the representative can help with (prevents a repeat)."""
+    disclaimer_shown: bool
+    """The full estimate disclaimer was shown once; later results show a short reminder."""
+    option_labels: dict[str, str]
+    """Labels of options the employee named that were resolved from the catalogue."""
 
 
 @dataclass
@@ -117,6 +123,8 @@ class ComposeRequest:
     values: dict[str, str] = field(default_factory=dict)
     descriptions: dict[str, str] = field(default_factory=dict)
     fallback: str | None = None
+    recent: list[dict[str, str]] = field(default_factory=list)
+    """Recent conversation for general answers, with digits masked (never salary values)."""
 
 
 @dataclass
@@ -138,6 +146,8 @@ class TurnRuntime:
     """Stop acting on this turn (an error or clarification has already been replied)."""
     replies: list[Reply] = field(default_factory=list)
     compose: ComposeRequest | None = None
+    labels: dict[str, str] = field(default_factory=dict)
+    """Display labels of options resolved from the catalogue in this turn."""
     stager: ResponseStager | None = None
     """Durable staging under the input claim (None: in-memory runs and unit tests)."""
     staged: list[StagedMessage] = field(default_factory=list)

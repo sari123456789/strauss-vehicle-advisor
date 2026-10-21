@@ -38,9 +38,11 @@ PROPULSION_LABELS = {
 }
 
 DISCLAIMER = (
-    "החישוב הוא הערכה לפי המידע שמסרת והכללים שבמערכת (טבלאות שכר 2025 ושווי שימוש 2026), "
-    "ואינו תלוש שכר."
+    "חשוב לדעת: זו הערכה לפי הפרטים שלך והכללים שבמערכת (טבלאות שכר 2025 ושווי שימוש 2026), "
+    "ולא תלוש שכר."
 )
+SHORT_DISCLAIMER = "(הערכה בלבד, לא תלוש שכר)"
+"""After the first result in a conversation, only this short reminder is repeated."""
 
 
 def field_label(path: str) -> str:
@@ -59,36 +61,36 @@ def shekels(amount: MoneyAmount, *, signed: bool = False) -> str:
 def ask_for_fields(fields: Iterable[str]) -> str:
     labels = [field_label(f) for f in fields]
     if len(labels) == 1:
-        return f"כדי להמשיך, חסר לי {labels[0]}. מה הערך?"
-    return f"כדי להמשיך, חסרים לי {labels[0]} ו{labels[1]}. אפשר לכתוב את שניהם יחד."
+        return f"כדי להמשיך חסר לי רק עוד פרט אחד: {labels[0]}. מה הוא?"
+    return f"כדי להמשיך חסרים לי עוד שני פרטים: {labels[0]} ו{labels[1]}. אפשר לכתוב את שניהם יחד."
 
 
 def unknown_field_guidance(fields: Iterable[str]) -> str:
     labels = ", ".join(field_label(f) for f in fields)
     return (
-        f"אין בעיה. את {labels} אפשר בדרך כלל למצוא בתלוש השכר או לברר מול מחלקת השכר. "
-        "בינתיים אוכל לעזור בדברים שלא תלויים בזה, למשל להציג את הרכבים שמתאימים לך."
+        f"אין בעיה. את {labels} אפשר בדרך כלל למצוא בתלוש השכר. "
+        "בינתיים אפשר להמשיך במה שלא תלוי בזה, למשל לראות אילו רכבים מגיעים לך."
     )
 
 
 _CLARIFICATIONS = {
     ClarificationCode.ACTUAL_OR_HYPOTHETICAL: (
-        "לגבי {label}: האם זה הנתון האמיתי שלך היום (ואעדכן אותו), או רק בדיקה של מה יקרה אם?"
+        "רק לוודא לגבי {label}: זה הנתון האמיתי שלך היום (ואעדכן אותו), או בדיקה של מה יקרה אם?"
     ),
     ClarificationCode.NET_NOT_GROSS: (
-        "ציינת סכום נטו, אבל החישוב מבוסס על {label} (ברוטו). מה הסכום הזה?"
+        "הסכום שציינת הוא נטו, אבל החישוב שלי יוצא מ{label} (ברוטו). מה הסכום בברוטו?"
     ),
     ClarificationCode.SALARY_COMPOSITION: (
-        "רק כדי לוודא: הסכום שציינת הוא שכר בסיס ברוטו, סך כל הברוטו (כולל עמלות ובונוסים), או נטו?"
+        "רק לוודא: הסכום הזה הוא שכר בסיס ברוטו, כל הברוטו (כולל עמלות ובונוסים), או נטו?"
     ),
     ClarificationCode.RATE_UNIT: "באיזה אחוז מדובר ב{label}? למשל 6%.",
-    ClarificationCode.INVALID_VALUE: "לא הצלחתי להבין את הערך של {label}. אפשר לכתוב אותו שוב?",
-    ClarificationCode.CONFLICTING_VALUES: "ציינת שני ערכים שונים ל{label}. מה הערך הנכון?",
+    ClarificationCode.INVALID_VALUE: "לא הצלחתי לקלוט את הערך של {label}. אפשר לכתוב אותו שוב?",
+    ClarificationCode.CONFLICTING_VALUES: "קיבלתי שני ערכים שונים ל{label}. איזה מהם נכון?",
     ClarificationCode.OCCUPATION_UNRESOLVED: (
-        "לא מצאתי עיסוק רשמי שמתאים לתיאור. אפשר לכתוב את שם התפקיד כפי שהוא מופיע בחברה?"
+        "לא מצאתי עיסוק רשמי שמתאים לתיאור. אפשר לכתוב את שם התפקיד כמו שהוא מופיע בחברה?"
     ),
     ClarificationCode.VEHICLE_UNRESOLVED: (
-        "לא הצלחתי לזהות את הרכב בוודאות. אפשר לציין דגם ושנת רישום מדויקים?"
+        "לא הצלחתי לזהות את הרכב בוודאות. אפשר לכתוב את הדגם ואת שנת הרישום?"
     ),
 }
 
@@ -103,7 +105,7 @@ def clarification_text(items: list[Clarification]) -> str:
 
 def vehicle_candidates_text(names: list[str]) -> str:
     numbered = "\n".join(f"{i}. {name}" for i, name in enumerate(names, start=1))
-    return f"מצאתי כמה רכבים מתאימים לתיאור. לאיזה מהם התכוונת?\n{numbered}"
+    return f"יש כמה רכבים שמתאימים לתיאור. לאיזה מהם התכוונת?\n{numbered}"
 
 
 def occupation_candidates_text(names: list[str]) -> str:
@@ -118,38 +120,38 @@ def labels_text(fields: Iterable[str]) -> str:
 
 def confirm_request_text(fields: list[str]) -> str:
     return (
-        "לפני שאציג הפרש לעומת היום, אפשר לאשר שהפרטים השמורים עדיין נכונים: "
-        f"{labels_text(fields)}? הם מופיעים בחלונית הצד. "
-        "אם משהו השתנה, אפשר פשוט לכתוב את הערך הנכון."
+        "לפני שאשווה למה שיש לך היום, רק לוודא שהפרטים האלה עדיין נכונים: "
+        f"{labels_text(fields)}. (הם מופיעים בחלונית הצד.) "
+        "אם משהו השתנה, פשוט לכתוב את הערך הנכון."
     )
 
 
 def confirmed_text(fields: list[str]) -> str:
-    return f"תודה, אישרתי ש{labels_text(fields)} עדיין נכונים."
+    return f"מעולה, רשמתי ש{labels_text(fields)} עדיין נכונים."
 
 
 def conflicts_text(fields: list[str]) -> str:
     if not fields:
-        return "שמתי לב לסתירה בין הפרטים שמסרת לנתונים במערכת. כדאי לבדוק אותם לפני חישוב."
-    return f"שמתי לב לסתירה לגבי {labels_text(fields)}. כדאי לבדוק את הפרט הזה לפני חישוב."
+        return "שמתי לב לסתירה בין הפרטים שמסרת לנתונים שבמערכת. כדאי לבדוק אותם לפני שנחשב."
+    return f"שמתי לב לסתירה לגבי {labels_text(fields)}. כדאי לבדוק את הפרט הזה לפני שנחשב."
 
 
 def still_missing_text(fields: list[str]) -> str:
-    return f"לתשומת לבך: לחישוב מלא עדיין חסר {labels_text(fields)}."
+    return f"שימו לב: כדי לחשב עד הסוף עדיין חסר {labels_text(fields)}."
 
 
 PROPULSION_DIFFERS = (
-    "סוג ההנעה שדיווחת לרכב הנוכחי שונה מהרשום בקטלוג, ולכן לא חישבתי את ההסדר הנוכחי. "
+    "סוג ההנעה שדיווחת לרכב הנוכחי שונה ממה שרשום בקטלוג, אז עוד לא חישבתי את המצב של היום. "
     "מה סוג ההנעה הנכון?"
 )
 OPTIONS_CHANGED = (
-    "הפרטים השתנו מאז שהצגתי את רשימת החלופות, ולכן ייתכן שהיא כבר לא מדויקת. "
-    'אפשר לבקש "אילו רכבים מתאימים לי?" כדי לראות רשימה מעודכנת.'
+    "הפרטים השתנו מאז שהצגתי את רשימת הרכבים, אז ייתכן שהיא כבר לא מדויקת. "
+    'אפשר לכתוב "אילו רכבים מתאימים לי?" ואציג רשימה מעודכנת.'
 )
 
 
 def eligibility_changed_text(labels: list[str]) -> str:
-    return f"הזכאות ל{', '.join(labels)} השתנתה מאז שהוצגה הרשימה."
+    return f"שימו לב: הזכאות ל{', '.join(labels)} השתנתה מאז שהצגתי את הרשימה."
 
 
 def option_label(item: OptionItem) -> str:
@@ -162,8 +164,11 @@ def option_label(item: OptionItem) -> str:
 def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: list[str]) -> str:
     eligible = [i for i in items if i.eligibility is EligibilityStatus.ELIGIBLE]
     if not eligible:
-        return "לפי המידע שמסרת לא מצאתי חלופות זמינות כרגע."
-    lines = ["אלה החלופות שמתאימות לך לפי המידע שמסרת והכללים במערכת:"]
+        return (
+            "לפי הפרטים שלך לא מצאתי כרגע רכבים זמינים. "
+            "אם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
+        )
+    lines = ["אלה הרכבים שמגיעים לך 👇"]
     for index, item in enumerate(eligible, start=1):
         details = []
         if item.propulsion:
@@ -175,60 +180,77 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
         suffix = f" ({', '.join(details)})" if details else ""
         lines.append(f"{index}. {option_label(item)}{suffix}")
     if not scope_complete or unchecked:
-        lines.append("לתשומת לבך: לא כל המסלולים נבדקו, כי חסר מידע לבדיקת חלק מהם.")
-    lines.append("אפשר לבקש לחשב את הנטו לחלופה אחת, לכמה או לכולן.")
+        lines.append("שימו לב: חלק מהמסלולים עוד לא נבדקו, כי חסר לי מידע עליהם.")
+    lines.append("על איזה מהם לחשב את הנטו? אפשר לבחור אחד, כמה, או את כולם.")
     return "\n".join(lines)
 
 
 _STATUS_TEXT = {
     ScenarioStatus.INELIGIBLE: "לא זמין לפי קבוצת הזכאות או הכללים",
-    ScenarioStatus.NEEDS_INFORMATION: "חסר מידע לחישוב",
+    ScenarioStatus.NEEDS_INFORMATION: "חסר עוד מידע כדי לחשב",
     ScenarioStatus.UNSUPPORTED: "לא נתמך בחישוב ההדגמה",
     ScenarioStatus.FAILED: "החישוב לא הושלם",
 }
 
 
-def comparison_text(result: ComparisonResult, labels: dict[str, str]) -> str:
+def comparison_text(
+    result: ComparisonResult, labels: dict[str, str], *, full_disclaimer: bool = True
+) -> str:
+    """Amounts from the Business result only. The full disclaimer is shown once per
+    conversation; later results repeat a short reminder."""
     lines = []
     if result.current is not None and result.current.net is not None:
-        lines.append(f"הנטו המשוער היום: {shekels(result.current.net)}")
+        lines.append(f"היום הנטו המשוער שלך הוא בערך {shekels(result.current.net)} בחודש.")
     elif result.current is not None:
-        lines.append("את הנטו הנוכחי לא ניתן היה לחשב, ולכן לא מוצג הפרש.")
+        lines.append("את הנטו של היום לא הצלחתי לחשב, אז אין כאן השוואה למצב הנוכחי.")
+    calculated = [
+        s
+        for s in result.alternatives
+        if s.status is ScenarioStatus.CALCULATED and s.net is not None
+    ]
+    single = len(result.alternatives) == 1 and len(calculated) == 1
     for scenario in result.alternatives:
         label = labels.get(scenario.option_key, scenario.option_key)
         if scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
-            line = f"• {label}: נטו משוער {shekels(scenario.net)}"
-            if scenario.delta is not None:
-                line += f" (הפרש {shekels(scenario.delta, signed=True)} לעומת היום)"
-            lines.append(line)
+            delta = (
+                f" ({shekels(scenario.delta, signed=True)} לעומת היום)"
+                if scenario.delta is not None
+                else ""
+            )
+            if single:
+                lines.append(
+                    f"עם {label} הנטו המשוער שלך יוצא בערך {shekels(scenario.net)} בחודש{delta}."
+                )
+            else:
+                lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}{delta}")
         else:
             lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
     if result.kind.value == "hypothetical":
-        lines.append('זו בדיקת "מה אם" בלבד; הפרטים השמורים שלך לא השתנו.')
-    lines.append(DISCLAIMER)
+        lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
+    lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
     return "\n".join(lines)
 
 
 def pending_text(labels: list[str]) -> str:
     joined = ", ".join(labels)
     return (
-        f"עבור {joined} חסר פרט שאפשר לקבל רק מנציג התחבורה. פנינו לנציג; "
-        "בינתיים אפשר להמשיך לשאול על כל דבר אחר, ואעדכן כשתגיע תשובה."
+        f"בשביל {joined} חסר פרט שרק נציג התחבורה יכול לתת, אז פניתי אליו. "
+        "בינתיים אפשר להמשיך בכל דבר אחר, ואעדכן כאן כשתגיע תשובה."
     )
 
 
 def representative_created_text(label: str) -> str:
-    return f"שלחתי שאלה לנציג התחבורה לגבי {label}. השיחה ממשיכה כרגיל, ואעדכן כאן כשתתקבל תשובה."
+    return f"שלחתי לנציג התחבורה שאלה לגבי {label}. אפשר להמשיך כרגיל, ואעדכן כאן כשתגיע תשובה."
 
 
 def representative_answer_text(label: str) -> str:
-    return f"התקבלה תשובה מנציג התחבורה לגבי {label}."
+    return f"הגיעה תשובה מנציג התחבורה לגבי {label} 🎉"
 
 
 def representative_undetermined_text(label: str) -> str:
     return (
-        f"נציג התחבורה לא יכול היה לקבוע את המידע לגבי {label}, ולכן לא ניתן לחשב את החלופה הזו. "
-        "שאר הבדיקות ממשיכות כרגיל."
+        f"נציג התחבורה לא יכול היה לקבוע את המידע לגבי {label}, אז את החלופה הזו לא אוכל לחשב. "
+        "כל השאר ממשיך כרגיל."
     )
 
 
@@ -237,53 +259,58 @@ def updated_text(fields: list[str], *, hypothetical: bool, stale_runs: bool) -> 
     if hypothetical:
         text = f'רשמתי לבדיקת "מה אם": {labels}. הפרטים השמורים שלך לא השתנו.'
     else:
-        text = f"עדכנתי את {labels}."
+        text = f"עדכנתי את {labels} 👍"
     if stale_runs:
-        text += " חישובים קודמים מבוססים על הנתונים הקודמים ואינם מעודכנים עוד."
+        text += " חישובים קודמים מבוססים על הנתונים הקודמים, אז הם כבר לא מעודכנים."
     return text
 
 
-def history_text(result: ComparisonResult, labels: dict[str, str], *, stale: bool) -> str:
-    header = "זו ההשוואה הקודמת כפי שנשמרה"
+def history_text(
+    result: ComparisonResult, labels: dict[str, str], *, stale: bool, full_disclaimer: bool = True
+) -> str:
+    header = "זה החישוב הקודם, כמו שנשמר"
     if stale:
-        header += " (היא מבוססת על נתונים שהשתנו מאז, ולכן אינה עדכנית)"
-    return f"{header}:\n{comparison_text(result, labels)}"
+        header += " (הנתונים השתנו מאז, אז הוא כבר אינו עדכני)"
+    body = comparison_text(result, labels, full_disclaimer=full_disclaimer)
+    return f"{header}:\n{body}"
 
 
-NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. אפשר לבקש לחשב נטו לחלופה מסוימת."
-NOTHING_TO_CONFIRM = "אין כרגע פרטים שממתינים לאישור. במה אפשר לעזור?"
-CANCELLED = "בסדר, הפסקתי את הבדיקה. אפשר להתחיל בדיקה חדשה בכל רגע."
-UNCLEAR = 'ייתכן שלא הבנתי נכון. אפשר לנסח שוב, למשל: "אילו רכבים מתאימים לי?"'
+NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. רוצה שנחשב נטו לרכב מסוים?"
+NOTHING_TO_CONFIRM = "אין כרגע פרטים שמחכים לאישור. במה אפשר לעזור?"
+CANCELLED = "בסדר גמור, עצרתי. אפשר להתחיל משהו חדש מתי שרוצים."
+UNCLEAR = 'ייתכן שלא הבנתי נכון. אפשר לנסח אחרת? למשל: "אילו רכבים מתאימים לי?"'
 HELP = (
-    "בשיחה הזו אפשר לראות אילו רכבים מתאימים לקבוצת הזכאות שלך, לחשב נטו משוער לחלופות, "
-    "ולהשוות אותן להסדר הנוכחי. במה נתחיל?"
+    "היי! 👋 אני כאן כדי לעזור לבחור רכב חברה ולראות כמה יישאר לך נטו. "
+    "רוצה שנתחיל מהרכבים שמגיעים לך?"
 )
 GENERAL_FALLBACK = (
-    "זו שאלה טובה. כרגע אין באפשרותי לנסח הסבר מפורט; אפשר לברר מול מחלקת השכר, "
-    "או להמשיך בבדיקת החלופות."
+    "על זה קשה לי לענות כרגע. אבל אפשר להמשיך לבדוק רכבים, "
+    'למשל: "אילו רכבים מתאימים לי?" או "כמה נטו עם ATTO 3?"'
 )
-ASK_WHICH_VEHICLE = "לאיזו חלופה התכוונת? אפשר לציין את שמה או את מספרה ברשימה."
-BUDGET_EXCEEDED = "הבקשה מורכבת מדי לטיפול בבת אחת. אפשר לפצל אותה לשאלות קטנות יותר?"
-LLM_RATE_LIMITED = "יש עומס זמני על המערכת. אפשר לנסות שוב בעוד רגע."
+ASK_WHICH_VEHICLE = "לאיזה רכב התכוונת? אפשר לכתוב את השם או את המספר שלו ברשימה."
+BUDGET_EXCEEDED = "זה קצת הרבה בבת אחת 🙂 אפשר לפצל לשאלות קטנות יותר?"
+LLM_RATE_LIMITED = "יש עכשיו עומס קטן. אפשר לנסות שוב בעוד רגע?"
 LLM_QUOTA_EXHAUSTED = (
-    "העוזר החכם אינו זמין כרגע. אפשר להמשיך במסכי הקטלוג וההשוואות, או לנסות מאוחר יותר."
+    "העוזר החכם לא זמין כרגע. בינתיים אפשר להמשיך במסכי הקטלוג וההשוואות, או לחזור מאוחר יותר."
 )
-LLM_UNAVAILABLE = "יש תקלה זמנית בהבנת ההודעה. אפשר לנסות שוב?"
+LLM_UNAVAILABLE = "משהו השתבש אצלי בהבנת ההודעה. אפשר לנסות שוב?"
 SAME_AS_BEFORE_IGNORED = "התשובה הזו כבר טופלה."
 
 _ERRORS = {
-    ErrorCode.NOT_FOUND: "לא מצאתי את המידע המבוקש.",
-    ErrorCode.VERSION_CONFLICT: "הנתונים עודכנו בינתיים. טענתי אותם מחדש; אפשר לאשר שוב את השינוי?",
+    ErrorCode.NOT_FOUND: "לא מצאתי את המידע הזה.",
+    ErrorCode.VERSION_CONFLICT: (
+        "הנתונים עודכנו בינתיים, אז טענתי אותם מחדש. אפשר לאשר שוב את השינוי?"
+    ),
     ErrorCode.OPERATION_PAYLOAD_MISMATCH: "הבקשה התנגשה בבקשה קודמת. אפשר לנסות שוב?",
-    ErrorCode.INVALID_STATE_TRANSITION: "לא ניתן לבצע את הפעולה בשלב הזה של השיחה.",
-    ErrorCode.INVALID_BUSINESS_INPUT: "אחד הערכים אינו תקין. אפשר לבדוק אותו ולכתוב שוב?",
-    ErrorCode.INPUT_OUT_OF_SUPPORTED_RANGE: "אחד הערכים מחוץ לטווח שהמערכת תומכת בו.",
-    ErrorCode.GROSS_UP_NOT_CONVERGED: "לא ניתן היה להשלים את חישוב החזר החשמל לרכב הזה.",
+    ErrorCode.INVALID_STATE_TRANSITION: "את זה אי אפשר לעשות בשלב הזה של השיחה.",
+    ErrorCode.INVALID_BUSINESS_INPUT: "אחד הערכים לא נראה תקין. אפשר לבדוק ולכתוב אותו שוב?",
+    ErrorCode.INPUT_OUT_OF_SUPPORTED_RANGE: "אחד הערכים מחוץ לטווח שהמערכת יודעת לחשב.",
+    ErrorCode.GROSS_UP_NOT_CONVERGED: "לא הצלחתי להשלים את חישוב החזר החשמל לרכב הזה.",
     ErrorCode.RATE_LIMITED: LLM_RATE_LIMITED,
     ErrorCode.UNAUTHENTICATED: "צריך להתחבר מחדש כדי להמשיך.",
-    ErrorCode.FORBIDDEN: "אין הרשאה לבצע את הפעולה הזו.",
+    ErrorCode.FORBIDDEN: "אין הרשאה לפעולה הזו.",
 }
-GENERIC_ERROR = "יש תקלה זמנית, אפשר לנסות שוב."
+GENERIC_ERROR = "משהו השתבש לרגע. אפשר לנסות שוב?"
 
 
 def error_text(code: ErrorCode | None) -> str:
@@ -296,3 +323,83 @@ def issue_blocks_text(code: IssueCode) -> str:
         IssueCode.INELIGIBLE: "לא זמין לפי הכללים",
         IssueCode.MISSING_INPUT: "חסר מידע",
     }.get(code, "לא חושב")
+
+
+# --- Vehicles named by the employee (resolved against the catalogue) ---------------------------
+
+
+def vehicle_choices_text(name: str, labels: list[str]) -> str:
+    lines = "\n".join(f"{index}. {label}" for index, label in enumerate(labels, start=1))
+    return f'יש כמה רכבים שמתאימים ל"{name}":\n{lines}\nלאיזה מהם התכוונת?'
+
+
+def vehicle_not_in_catalogue_text(name: str) -> str:
+    return (
+        f'לא מצאתי רכב בשם "{name}" בקטלוג של החברה, סליחה. '
+        'אולי בכתיב אחר? אפשר גם לכתוב "אילו רכבים מתאימים לי?" ואציג את כל הרשימה.'
+    )
+
+
+def vehicle_not_eligible_text(labels: list[str]) -> str:
+    names = ", ".join(labels)
+    return (
+        f"{names} נמצא בקטלוג, אבל לפי הפרטים בפרופיל שלך הוא אינו בין החלופות שמגיעות לך. "
+        'רוצה לראות מה כן מגיע לך? אפשר לכתוב "אילו רכבים מתאימים לי?". '
+        "ואם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
+    )
+
+
+def vehicle_eligibility_unknown_text(labels: list[str]) -> str:
+    names = ", ".join(labels)
+    return f"{names} נמצא בקטלוג, אבל כדי לדעת אם הוא מגיע לך חסר לי עוד מידע."
+
+
+# --- Where the information comes from ----------------------------------------------------------
+
+SOURCE_LABELS = {
+    "employee": "דיווח העובד",
+    "representative": "נציג התחבורה",
+    "catalogue": "קטלוג הרכבים של החברה",
+    "rules": "כללי החברה",
+    "tax_dataset": "נתוני רשות המסים",
+}
+"""Labels for `SourceType` values."""
+
+
+def data_sources_text(fields: list[tuple[str, str, str | None]]) -> str:
+    """`fields`: (field path, status, source) of the saved profile; never values."""
+    by_source: dict[str, list[str]] = {}
+    missing: list[str] = []
+    for path, status, source in fields:
+        if status == "missing":
+            missing.append(field_label(path))
+            continue
+        label = SOURCE_LABELS.get(source or "", "נשמר בפרופיל מראש")
+        by_source.setdefault(label, []).append(field_label(path))
+    lines = ["שאלה טובה! ככה נאסף המידע שעליו מבוססות התשובות שלי:"]
+    for label, names in by_source.items():
+        lines.append(f"• {', '.join(names)}: מהפרופיל השמור שלך. מקור: {label}.")
+    if missing:
+        lines.append(f"• עדיין חסרים בפרופיל: {', '.join(missing)}.")
+    lines.append(
+        "• רשימת הרכבים והזכאות: קטלוג הרכבים וכללי הזכאות של החברה במערכת. "
+        "שווי השימוש: נתוני רשות המסים."
+    )
+    lines.append(
+        "הפרטים האישיים הם כפי שדווחו, וייתכן שחלקם כבר לא מעודכנים. אפשר לראות אותם במסך "
+        '"הנתונים שלי", ולתקן כל פרט כאן בשיחה.'
+    )
+    return "\n".join(lines)
+
+
+# --- The transportation representative ---------------------------------------------------------
+
+REPRESENTATIVE_HELP = (
+    "בשמחה. נציג התחבורה עוזר כשחסר פרט שאי אפשר לדעת מהפרופיל: קבוצת הזכאות שלך, הרכב שיש "
+    "לך היום או סוג ההנעה שלו. שאלה על דמי ההשתתפות של רכב מסוים אפשר לשלוח מהכפתור "
+    '"שאלה לנציג" במסך ההשוואה. איזה פרט לברר מול הנציג?'
+)
+REPRESENTATIVE_HELP_AGAIN = (
+    "כדי לשלוח שאלה לנציג צריך לדעת איזה פרט חסר, למשל: "
+    '"לא ידועה לי קבוצת הזכאות שלי". אפשר גם להמשיך בינתיים, למשל: "אילו רכבים מתאימים לי?"'
+)
