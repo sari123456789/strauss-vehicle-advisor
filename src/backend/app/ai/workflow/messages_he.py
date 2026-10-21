@@ -185,7 +185,7 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
 _STATUS_TEXT = {
     ScenarioStatus.INELIGIBLE: "לא זמין לפי קבוצת הזכאות או הכללים",
     ScenarioStatus.NEEDS_INFORMATION: "חסר עוד מידע כדי לחשב",
-    ScenarioStatus.UNSUPPORTED: "לא נתמך בחישוב ההדגמה",
+    ScenarioStatus.UNSUPPORTED: "עוד לא נתמך בחישוב",
     ScenarioStatus.FAILED: "החישוב לא הושלם",
 }
 
