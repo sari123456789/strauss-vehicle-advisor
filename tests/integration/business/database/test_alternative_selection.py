@@ -66,9 +66,11 @@ def test_deactivation_cancels_dependent_open_requests(business_db: str) -> None:
                 await uow.commit()
             async with s.p.uow() as uow:
                 _, case = await AuthorizationPolicy().tool_case(uow, ctx)
-                stored = await deactivate_alternative(uow, case, alt.alternative_id, now=NOW)
+                stored = await deactivate_alternative(
+                    uow, case, alt.alternative_id, now=NOW, actor=who
+                )
                 with pytest.raises(NotFoundError):
-                    await deactivate_alternative(uow, case, uuid4(), now=NOW)
+                    await deactivate_alternative(uow, case, uuid4(), now=NOW, actor=who)
                 await uow.commit()
             assert not stored.active and stored.version == alt.version + 1
             async with s.p.uow() as uow:

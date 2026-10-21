@@ -9,11 +9,13 @@ Optimistic concurrency: `update(entity)` writes only if the stored version still
 `entity.version` (the version that was read) and returns the entity with version + 1;
 otherwise it raises `VersionConflictError`. There is never a last-write-wins update.
 
-Global row-lock order (B3a), for every operation that holds more than one lock:
-operation claim -> employee profile -> case -> representative requests -> alternatives.
-No operation takes an earlier lock after a later one. A path that starts from a request ID
-reads the request without a lock to find its case, locks the case, and only then locks and
-re-validates the request.
+Global row-lock order (B3a, extended for assignments), one order for every operation:
+  operation claim -> case FOR UPDATE -> request FOR UPDATE -> assignment -> alternatives.
+  Claim:   operation claim -> request FOR UPDATE -> assignment INSERT.
+  Release: operation claim -> request FOR UPDATE -> assignment FOR UPDATE.
+  Answer:  operation claim -> case FOR UPDATE -> request FOR UPDATE -> assignment FOR UPDATE.
+  Cancel:  case FOR UPDATE -> request FOR UPDATE -> assignment FOR UPDATE.
+No operation takes an earlier lock after a later one.
 """
 
 import re
@@ -33,9 +35,11 @@ from app.business.domain.cases import (
 from app.business.domain.employee_profiles import EmployeeProfile
 from app.business.domain.json_values import JsonObject
 from app.business.domain.representatives import (
+    AssignmentStatus,
     RepresentativeAnswer,
     RepresentativeFact,
     RepresentativeRequest,
+    RequestAssignment,
     RequestStatus,
 )
 
@@ -54,6 +58,12 @@ class VersionConflictError(Exception):
             resource_id,
             expected_version,
         )
+
+
+class AssignmentConflictError(Exception):
+    """Another active assignment already exists for the request (partial unique index)."""
+
+    code = "ASSIGNMENT_CONFLICT"
 
 
 class OperationPayloadMismatchError(Exception):
@@ -202,6 +212,49 @@ class ComparisonRunRepository(Protocol):
     async def list_recent(self, case_id: UUID, limit: int) -> tuple[ComparisonRunRecord, ...]: ...
 
 
+class QueueScope(StrEnum):
+    """Which handling state a queue listing returns, relative to the viewing representative."""
+
+    ALL = "all"
+    UNCLAIMED = "unclaimed"
+    MINE = "mine"
+    OTHERS = "others"
+
+
+@dataclass(frozen=True, slots=True)
+class QueueQuery:
+    """Filters for `list_queue`. `after_created_at`/`after_id` is an exclusive keyset cursor."""
+
+    viewer_id: UUID
+    limit: int
+    statuses: frozenset[RequestStatus] | None = None
+    scope: QueueScope = QueueScope.ALL
+    field_code: str | None = None
+    search: str | None = None
+    after_created_at: datetime | None = None
+    after_id: UUID | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class QueueEntry:
+    request: RepresentativeRequest
+    assignment: RequestAssignment | None
+    """The single ACTIVE assignment of the request, if any."""
+
+
+@dataclass(frozen=True, slots=True)
+class QueueCounts:
+    """Queue totals for one viewing representative, over the whole queue (not one page)."""
+
+    total: int
+    unclaimed: int
+    assigned_to_me: int
+    assigned_to_others: int
+    answered: int
+    cannot_determine: int
+    cancelled: int
+
+
 @runtime_checkable
 class RepresentativeRequestRepository(Protocol):
     async def add_or_get_open(
@@ -230,11 +283,53 @@ class RepresentativeRequestRepository(Protocol):
         """Read `FOR UPDATE`; only while the request's case is already locked."""
         ...
 
-    async def list_all(
-        self, statuses: Collection[RequestStatus] | None = None, *, limit: int
-    ) -> tuple[RepresentativeRequest, ...]:
-        """Representative queue (demo policy: every representative sees every request),
-        oldest first."""
+    async def list_queue(self, query: QueueQuery) -> tuple[QueueEntry, ...]:
+        """Representative queue (demo policy: every representative sees every request) with the
+        active assignment of each request, ordered by (created_at, request_id). Filtering and
+        the keyset cursor run in the database, before the limit."""
+        ...
+
+
+@runtime_checkable
+class RequestAssignmentRepository(Protocol):
+    """Manages claim/release/complete/cancel lifecycle for representative request assignments.
+
+    Lock order: the caller must hold a FOR UPDATE lock on the representative_request row
+    before calling any mutating method (claim, release, complete, cancel). Read-only methods
+    (get_active, list_for_request) may be called without prior locks.
+    """
+
+    async def get_active(self, request_id: UUID) -> RequestAssignment | None:
+        """Return the currently active assignment for this request, or None (unlocked read)."""
+        ...
+
+    async def lock_active(self, request_id: UUID) -> RequestAssignment | None:
+        """SELECT FOR UPDATE on the active assignment row (must already hold request lock)."""
+        ...
+
+    async def add(self, assignment: RequestAssignment) -> None:
+        """Insert a new assignment. Raises `AssignmentConflictError` if another active
+        assignment already exists for the request."""
+        ...
+
+    async def counts(self, viewer_id: UUID) -> QueueCounts:
+        """Whole-queue totals as seen by `viewer_id` (unlocked aggregate read)."""
+        ...
+
+    async def update_status(
+        self,
+        assignment: RequestAssignment,
+        *,
+        new_status: AssignmentStatus,
+        released_at: datetime | None = None,
+        completed_at: datetime | None = None,
+        cancelled_at: datetime | None = None,
+    ) -> RequestAssignment:
+        """Optimistic update on assignment_version; returns updated assignment."""
+        ...
+
+    async def list_for_request(self, request_id: UUID) -> tuple[RequestAssignment, ...]:
+        """All assignments for a request, oldest first (history)."""
         ...
 
 

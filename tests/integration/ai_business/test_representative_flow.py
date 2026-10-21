@@ -57,6 +57,12 @@ async def _ask(client: httpx.AsyncClient, headers: dict[str, str], case_id: str)
 async def _answer(client: httpx.AsyncClient, request_id: str, value: str = "350") -> None:
     rep = await login(client, "rep01")
     view = (await client.get(f"{REQUESTS}/{request_id}", headers=rep)).json()["data"]
+    claimed = await client.post(
+        f"{REQUESTS}/{request_id}/claim",
+        json={"operationId": str(uuid4()), "expectedRequestVersion": view["requestVersion"]},
+        headers=rep,
+    )
+    assert claimed.status_code == 200, claimed.text  # answering requires the claim
     body = {
         "operationId": str(uuid4()),
         "expectedRequestVersion": view["requestVersion"],

@@ -87,6 +87,19 @@ async def test_representative_lists_reads_and_answers(app_db: str) -> None:
 
         one = await client.get(f"{BASE}/{request_id}", headers=rep)
         assert one.status_code == 200 and one.json()["data"]["requestId"] == request_id
+        assert one.json()["data"]["handlingStatus"] == "unclaimed"
+
+        # Answering is refused until the representative claims the request.
+        unclaimed = await client.post(
+            f"{BASE}/{request_id}/answers", json=_answer(mine["requestVersion"]), headers=rep
+        )
+        problem(unclaimed, 409, "INVALID_STATE_TRANSITION")
+        claimed = await client.post(
+            f"{BASE}/{request_id}/claim",
+            json={"operationId": str(uuid4()), "expectedRequestVersion": mine["requestVersion"]},
+            headers=rep,
+        )
+        assert claimed.status_code == 200, claimed.text
 
         body = _answer(mine["requestVersion"])
         answered = await client.post(f"{BASE}/{request_id}/answers", json=body, headers=rep)
@@ -118,6 +131,12 @@ async def test_stale_request_version_is_a_conflict(app_db: str) -> None:
     async with running(application(app_db)) as client:
         _, request_id = await _ask(client, await login(client, "e002"))
         rep = await login(client, "rep01")
+        claimed = await client.post(
+            f"{BASE}/{request_id}/claim",
+            json={"operationId": str(uuid4()), "expectedRequestVersion": 0},
+            headers=rep,
+        )
+        assert claimed.status_code == 200, claimed.text
         stale = await client.post(f"{BASE}/{request_id}/answers", json=_answer(99), headers=rep)
         problem(stale, 409, "VERSION_CONFLICT")
 

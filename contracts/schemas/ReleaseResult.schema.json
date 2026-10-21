@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assignmentId": {
+      "format": "uuid",
+      "title": "Assignmentid",
+      "type": "string"
+    },
+    "releasedAt": {
+      "format": "date-time",
+      "title": "Releasedat",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assignmentId",
+    "releasedAt"
+  ],
+  "title": "ReleaseResult",
+  "type": "object"
+}

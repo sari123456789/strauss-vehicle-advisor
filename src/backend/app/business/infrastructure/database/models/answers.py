@@ -127,6 +127,42 @@ class IntegrationOutboxRow(Base):
     created_at: Mapped[datetime] = _time(server_default=True)
 
 
+class RequestAssignmentRow(Base):
+    """One claim record per representative per request (claim/release/complete/cancel history).
+
+    At most one row may have status='active' for a given request_id (partial unique index
+    `uq_request_assignments_one_active`). Insert-only for create; UPDATE only for status
+    transitions — enforced by application logic, not a DB trigger.
+    """
+
+    __tablename__ = "request_assignments"
+    __table_args__ = (
+        Index(
+            "uq_request_assignments_one_active",
+            "request_id",
+            unique=True,
+            postgresql_where=text("status = 'active'"),
+        ),
+        Index("ix_request_assignments_claimed_by_status", "claimed_by", "status"),
+        Index("ix_request_assignments_request_id_status", "request_id", "status"),
+    )
+
+    id: Mapped[UUID] = _uuid(primary_key=True)
+    request_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("business.representative_requests.id", ondelete=RESTRICT),
+        nullable=False,
+    )
+    claimed_by: Mapped[UUID] = _fk_uuid(USERS_ID)
+    claimed_at: Mapped[datetime] = _time()
+    assignment_version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = _time(server_default=True)
+
+
 class AuditEntryRow(Base):
     __tablename__ = "audit_entries"
     __table_args__ = (Index("ix_audit_entries_case_id_occurred_at", "case_id", "occurred_at"),)

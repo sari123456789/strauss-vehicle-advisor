@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "assignmentId": {
+      "format": "uuid",
+      "title": "Assignmentid",
+      "type": "string"
+    },
+    "assignmentVersion": {
+      "minimum": 0,
+      "title": "Assignmentversion",
+      "type": "integer"
+    },
+    "claimedAt": {
+      "format": "date-time",
+      "title": "Claimedat",
+      "type": "string"
+    }
+  },
+  "required": [
+    "assignmentId",
+    "assignmentVersion",
+    "claimedAt"
+  ],
+  "title": "ClaimResult",
+  "type": "object"
+}

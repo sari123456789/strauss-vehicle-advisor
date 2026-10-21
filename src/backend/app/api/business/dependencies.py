@@ -21,6 +21,7 @@ from app.business.application.errors import BusinessError
 from app.business.application.identity.auth_service import AuthService
 from app.business.application.profiles.profile_service import EmployeeProfileService
 from app.business.application.representatives.answer_service import RepresentativeAnswerService
+from app.business.application.representatives.assignment_service import AssignmentService
 from app.contracts.business_port import BusinessToolsPort
 from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode
 from app.contracts.tool_context import ActorRef, ToolContext
@@ -49,6 +50,8 @@ class BusinessApi:
     http: HttpConfig = field(default_factory=HttpConfig)
     representatives: RepresentativeAnswerService | None = None
     """Representative inbox and answers (B3b); the routes answer 503 when it is not wired."""
+    assignments: AssignmentService | None = None
+    """Representative claim/release/summary; the routes answer 503 when it is not wired."""
 
 
 def business_api(request: Request) -> BusinessApi:

@@ -22,6 +22,17 @@
       "title": "ExpectedValueType",
       "type": "string"
     },
+    "HandlingStatus": {
+      "description": "Assignment ownership as seen by the current representative — derived, not stored.",
+      "enum": [
+        "unclaimed",
+        "assigned_to_me",
+        "assigned_to_other",
+        "completed"
+      ],
+      "title": "HandlingStatus",
+      "type": "string"
+    },
     "RepresentativeFieldCode": {
       "description": "Server-recognized facts a representative may supply (provisional allowlist).",
       "enum": [
@@ -90,8 +101,48 @@
     }
   },
   "additionalProperties": false,
-  "description": "Representative-visible, minimal context only (no employee profile or salary).",
+  "description": "Representative-visible, minimal context only (no employee profile or salary).\n\nBackward-compatible: all new fields are Optional with safe defaults so existing\nAngular consumers continue to work without changes.",
   "properties": {
+    "assignmentVersion": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assignmentversion"
+    },
+    "canAnswer": {
+      "default": false,
+      "title": "Cananswer",
+      "type": "boolean"
+    },
+    "canClaim": {
+      "default": false,
+      "title": "Canclaim",
+      "type": "boolean"
+    },
+    "canRelease": {
+      "default": false,
+      "title": "Canrelease",
+      "type": "boolean"
+    },
+    "claimedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Claimedat"
+    },
     "createdAt": {
       "format": "date-time",
       "title": "Createdat",
@@ -114,6 +165,29 @@
     "fieldCode": {
       "$ref": "#/$defs/RepresentativeFieldCode"
     },
+    "handlerDisplayName": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Handlerdisplayname"
+    },
+    "handlingStatus": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HandlingStatus"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "questionText": {
       "maxLength": 1000,
       "minLength": 1,
@@ -132,6 +206,19 @@
     },
     "status": {
       "$ref": "#/$defs/RequestStatus"
+    },
+    "updatedAt": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updatedat"
     },
     "vehicle": {
       "anyOf": [

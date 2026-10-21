@@ -187,23 +187,42 @@ fixtures are validated against the same Pydantic models at construction and by `
 ## 9. Representative HTTP routes (B3b, full-system integration)
 
 Implemented in `app/api/business/routers/representatives.py` and exported to
-`contracts/openapi/business-api.json`. Paths follow architecture §9. The bodies and views are the
-existing shared contract models; there are no new DTOs. Every route needs a bearer token of an
-active `representative`. Other roles get `403 FORBIDDEN` and anonymous callers get
+`contracts/openapi/business-api.json`. Paths follow architecture §9. Every route needs a bearer
+token of an active `representative`. Other roles get `403 FORBIDDEN` and anonymous callers get
 `401 UNAUTHENTICATED`, both as Problem Details.
 
 | Method and path | Body / query | Response |
 |---|---|---|
-| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first |
+| `GET /api/v1/representative-requests` | `status` (repeatable, default `open`), `assignment` (`all` default, `unclaimed`, `mine`, `others`), `fieldCode`, `search` (max 100), `after` (exclusive cursor: the request ID that ends the previous page; unknown ID → `422 INVALID_BUSINESS_INPUT`), `limit` 1–200 | `Envelope[list[RepresentativeRequestView]]`, oldest first, stable by (createdAt, requestId) |
+| `GET /api/v1/representative-requests/summary` | — | `Envelope[RepresentativeSummary]` (whole queue, not one page) |
 | `GET /api/v1/representative-requests/{requestId}` | — | `Envelope[RepresentativeRequestView]` |
+| `POST /api/v1/representative-requests/{requestId}/claim` | `ClaimRequest` | `Envelope[ClaimResult]` |
+| `POST /api/v1/representative-requests/{requestId}/release` | `ReleaseRequest` | `Envelope[ReleaseResult]` |
 | `POST /api/v1/representative-requests/{requestId}/answers` | `AnswerSubmit` | `Envelope[AnswerView]` |
+
+**Claiming (requested for the demo; not yet reviewed in `business-decisions.md`):**
+- An open, unclaimed request can be claimed by one representative. The claimant is its handler until
+  the handler answers it or releases it. Logout and browser closure do not release it. There is no
+  lease and no automatic expiry.
+- Other representatives see the handler's display name (`handlerDisplayName`, never a login or
+  subject ID) with `handlingStatus = assigned_to_other`, but cannot answer or release it.
+- Claim, release and answer carry `operationId`, so a retry replays the stored result. A claim
+  of an already claimed request is `409 INVALID_STATE_TRANSITION`. A cancelled request cannot be claimed.
+- Release is handler-only (`403 FORBIDDEN` otherwise), checked on `expectedAssignmentVersion`.
+  A stale version is `409 VERSION_CONFLICT`. Releasing an unclaimed request is `409`.
+- Cancelling a request (an alternative change) cancels its active assignment in the same transaction.
+  No production use case deactivates an alternative yet, so this path is covered by tests only.
+- Each claim, release and cancel writes an audit entry (`representative_assignment.*`).
 
 **Answer behavior:**
 - Every response is `200`. A replay with the same `operationId` and payload returns the stored answer.
 - A different payload under the same `operationId` is `409 OPERATION_PAYLOAD_MISMATCH`.
+- An answer to an unclaimed request is `409 INVALID_STATE_TRANSITION` (`reason: must_claim_before_answering`).
+- An answer by a representative other than the handler is `403 FORBIDDEN`.
 - A second answer to an already answered request is `409 INVALID_STATE_TRANSITION`.
 - A stale `expectedRequestVersion` is `409 VERSION_CONFLICT`.
 - An invalid value is `422 INVALID_BUSINESS_INPUT`.
-- A committed answer writes its `representative.answered` outbox event in the same transaction.
+- A committed answer writes its `representative.answered` outbox event and completes its assignment
+  in the same transaction.
 
 **Privacy:** the views never contain the employee's identity, salary, profile, case ID or conversation ID.

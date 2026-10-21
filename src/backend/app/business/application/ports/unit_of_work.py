@@ -23,6 +23,7 @@ from app.business.application.ports.repositories import (
     OutboxRepository,
     RepresentativeAnswerRepository,
     RepresentativeRequestRepository,
+    RequestAssignmentRepository,
 )
 
 
@@ -67,6 +68,7 @@ class BusinessUnitOfWork(UnitOfWork, Protocol):
     comparison_runs: ComparisonRunRepository
     representative_requests: RepresentativeRequestRepository
     representative_answers: RepresentativeAnswerRepository
+    assignments: RequestAssignmentRepository
     case_facts: CaseFactRepository
     audit: AuditRepository
     outbox: OutboxRepository

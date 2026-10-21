@@ -34,6 +34,7 @@ from app.business.application.imports.import_service import ImportReferenceDataS
 from app.business.application.occupations.occupation_service import OccupationService
 from app.business.application.profiles.profile_service import EmployeeProfileService
 from app.business.application.representatives.answer_service import RepresentativeAnswerService
+from app.business.application.representatives.assignment_service import AssignmentService
 from app.business.application.representatives.question_service import (
     RepresentativeQuestionService,
 )
@@ -187,6 +188,8 @@ class BusinessServices:
     reference_data: SqlReferenceDataRepository | None = None
     representative_answers: RepresentativeAnswerService | None = None
     """Representative inbox and answers (B3a), exposed over HTTP (B3b)."""
+    representative_assignments: AssignmentService | None = None
+    """Claim/release/summary for representative requests."""
     event_feed: SqlBusinessEventFeed | None = None
     """`BusinessEventFeed` (outbox); given only to the AI event relay (decision D4)."""
 
@@ -233,6 +236,7 @@ def build_business_services(settings: Settings) -> BusinessServices:
         unit_of_work=uow,
         reference_data=reference,
         representative_answers=RepresentativeAnswerService(uow, policy, reference, clock),
+        representative_assignments=AssignmentService(uow, policy, clock),
         event_feed=SqlBusinessEventFeed(persistence.sessions),
     )
 

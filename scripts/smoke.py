@@ -16,7 +16,8 @@ Steps:
    4b. Comparison `waiver` for E-005 shows net "17806" (allowance from the occupation table).
 5. A representative question for CAR-10, then an employee message about CAR-10: the agent
    replies (the option waits for the representative; the conversation continues).
-6. rep01 answers; the employee's conversation receives the representative continuation.
+6. rep01 claims the request and answers it; the employee's conversation receives the
+   representative continuation.
 """
 
 import argparse
@@ -186,6 +187,15 @@ class Smoke:
                 f"{API}/representative-requests/{state['request']}", headers=rep
             )
             _expect(view, 200)
+            claimed = await self.client.post(
+                f"{API}/representative-requests/{state['request']}/claim",
+                json={
+                    "operationId": str(uuid4()),
+                    "expectedRequestVersion": view.json()["data"]["requestVersion"],
+                },
+                headers=rep,
+            )
+            _expect(claimed, 200)
             answer = await self.client.post(
                 f"{API}/representative-requests/{state['request']}/answers",
                 json={
