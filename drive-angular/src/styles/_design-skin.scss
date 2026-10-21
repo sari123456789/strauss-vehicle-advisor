@@ -558,3 +558,10 @@ tbody tr:hover {
     margin: 10px;
   }
 }
+
+// The monthly difference is the headline number: red when the employee would take home less.
+.result.selected .amount.negative,
+.calculation-grid aside .amount.negative {
+  color: #a33a2b;
+  background: #fbeceb;
+}

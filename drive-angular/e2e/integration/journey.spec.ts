@@ -44,7 +44,7 @@ test('employee journey and representative answer', async ({page, browser}) => {
   await atto.getByRole('button', {name: 'להוספה להשוואה'}).click();
 
   // A real comparison: the Business display value for E-001 / ATTO 3.
-  await page.getByRole('link', {name: /להשוואת הנטו/}).click();
+  await page.getByRole('link', {name: /לבדיקת ההפרש החודשי/}).click();
   const card = page.locator('article.result').filter({hasText: 'ATTO 3'});
   await expect(card).toContainText('11,693', {timeout: 30_000});
 

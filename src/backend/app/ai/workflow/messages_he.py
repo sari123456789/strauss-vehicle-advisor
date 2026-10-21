@@ -178,7 +178,7 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
         ]
     if not scope_complete or unchecked:
         lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
-    lines.append('רוצה שאבדוק כמה יישאר לך נטו? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
+    lines.append('רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
     return "\n".join(lines)
 
 
@@ -190,44 +190,58 @@ _STATUS_TEXT = {
 }
 
 
+def _delta_phrase(delta: MoneyAmount) -> str:
+    value = int(delta.display)
+    if value > 0:
+        return f"יישארו לך {shekels(delta)} יותר"
+    if value < 0:
+        return f"יישארו לך {shekels(delta)[1:]} פחות"
+    return "אין שינוי"
+
+
 def comparison_text(
     result: ComparisonResult, labels: dict[str, str], *, full_disclaimer: bool = True
 ) -> str:
     """Amounts from the Business result only. The full disclaimer is shown once per
     conversation; later results repeat a short reminder."""
     lines = []
-    if result.current is not None and result.current.net is not None:
-        lines.append(f"היום הנטו המשוער שלך הוא בערך {shekels(result.current.net)} בחודש.")
-    elif result.current is not None:
-        lines.append("את הנטו של היום לא הצלחתי לחשב, אז אין כאן השוואה למצב הנוכחי.")
+    if result.current is not None and result.current.net is None:
+        lines.append("את המצב של היום לא הצלחתי לחשב, אז אין כאן עדיין הפרש.")
     calculated = [
         s
         for s in result.alternatives
         if s.status is ScenarioStatus.CALCULATED and s.net is not None
     ]
-    single = len(result.alternatives) == 1 and len(calculated) == 1
-    for scenario in result.alternatives:
-        label = labels.get(scenario.option_key, scenario.option_key)
-        if scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
-            delta = (
-                f" ({shekels(scenario.delta, signed=True)} לעומת היום)"
-                if scenario.delta is not None
-                else ""
-            )
-            if single:
-                lines.append(
-                    f"עם {label} הנטו המשוער שלך יוצא בערך {shekels(scenario.net)} בחודש{delta}."
-                )
-            else:
-                lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}{delta}")
-        else:
-            lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
-    if len(calculated) > 1:
-        best = max(calculated, key=lambda s: int(s.net.display))
+    with_delta = [s for s in calculated if s.delta is not None]
+    # The point of the advisor is the monthly difference from today, so it leads every line;
+    # the net itself is only secondary context.
+    if len(result.alternatives) == 1 and len(with_delta) == 1:
+        s = with_delta[0]
         lines.append(
-            f"הכי משתלם לך בנטו: {labels.get(best.option_key, best.option_key)} "
-            f"({shekels(best.net)} בחודש)."
+            f"עם {labels.get(s.option_key, s.option_key)}: {_delta_phrase(s.delta)} בחודש לעומת היום "
+            f"(נטו משוער {shekels(s.net)})."
         )
+    else:
+        if with_delta:
+            lines.append("ההפרש בנטו החודשי שלך לעומת היום:")
+        ordered = sorted(
+            result.alternatives,
+            key=lambda s: -int(s.delta.display) if s.delta is not None else 10**9,
+        )
+        for scenario in ordered:
+            label = labels.get(scenario.option_key, scenario.option_key)
+            if scenario.status is ScenarioStatus.CALCULATED and scenario.delta is not None:
+                lines.append(f"• {label}: {shekels(scenario.delta, signed=True)} בחודש")
+            elif scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
+                lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}")
+            else:
+                lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
+        if len(with_delta) > 1:
+            best = max(with_delta, key=lambda s: int(s.delta.display))
+            lines.append(
+                f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
+                f"{_delta_phrase(best.delta)} בחודש לעומת היום."
+            )
     if result.kind.value == "hypothetical":
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
@@ -278,12 +292,12 @@ def history_text(
     return f"{header}:\n{body}"
 
 
-NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. רוצה שנחשב נטו לרכב מסוים?"
+NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. רוצה שנבדוק כמה רכב מסוים ישנה לך בחודש?"
 NOTHING_TO_CONFIRM = "אין כרגע פרטים שמחכים לאישור. במה אפשר לעזור?"
 CANCELLED = "בסדר גמור, עצרתי. אפשר להתחיל משהו חדש מתי שרוצים."
 UNCLEAR = 'ייתכן שלא הבנתי נכון. אפשר לנסח אחרת? למשל: "אילו רכבים מתאימים לי?"'
 HELP = (
-    "היי! 👋 אני כאן כדי לעזור לבחור רכב חברה ולראות כמה יישאר לך נטו. "
+    "היי! 👋 אני כאן כדי לעזור לבחור רכב חברה ולראות כמה זה ישנה לך בנטו כל חודש לעומת היום. "
     "רוצה שנתחיל מהרכבים שמגיעים לך?"
 )
 GENERAL_FALLBACK = (
