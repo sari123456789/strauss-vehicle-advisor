@@ -1,5 +1,5 @@
 import {Component, OnInit, computed, inject} from '@angular/core';
-import {RouterLink} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 import {ELIGIBILITY_REASON, FIELD_PATH, SCENARIO_STATUS, optionLabel} from '../../core/api/labels';
 import type {ScenarioResult} from '../../core/api/types';
 import {MoneyPipe} from '../../shared/format/money.pipe';
@@ -20,7 +20,12 @@ export class ComparisonPage implements OnInit {
   readonly statuses = SCENARIO_STATUS;
   readonly reasons = ELIGIBILITY_REASON;
   readonly fieldPath = FIELD_PATH;
-  readonly result = this.store.result;
+  private readonly router = inject(Router);
+  /** Shown only with the current state calculated: the page is about the difference from today. */
+  readonly result = computed(() => {
+    const r = this.store.result();
+    return r?.current?.net ? r : null;
+  });
   readonly labels = computed(() => new Map(this.catalog.options().map(o => [o.optionKey, optionLabel(o)])));
 
   async ngOnInit(): Promise<void> {
@@ -28,8 +33,11 @@ export class ComparisonPage implements OnInit {
     await this.run();
   }
 
-  run(): Promise<void> {
-    return this.store.compare(this.catalog.selected());
+  async run(): Promise<void> {
+    await this.store.compare(this.catalog.selected());
+    const r = this.store.result();
+    // Without the current state there is no difference to show: confirm the details in the chat first.
+    if (r && !r.current?.net) await this.router.navigate(['/advisor'], {queryParams: {needs: 'current'}});
   }
 
   label(alternative: ScenarioResult): string {

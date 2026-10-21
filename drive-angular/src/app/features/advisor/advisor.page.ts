@@ -30,12 +30,15 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly fieldStatus = FIELD_STATUS;
   /** The payslip import panel (same reusable component as the profile page). */
   readonly payslipOpen = signal(false);
+  /** Sent here from the comparison page because the current state could not be calculated. */
+  readonly needsCurrent = signal(false);
   /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
   readonly panelCards = signal<OptionItem[] | null>(null);
   text = '';
 
   async ngOnInit(): Promise<void> {
     void this.profile.load();
+    this.needsCurrent.set(this.route.snapshot.queryParamMap.get('needs') === 'current');
     const requested = this.route.snapshot.paramMap.get('conversationId');
     if (requested) await this.store.open(requested);
     else await this.store.ensureActive().catch(() => undefined);
@@ -51,6 +54,7 @@ export class AdvisorPage implements OnInit, OnDestroy {
   send(): void {
     const text = this.text;
     this.text = '';
+    this.needsCurrent.set(false);
     void this.store.send(text).then(() => {
       void this.profile.load();
       void this.catalog.load();
