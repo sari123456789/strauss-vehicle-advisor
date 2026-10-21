@@ -35,8 +35,10 @@ export class SiteHeaderComponent {
     {path: '/catalog', label: 'השוואת רכבים'},
     {path: '/profile', label: 'הנתונים שלי'},
   ];
+  // Employees follow the three steps (shown under the header); the menu keeps only what is outside them.
   private readonly employeeLinks: NavLink[] = [
-    {path: '/advisor', label: 'היועץ שלי'},
+    {path: '/advisor', label: 'התחלה'},
+    {path: '/profile', label: 'הפרטים שלי'},
     {path: '/history', label: 'ההשוואות שלי'},
   ];
   private readonly representativeLinks: NavLink[] = [
@@ -45,7 +47,7 @@ export class SiteHeaderComponent {
   ];
   protected readonly links = computed(() => {
     if (this.session.isRepresentative()) return this.representativeLinks;
-    return this.session.isEmployee() ? [...this.publicLinks, ...this.employeeLinks] : this.publicLinks;
+    return this.session.isEmployee() ? this.employeeLinks : this.publicLinks;
   });
 
   private readonly menu = viewChild.required<SheetComponent>('menu');

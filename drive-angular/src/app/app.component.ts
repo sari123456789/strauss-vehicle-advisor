@@ -5,10 +5,11 @@ import {SessionService} from './core/auth/session.service';
 import {filter, map} from 'rxjs';
 import {SiteFooterComponent} from './shared/layout/site-footer.component';
 import {SiteHeaderComponent} from './shared/layout/site-header.component';
+import {JourneyStepsComponent} from './shared/layout/journey-steps.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, SiteHeaderComponent, SiteFooterComponent],
+  imports: [RouterOutlet, RouterLink, JourneyStepsComponent, SiteHeaderComponent, SiteFooterComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +25,15 @@ export class AppComponent {
     {initialValue: ''},
   );
   protected readonly isHome = computed(() => this.url() === '/');
+  /** Step of the employee journey shown under the header, or -1 off the journey pages. */
+  protected readonly step = computed(() => {
+    if (!this.session.isEmployee()) return -1;
+    const url = this.url();
+    if (url.startsWith('/advisor')) return 0;
+    if (url.startsWith('/catalog')) return 1;
+    if (url.startsWith('/comparison') || url.startsWith('/calculation')) return 2;
+    return -1;
+  });
   /** The chat is a full workspace: no site footer under it. */
   protected readonly isChat = computed(() => this.url().startsWith('/advisor'));
   /** "Back to the chat" button: for a signed-in employee on every page except the chat itself. */
