@@ -61,6 +61,7 @@ def test_reads_the_six_reference_employees_and_staff() -> None:
     assert by_ref["E-002"].study_fund_employee_rate == Decimal(0)
     assert {s.login: s.roles for s in source.staff} == {
         "rep01": frozenset({Role.REPRESENTATIVE}),
+        "rep02": frozenset({Role.REPRESENTATIVE}),
         "ops01": frozenset({Role.IMPORT_OPERATOR}),
     }
     assert source.workbook.path == "data/source/challenge-data.xlsx"

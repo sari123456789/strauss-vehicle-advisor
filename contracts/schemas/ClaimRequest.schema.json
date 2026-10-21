@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expectedRequestVersion": {
+      "minimum": 0,
+      "title": "Expectedrequestversion",
+      "type": "integer"
+    },
+    "operationId": {
+      "format": "uuid",
+      "title": "Operationid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "operationId",
+    "expectedRequestVersion"
+  ],
+  "title": "ClaimRequest",
+  "type": "object"
+}

@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "description": "Accurate counts over the entire queue, independent of pagination.",
+  "properties": {
+    "answered": {
+      "title": "Answered",
+      "type": "integer"
+    },
+    "assignedToMe": {
+      "title": "Assignedtome",
+      "type": "integer"
+    },
+    "assignedToOthers": {
+      "title": "Assignedtoothers",
+      "type": "integer"
+    },
+    "cancelled": {
+      "title": "Cancelled",
+      "type": "integer"
+    },
+    "cannotDetermine": {
+      "title": "Cannotdetermine",
+      "type": "integer"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "unclaimed": {
+      "title": "Unclaimed",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "total",
+    "unclaimed",
+    "assignedToMe",
+    "assignedToOthers",
+    "answered",
+    "cannotDetermine",
+    "cancelled"
+  ],
+  "title": "RepresentativeSummary",
+  "type": "object"
+}

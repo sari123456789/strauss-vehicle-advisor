@@ -26,6 +26,15 @@ class RequestStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class HandlingStatus(StrEnum):
+    """Assignment ownership as seen by the current representative — derived, not stored."""
+
+    UNCLAIMED = "unclaimed"
+    ASSIGNED_TO_ME = "assigned_to_me"
+    ASSIGNED_TO_OTHER = "assigned_to_other"
+    COMPLETED = "completed"
+
+
 class RepresentativeFieldCode(StrEnum):
     """Server-recognized facts a representative may supply (provisional allowlist)."""
 
@@ -107,7 +116,11 @@ class VehicleContext(ContractModel):
 
 
 class RepresentativeRequestView(ContractModel):
-    """Representative-visible, minimal context only (no employee profile or salary)."""
+    """Representative-visible, minimal context only (no employee profile or salary).
+
+    Backward-compatible: all new fields are Optional with safe defaults so existing
+    Angular consumers continue to work without changes.
+    """
 
     request_id: UUID
     request_version: int = Field(ge=0)
@@ -118,6 +131,56 @@ class RepresentativeRequestView(ContractModel):
     vehicle: VehicleContext | None = None
     entitlement_group: EntitlementGroup | None = None
     created_at: datetime
+    # --- new fields (all Optional for backward compatibility) ---
+    updated_at: datetime | None = None
+    handling_status: HandlingStatus | None = None
+    handler_display_name: str | None = None
+    """Display name of the current (or last) handler; never login or subject_id."""
+    claimed_at: datetime | None = None
+    assignment_version: int | None = None
+    can_claim: bool = False
+    can_answer: bool = False
+    can_release: bool = False
+
+
+class ClaimRequest(ContractModel):
+    operation_id: UUID
+    expected_request_version: int = Field(ge=0)
+
+
+class ClaimResult(ContractModel):
+    assignment_id: UUID
+    assignment_version: int = Field(ge=0)
+    claimed_at: datetime
+
+
+class ReleaseRequest(ContractModel):
+    operation_id: UUID
+    expected_assignment_version: int = Field(ge=0)
+
+
+class ReleaseResult(ContractModel):
+    assignment_id: UUID
+    released_at: datetime
+
+
+class AssignmentFilter(StrEnum):
+    ALL = "all"
+    UNCLAIMED = "unclaimed"
+    MINE = "mine"
+    OTHERS = "others"
+
+
+class RepresentativeSummary(ContractModel):
+    """Accurate counts over the entire queue, independent of pagination."""
+
+    total: int
+    unclaimed: int
+    assigned_to_me: int
+    assigned_to_others: int
+    answered: int
+    cannot_determine: int
+    cancelled: int
 
 
 class AnswerSubmit(ContractModel):

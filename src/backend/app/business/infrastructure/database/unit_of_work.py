@@ -33,6 +33,7 @@ from app.business.application.ports.repositories import (
     OutboxRepository,
     RepresentativeAnswerRepository,
     RepresentativeRequestRepository,
+    RequestAssignmentRepository,
 )
 from app.business.application.ports.unit_of_work import TransientConflictError
 from app.business.infrastructure.database.repositories.alternatives import (
@@ -43,6 +44,9 @@ from app.business.infrastructure.database.repositories.answers import (
     SqlCaseFactRepository,
     SqlOutboxRepository,
     SqlRepresentativeAnswerRepository,
+)
+from app.business.infrastructure.database.repositories.assignments import (
+    SqlRequestAssignmentRepository,
 )
 from app.business.infrastructure.database.repositories.cases import SqlCaseRepository
 from app.business.infrastructure.database.repositories.credentials import (
@@ -92,6 +96,9 @@ class SqlUnitOfWork:
         )
         self.representative_answers: RepresentativeAnswerRepository = (
             SqlRepresentativeAnswerRepository(self._session)
+        )
+        self.assignments: RequestAssignmentRepository = SqlRequestAssignmentRepository(
+            self._session
         )
         self.case_facts: CaseFactRepository = SqlCaseFactRepository(self._session)
         self.audit: AuditRepository = SqlAuditRepository(self._session)

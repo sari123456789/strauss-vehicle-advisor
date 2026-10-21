@@ -39,6 +39,7 @@ from app.business.application.ports.repositories import (
     OutboxRepository,
     RepresentativeAnswerRepository,
     RepresentativeRequestRepository,
+    RequestAssignmentRepository,
 )
 from app.business.application.ports.unit_of_work import BusinessUnitOfWork, UnitOfWork
 from app.business.infrastructure.clock import SystemClock
@@ -71,6 +72,7 @@ IMPLEMENTED_PORTS = {
     "ComparisonRunRepository",
     "RepresentativeRequestRepository",
     "RepresentativeAnswerRepository",
+    "RequestAssignmentRepository",
     "CaseFactRepository",
     "AuditRepository",
     "OutboxRepository",
@@ -126,6 +128,7 @@ def test_sql_unit_of_work_implements_the_business_ports() -> None:
         "comparison_runs": ComparisonRunRepository,
         "representative_requests": RepresentativeRequestRepository,
         "representative_answers": RepresentativeAnswerRepository,
+        "assignments": RequestAssignmentRepository,
         "case_facts": CaseFactRepository,
         "audit": AuditRepository,
         "outbox": OutboxRepository,

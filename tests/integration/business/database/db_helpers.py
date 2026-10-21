@@ -36,6 +36,7 @@ CASE_TABLES = (
     "comparison_runs",
     "representative_requests",
     "representative_answers",
+    "request_assignments",
     "case_representative_facts",
     "integration_outbox",
     "audit_entries",

@@ -898,4 +898,32 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
   by the logo change in `b0411be` and also fails on `develop`.
 - **History limit:** at most 20 runs per case appear in the history (`RECENT_RUNS`).
 
+## 21. Representative claiming (requested 2026-10-21; implemented on `feature/representative-claiming`, pending review)
+
+- **Status:** requested by the developer for the demo. The repository contains no approved claiming
+  plan, so this section is not an approved business decision until it is reviewed here.
+- **Rules:** an open, unclaimed request can be claimed by one representative. The handler answers
+  or releases it. Others see the handler's display name and cannot answer or release it. Logout does
+  not release a claim. There is no lease and no expiry. Cancelling a request cancels its active
+  assignment in the same transaction. A cancelled request cannot be claimed. **Reachability:**
+  `deactivate_alternative` has no production caller yet (only tests call it), so no HTTP or agent
+  path cancels a request today. No cancellation workflow was added without approval.
+- **Search:** case-insensitive substring match on the question text or the request ID. `%` and `_`
+  are matched literally. `after` is an exclusive keyset cursor on (createdAt, requestId).
+- **Angular impact (open):** the existing representative page posts answers without claiming. Under
+  this rule each such answer returns `409 INVALID_STATE_TRANSITION`. The frontend must claim before it
+  answers, or the business must decide otherwise. The backend does not auto-claim, because the
+  claimed-before-answer rule is a requirement.
+- **Data:** `business.request_assignments` (migration `0005_request_assignments`). At most one row
+  per request is `active`, enforced by the partial unique index `uq_request_assignments_one_active`.
+  Released, completed and cancelled rows are kept as history.
+- **Lock order (one order for every operation):** operation claim → case `FOR UPDATE` → request
+  `FOR UPDATE` → assignment. Claim is request → assignment insert. Release is request → assignment.
+  Answer is case → request → assignment, and it completes the assignment in the same transaction as
+  the answer and its outbox event. Cancel is case → request → assignment. Before this change the
+  answer path took the assignment lock first, against the order used by release.
+- **Verification:** `tests/integration/business/database/test_representative_claiming.py` runs
+  claim vs claim, claim vs cancel, claim vs answer, release vs answer, release vs claim and duplicate
+  operations on real PostgreSQL. It checks the invariants afterwards and never mocks the database.
+
 ---

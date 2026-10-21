@@ -1,10 +1,16 @@
-"""Representative requests and answers. A pending request blocks only its dependent fact or
-alternative, never the conversation.
+"""Representative requests, answers and assignments.
+
+A pending request blocks only its dependent fact or alternative, never the conversation.
 
 Answers are case-local (B3a, decision Q1): an applied answer changes only the case it was
 asked in - an alternative's participation or a case representative fact - and never the
 shared EmployeeProfile. An answer applies only while its effective dates cover the case's
 reference date; no dates means no restriction (agent-spec T36).
+
+Assignments (claiming): a representative may claim an open request and become its exclusive
+handler. Assignment lifecycle: active → completed (after answer) or released (explicit
+release, request remains open) or cancelled (request was cancelled by an alternative change,
+terminal). A cancelled request can never be claimed again.
 """
 
 import re
@@ -220,6 +226,65 @@ class RepresentativeFact:
 
     def applies_on(self, day: date) -> bool:
         return covers(self.effective_from, self.effective_to, day)
+
+
+class AssignmentStatus(StrEnum):
+    """Lifecycle state of a request assignment (claim record)."""
+
+    ACTIVE = "active"
+    """The handler has claimed the request and is responsible for answering."""
+    RELEASED = "released"
+    """The handler explicitly released the request; it is open and claimable again."""
+    COMPLETED = "completed"
+    """The handler answered the request; terminal."""
+    CANCELLED = "cancelled"
+    """The underlying request was cancelled (e.g. alternative deactivated); terminal.
+    A cancelled request can never be claimed again."""
+
+
+@dataclass(frozen=True, slots=True)
+class RequestAssignment:
+    """One claim record on a representative request.
+
+    Multiple assignments may exist per request (claim → release → claim history),
+    but at most one may be ACTIVE at any time (enforced by the DB partial unique index).
+    """
+
+    assignment_id: UUID
+    request_id: UUID
+    claimed_by: UUID
+    """subject_id of the representative; always from authenticated context."""
+    claimed_at: datetime
+    assignment_version: int
+    status: AssignmentStatus
+    released_at: datetime | None = None
+    completed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        if self.assignment_version < 0 or isinstance(self.assignment_version, bool):
+            raise InvalidValueError("assignment_version must be a non-negative integer")
+        if self.claimed_at.utcoffset() is None:
+            raise InvalidValueError("claimed_at must be timezone-aware")
+        if self.released_at is not None:
+            if self.released_at.utcoffset() is None:
+                raise InvalidValueError("released_at must be timezone-aware")
+            if self.status not in (AssignmentStatus.RELEASED, AssignmentStatus.COMPLETED):
+                raise InvalidValueError("released_at requires status released or completed")
+        if self.completed_at is not None:
+            if self.completed_at.utcoffset() is None:
+                raise InvalidValueError("completed_at must be timezone-aware")
+            if self.status is not AssignmentStatus.COMPLETED:
+                raise InvalidValueError("completed_at requires status completed")
+        if self.cancelled_at is not None:
+            if self.cancelled_at.utcoffset() is None:
+                raise InvalidValueError("cancelled_at must be timezone-aware")
+            if self.status is not AssignmentStatus.CANCELLED:
+                raise InvalidValueError("cancelled_at requires status cancelled")
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in (AssignmentStatus.COMPLETED, AssignmentStatus.CANCELLED)
 
 
 def applicable_facts(
