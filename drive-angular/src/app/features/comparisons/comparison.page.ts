@@ -43,6 +43,13 @@ export class ComparisonPage implements OnInit {
     }
   }
 
+  deltaWords(display: string): string {
+    const value = Number(display);
+    if (value > 0) return 'יישאר לך יותר בכל חודש';
+    if (value < 0) return 'יישאר לך פחות בכל חודש';
+    return 'בלי שינוי בנטו';
+  }
+
   label(alternative: ScenarioResult): string {
     return this.labels().get(alternative.optionKey) ?? alternative.optionKey;
   }
