@@ -103,6 +103,8 @@ class ConversationState(TypedDict, total=False):
     """Official occupations shown for an ambiguous description, awaiting a choice."""
     representative_help_shown: bool
     """The last reply explained what the representative can help with (prevents a repeat)."""
+    disclaimer_shown: bool
+    """The full estimate disclaimer was shown once; later results show a short reminder."""
     option_labels: dict[str, str]
     """Labels of options the employee named that were resolved from the catalogue."""
 

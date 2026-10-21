@@ -7,6 +7,7 @@ tests check that the workflow asks the right business tools and answers the righ
 
 import copy
 import json
+import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -148,7 +149,7 @@ async def test_unknown_eligibility_asks_for_the_missing_fact_instead_of_guessing
     )
     llm.interpret(calculate("ATTO 3"))
     outcome = await say(runner, "כמה נטו עם ATTO 3?")
-    assert "חסר עוד מידע" in text_of(outcome)
+    assert "חסר לי עוד מידע" in text_of(outcome)
     assert he.field_label("employee.entitlementGroup") in text_of(outcome)
     assert "אינו בין החלופות" not in text_of(outcome)
     assert "compare_scenarios" not in port.tools()
@@ -411,3 +412,53 @@ async def test_a_vehicle_resolved_from_the_catalogue_keeps_its_name_in_later_tur
     state = await runner.conversation_state("thread-1")
     assert state["option_labels"]["vehicle:CAR-10"].endswith("ATTO 3")
     assert state.get("displayed_options", []) == []  # ordinals still refer to shown lists only
+
+
+# --- Natural tone --------------------------------------------------------------------------------
+
+
+async def test_full_disclaimer_is_shown_once_then_a_short_reminder() -> None:
+    runner, _, llm = make()
+    llm.interpret(calculate("ATTO 3"), calculate("MG4"))
+    first = text_of(await say(runner, "כמה נטו עם ATTO 3?"))
+    second = text_of(await say(runner, "ועם MG4?"))
+    assert he.DISCLAIMER in first and he.SHORT_DISCLAIMER not in first
+    assert he.SHORT_DISCLAIMER in second and he.DISCLAIMER not in second
+
+
+async def test_greeting_gets_a_contextual_reply_with_a_warm_fallback() -> None:
+    runner, port, llm = make()
+    llm.interpret(interpretation(Intent.SMALLTALK), interpretation(Intent.SMALLTALK))
+    llm.compose("בשמחה! רוצה שנעבור על הרכבים שמגיעים לך?")
+    replied = await say(runner, "תודה רבה")
+    assert replied.messages[-1].kind == "explanation"
+    assert "בשמחה" in text_of(replied)
+    assert llm.calls(LlmTaskKind.COMPOSE)[0].messages[0].text.count("תודה רבה") == 1
+    fallback = await say(runner, "שלום")  # model unavailable -> the fixed warm greeting
+    assert text_of(fallback) == he.HELP
+    assert port.tools().count("get_conversation_context") == 2  # no business tools for chit-chat
+
+
+async def test_prompts_carry_the_persona() -> None:
+    runner, _, llm = make()
+    llm.interpret(interpretation(Intent.GENERAL_QUESTION))
+    llm.compose("אין בעיה.")
+    await say(runner, "מה זה שווי שימוש?")
+    system = llm.calls(LlmTaskKind.COMPOSE)[0].system_instruction
+    assert "warm, down-to-earth colleague" in system and "gender-neutral" in system
+
+
+GENDERED = re.compile(r"(אתה|תרצה|תרצי|תוכל |תוכלי)")  # "את" is also the object marker
+
+
+async def test_fixed_texts_avoid_gendered_address() -> None:
+    texts = [
+        value
+        for name, value in vars(he).items()
+        if isinstance(value, str)
+        and name.isupper()
+        and any("\u0590" <= c <= "\u05ff" for c in value)
+    ]
+    assert len(texts) > 10
+    for text in texts:
+        assert not GENDERED.search(text), text

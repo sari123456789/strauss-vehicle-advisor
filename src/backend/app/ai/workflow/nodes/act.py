@@ -451,7 +451,10 @@ async def compute(
         return None
     result = envelope.data
     updates["latest_run_id"] = str(result.run_id)
-    rt.reply(he.comparison_text(result, labels), "comparison", runId=str(result.run_id))
+    full = not state.get("disclaimer_shown")
+    text = he.comparison_text(result, labels, full_disclaimer=full)
+    rt.reply(text, "comparison", runId=str(result.run_id))
+    updates["disclaimer_shown"] = True
     if _has_reason(envelope.issues, LIST_BUILT_FROM_OTHER_FACTS):
         updates["result_set_id"] = None
         rt.reply(he.OPTIONS_CHANGED, "options_changed")
@@ -549,7 +552,10 @@ async def _show_run(
     result = envelope.data.result
     labels = _labels(state, rt)
     stale = result.freshness is Freshness.STALE
-    rt.reply(he.history_text(result, labels, stale=stale), "history", runId=run_id, stale=stale)
+    full = not state.get("disclaimer_shown")
+    text = he.history_text(result, labels, stale=stale, full_disclaimer=full)
+    rt.reply(text, "history", runId=run_id, stale=stale)
+    updates["disclaimer_shown"] = True
     if explain:
         values, descriptions = comparison_placeholders(result, labels)
         turn = state.get("turn")
@@ -649,8 +655,8 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
             updates["representative_help_shown"] = True
     elif intent is Intent.GENERAL_QUESTION:
         _general(state, rt, he.GENERAL_FALLBACK)
-    elif intent is Intent.SMALLTALK:
-        rt.reply(he.HELP, "info")
+    elif intent is Intent.SMALLTALK:  # a greeting or thanks gets a natural, fitting reply
+        _general(state, rt, he.HELP)
     else:
         rt.reply(he.UNCLEAR, "clarification")
 

@@ -1,10 +1,14 @@
 @use '../../../styles/breakpoints' as bp;
 @use 'reference-scale' as ref;
 
+// Home page from design/drive-design-proof (home.page.scss there, 1672×941 reference scaled to 1586).
+// Mobile first; desktop geometry in reference px via ref.u(), so it scales with the page width.
+
 :host {
   display: block;
   container-type: inline-size;
-  background: var(--bg);
+  color: var(--text);
+  background: radial-gradient(ellipse at 70% 44%, #fbfbfb, #f3f3f4 65%, #e8e8e8);
 }
 
 // ---------- Mobile first ----------
@@ -12,256 +16,427 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid var(--rule);
 }
 
 .hero__photo {
+  order: 2;
   display: block;
   inline-size: 100%;
   block-size: auto;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 934 / 677;
   object-fit: cover;
-  object-position: 38% 62%;
 }
 
 .hero__copy {
-  padding-block: 24px 32px;
+  padding-block: 24px 8px;
   padding-inline: var(--gutter-inline-start) var(--gutter-inline-end);
 }
 
 .hero__eyebrow {
-  margin: 0 0 12px;
-  color: var(--accent);
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.hero__eyebrow b {
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+
+.hero__eyebrow-rule {
+  inline-size: 25px;
+  block-size: 2px;
+  background: #ae7b4a;
 }
 
 .hero__title {
-  margin: 0 0 16px;
-  font-size: clamp(34px, 10cqi, 56px);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-}
-
-.hero__line {
-  display: block;
+  margin: 12px 0;
+  font-family: var(--font-display);
+  font-size: clamp(48px, 15cqi, 80px);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
 }
 
 .hero__line--accent {
-  color: var(--accent);
+  color: #b6875b;
 }
 
 .hero__lead {
   margin: 0 0 24px;
   color: var(--text);
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: 19px;
+  line-height: 1.4;
 }
 
 .hero__cta {
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-block-size: 52px;
-  padding-inline: 24px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 17px;
-  font-weight: 700;
-  transition: background-color 0.2s;
+  gap: 10px;
+  min-block-size: 82px;
+  padding-block: 10px;
+  padding-inline: 26px 90px;
+  border: 1px solid #d7b28d;
+  border-radius: 70px;
+  background: linear-gradient(110deg, #bd8959, #95613a);
+  color: #fff;
 }
 
 .hero__cta:hover {
-  background: var(--accent-hover);
+  background: linear-gradient(110deg, #b07c4c, #865532);
 }
 
-.hero__cta-arrow {
-  flex: none;
-  inline-size: 22px;
-  block-size: 15px;
+.hero__cta-text b {
+  display: block;
+  font-size: 28px;
+  line-height: 1.15;
 }
 
-.hero__link {
-  display: inline-flex;
+.hero__cta-text small {
+  display: block;
+  font-size: 15px;
+}
+
+.hero__cta-chevron {
+  inline-size: 10px;
+  block-size: 18px;
+}
+
+.hero__cta-disc {
+  position: absolute;
+  inset-inline-end: 10px;
+  inset-block-start: 50%;
+  display: grid;
+  place-items: center;
+  inline-size: 62px;
+  block-size: 62px;
+  border-radius: 50%;
+  background: #fff;
+  color: #ac7a4a;
+  transform: translateY(-50%);
+}
+
+.hero__cta-disc svg {
+  inline-size: 34px;
+  block-size: 34px;
+}
+
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 28px 0 8px;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+
+.benefits li {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  min-block-size: var(--tap);
-  margin-top: 8px;
-  color: var(--accent);
-  font-size: 17px;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 8px;
+  padding-inline: 6px;
 }
 
+.benefits li + li {
+  border-inline-start: 1px solid #b18661;
+}
+
+.benefits img {
+  inline-size: 40px;
+  block-size: 34px;
+  margin-bottom: 6px;
+  object-fit: contain;
+}
+
+.benefits b {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.benefits span {
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+// Not part of the design proof; kept in the DOM, hidden at every width.
 .hero__indicator {
   display: none;
 }
 
+// ---------- Bottom strip ----------
 .options {
-  padding-block: 24px max(32px, env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 2;
+  padding-block: 0 max(24px, env(safe-area-inset-bottom));
   padding-inline: var(--gutter-inline-start) var(--gutter-inline-end);
 }
 
-.options__title {
-  margin: 0 0 16px;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.options__list {
+.strip {
   display: grid;
-  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid #d6d7dd;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 3px 20px rgba(102, 102, 102, 0.07);
+  overflow: hidden;
 }
 
-.options__list > li {
+.strip > li {
   min-inline-size: 0;
 }
 
-@include bp.md {
-  .hero__photo {
-    aspect-ratio: 16 / 9;
-  }
-
-  .hero__cta {
-    display: inline-flex;
-    min-inline-size: 320px;
-  }
-
-  .hero__link {
-    display: flex;
-    inline-size: fit-content;
-    margin-top: 12px;
-  }
-
-  .hero__lead {
-    font-size: 20px;
-  }
+.strip > li + li {
+  border-top: 1px solid #ddd;
 }
 
-// ---------- Desktop: approved composition (brown-reference.png, 1586×992) ----------
+.strip__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  block-size: 100%;
+  min-block-size: 84px;
+  padding-block: 14px;
+  padding-inline: 18px;
+  transition: background-color 0.2s;
+}
+
+.strip__item::before {
+  content: '‹';
+  flex: none;
+  color: #a97644;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.strip__item:hover {
+  background: #fcf7f1;
+}
+
+.strip__text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.strip__text b {
+  display: block;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.strip__text small {
+  display: block;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.strip__icon {
+  flex: none;
+  inline-size: 38px;
+  block-size: 42px;
+  object-fit: contain;
+}
+
+.strip__item--gold,
+.strip__item--gold:hover {
+  background: linear-gradient(110deg, #916941, #bf9268, #d0a77d);
+  color: #fff;
+}
+
+.strip__item--gold::before {
+  color: #fff;
+}
+
+.strip__item--gold .strip__text b {
+  font-size: 18px;
+}
+
+// ---------- Desktop: design proof composition ----------
 @include bp.lg {
   .hero {
     display: block;
-    block-size: ref.u(669);
+    block-size: ref.u(780);
     overflow: hidden;
   }
 
-  // Photograph fitted to the reference car position (scale 0.729 of 1672px, offset −53, +48).
-  .hero__photo {
-    position: absolute;
-    left: ref.u(-53);
-    top: ref.u(48);
-    inline-size: ref.u(1219);
-    block-size: auto;
-    aspect-ratio: 1672 / 941;
-    object-fit: fill;
-    mask-image: linear-gradient(to bottom, transparent 0, #000 ref.u(60));
-  }
-
-  // Blend the photograph's right edge into the page background under the copy.
-  .hero::after {
+  // Decorative stripes behind the header, as in the design proof.
+  .hero::before {
     content: '';
     position: absolute;
     top: 0;
-    bottom: 0;
-    left: ref.u(930);
-    width: ref.u(240);
-    background: linear-gradient(to right, transparent, var(--bg));
+    left: ref.u(503);
+    inline-size: ref.u(428);
+    block-size: ref.u(162);
+    background: url('/assets/design/art/home-stripes.png') no-repeat center / contain;
+    mask-image: linear-gradient(90deg, #000 82%, transparent), linear-gradient(180deg, #000 68%, transparent);
+    mask-composite: intersect;
     pointer-events: none;
+  }
+
+  .hero__photo {
+    position: absolute;
+    left: 0;
+    top: ref.u(97);
+    inline-size: ref.u(887);
+    block-size: auto;
+    object-fit: fill;
+    mask-image: linear-gradient(90deg, #000 91%, transparent), linear-gradient(180deg, transparent 0%, #000 14%, #000 89%, transparent);
+    mask-composite: intersect;
   }
 
   .hero__copy {
     position: absolute;
     z-index: 1;
-    top: ref.u(152);
-    inset-inline-start: ref.u(49);
-    inline-size: ref.u(700);
+    top: ref.u(150);
+    inset-inline-start: ref.u(45);
+    inline-size: ref.u(720);
     padding: 0;
   }
 
   .hero__eyebrow {
-    margin: 0 ref.u(12) ref.u(16) 0;
+    gap: ref.u(15);
     font-size: ref.u(21);
-    letter-spacing: 0.055em;
-    line-height: 1.5;
+  }
+
+  .hero__eyebrow b {
+    font-size: ref.u(23);
+  }
+
+  .hero__eyebrow-rule {
+    inline-size: ref.u(38);
   }
 
   .hero__title {
-    margin: 0 0 ref.u(21);
-    font-size: ref.u(78);
-    line-height: 1.141;
-    letter-spacing: -0.051em;
+    margin: ref.u(4) 0 ref.u(14);
+    font-size: ref.u(140);
+    line-height: 1.05;
     white-space: nowrap;
-  }
-
-  // In the reference the second line hangs 7px past the copy's right edge.
-  .hero__line--accent {
-    margin-inline-start: ref.u(-7);
   }
 
   .hero__lead {
-    margin: 0 0 ref.u(38);
-    font-size: ref.u(23);
-    line-height: 1.5;
-    white-space: nowrap;
+    margin: 0 0 ref.u(40);
+    padding-inline-start: ref.u(36);
+    font-size: ref.u(28);
+    line-height: 1.25;
   }
 
   .hero__cta {
-    display: inline-flex;
-    inline-size: ref.u(306);
-    min-inline-size: 0;
-    block-size: ref.u(52);
-    min-block-size: var(--tap);
-    padding-inline: ref.u(40) ref.u(44);
-    font-size: ref.u(17);
-    white-space: nowrap;
+    gap: ref.u(12);
+    inline-size: ref.u(316);
+    min-block-size: 0;
+    block-size: ref.u(98);
+    margin-inline-start: ref.u(15);
+    padding-block: 0;
+    padding-inline: ref.u(33) ref.u(110);
   }
 
-  .hero__cta-arrow {
-    inline-size: ref.u(22);
-    block-size: ref.u(15);
+  .hero__cta-text b {
+    font-size: ref.u(35);
   }
 
-  .hero__link {
-    display: flex;
-    inline-size: fit-content;
-    margin-top: ref.u(9);
-    min-block-size: var(--tap);
+  .hero__cta-text small {
     font-size: ref.u(19);
-    text-underline-offset: ref.u(11);
   }
 
-  .hero__indicator {
-    display: block;
-    position: absolute;
-    z-index: 1;
-    left: ref.u(58);
-    bottom: ref.u(28);
-    --indicator-font: #{ref.u(17)};
-    --indicator-gap: #{ref.u(8)};
-    --indicator-count-gap: #{ref.u(8)};
-    --indicator-bar: #{ref.u(76)};
+  .hero__cta-chevron {
+    inline-size: ref.u(11);
+    block-size: ref.u(20);
+  }
+
+  .hero__cta-disc {
+    inset-inline-end: ref.u(16);
+    inline-size: ref.u(76);
+    block-size: ref.u(76);
+  }
+
+  .hero__cta-disc svg {
+    inline-size: ref.u(40);
+    block-size: ref.u(40);
+  }
+
+  .benefits {
+    inline-size: ref.u(700);
+    margin: ref.u(52) 0 0;
+  }
+
+  .benefits li {
+    padding-inline: ref.u(10);
+  }
+
+  .benefits img {
+    inline-size: ref.u(53);
+    block-size: ref.u(42);
+    margin-bottom: ref.u(10);
+  }
+
+  .benefits b {
+    font-size: ref.u(23);
+  }
+
+  .benefits span {
+    font-size: ref.u(19);
   }
 
   .options {
-    block-size: ref.u(323);
-    padding-block: ref.u(22) 0;
-    padding-inline: ref.u(49) ref.u(48);
+    // Overlaps only the faded bottom of the photo; the benefits row ends above it (≈ y714 of 780).
+    margin-top: ref.u(-40);
+    padding-block: 0 ref.u(30);
+    padding-inline: ref.u(58);
   }
 
-  .options__title {
-    margin: 0 0 ref.u(18);
-    font-size: ref.u(29);
-    line-height: 1.4;
+  .strip {
+    // RTL: first item on the right. Column widths from the design (365 / 377 / 374 / 435 of 1552).
+    grid-template-columns: 365fr 377fr 374fr 435fr;
+    border-radius: ref.u(19);
   }
 
-  .options__list {
-    grid-template-columns: 503fr 546fr 419fr;
-    gap: ref.u(11);
-    block-size: ref.u(178);
+  .strip > li + li {
+    border-top: 0;
+  }
+
+  .strip > li + li .strip__item:not(.strip__item--gold) {
+    position: relative;
+  }
+
+  .strip > li + li .strip__item:not(.strip__item--gold)::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block: ref.u(15);
+    border-inline-start: 1px solid #ddd;
+  }
+
+  .strip__item {
+    gap: ref.u(24);
+    min-block-size: ref.u(115);
+    padding-block: ref.u(20);
+    padding-inline: ref.u(32) ref.u(33);
+  }
+
+  .strip__item::before {
+    font-size: ref.u(28);
+  }
+
+  .strip__text b {
+    font-size: ref.u(19);
+  }
+
+  .strip__text small {
+    font-size: ref.u(17);
+  }
+
+  .strip__icon {
+    inline-size: ref.u(47);
+    block-size: ref.u(52);
+  }
+
+  .strip__item--gold .strip__text b {
+    font-size: ref.u(21);
   }
 }
