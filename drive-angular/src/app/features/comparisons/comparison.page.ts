@@ -6,6 +6,8 @@ import {MoneyPipe} from '../../shared/format/money.pipe';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {PageHeadingComponent} from '../../shared/ui/page-heading.component';
 import {CatalogStore} from '../catalog/state/catalog.store';
+import {ProfileStore} from '../profile/state/profile.store';
+import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 import {ComparisonsStore} from './state/comparisons.store';
 
 /**
@@ -21,6 +23,11 @@ export class ComparisonPage implements OnInit {
   readonly reasons = ELIGIBILITY_REASON;
   readonly fieldPath = FIELD_PATH;
   private readonly router = inject(Router);
+  private readonly profile = inject(ProfileStore);
+  /** Photo of the employee's current car, when it is a catalogue vehicle. */
+  readonly currentImage = computed(() =>
+    vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
+  );
   /** Shown only with the current state calculated: the page is about the difference from today. */
   readonly result = computed(() => {
     const r = this.store.result();
@@ -30,6 +37,7 @@ export class ComparisonPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     if (!this.catalog.options().length) await this.catalog.load();
+    if (!this.profile.profile()) void this.profile.load();
     await this.run();
   }
 
@@ -48,6 +56,11 @@ export class ComparisonPage implements OnInit {
     if (value > 0) return 'יישאר לך יותר בכל חודש';
     if (value < 0) return 'יישאר לך פחות בכל חודש';
     return 'בלי שינוי בנטו';
+  }
+
+  imageOf(alternative: ScenarioResult): string | null {
+    const option = this.catalog.options().find(o => o.optionKey === alternative.optionKey);
+    return vehicleImageUrl(option?.catalogueId);
   }
 
   label(alternative: ScenarioResult): string {
