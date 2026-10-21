@@ -99,8 +99,7 @@ ADVISOR_FACTS = f"""\
 - {NET_CALCULATION}
 - The transportation representative is a staff member. When the employee does not know their
   entitlement group, their current car's propulsion or which car they currently have, this chat
-  can send the representative a question. A question about the monthly participation fee of a car
-  can be sent from the comparison screen. Answers arrive later in this conversation; the
+  can send the representative a question. Answers arrive later in this conversation; the
   conversation can continue meanwhile.
 """
 

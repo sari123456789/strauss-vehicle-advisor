@@ -35,8 +35,4 @@ export class ComparisonPage implements OnInit {
   label(alternative: ScenarioResult): string {
     return this.labels().get(alternative.optionKey) ?? alternative.optionKey;
   }
-
-  ask(alternative: ScenarioResult): void {
-    void this.store.askParticipation(alternative.optionKey, this.label(alternative));
-  }
 }
