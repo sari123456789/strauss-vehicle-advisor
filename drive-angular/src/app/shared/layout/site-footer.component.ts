@@ -12,7 +12,7 @@ import {SessionService} from '../../core/auth/session.service';
         <span class="brand__tag">יועץ הרכב שלך</span>
       </a>
       @if (session.isRepresentative()) {
-        <a class="site-footer__link" routerLink="/representative">מסך נציג</a>
+        <a class="site-footer__link" routerLink="/representative">מרכז הפניות</a>
       }
     </footer>
   `,

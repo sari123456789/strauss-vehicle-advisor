@@ -25,7 +25,36 @@ export type Issue = B['Issue'];
 export type EligibilityReason = B['EligibilityReason'];
 export type Propulsion = B['Propulsion'];
 export type CreateQuestionResult = B['CreateQuestionResult'];
-export type RepresentativeRequestView = B['RepresentativeRequestView'];
+/**
+ * Claiming fields (contract change on develop, `feature/representative-claiming`). Added by hand
+ * until `npm run api:types` is re-run with the generator installed.
+ */
+export type HandlingStatus = 'unclaimed' | 'assigned_to_me' | 'assigned_to_other' | 'completed';
+export type RepresentativeRequestView = B['RepresentativeRequestView'] & {
+  assignmentVersion?: number | null;
+  canAnswer?: boolean;
+  canClaim?: boolean;
+  canRelease?: boolean;
+  claimedAt?: string | null;
+  handlerDisplayName?: string | null;
+  handlingStatus?: HandlingStatus | null;
+  updatedAt?: string | null;
+};
+export interface RepresentativeSummary {
+  total: number;
+  unclaimed: number;
+  assignedToMe: number;
+  assignedToOthers: number;
+  answered: number;
+  cannotDetermine: number;
+  cancelled: number;
+}
+export interface ClaimResult {
+  assignmentId: string;
+  assignmentVersion: number;
+  claimedAt: string;
+}
+export type AssignmentFilter = 'all' | 'unclaimed' | 'mine' | 'others';
 export type RepresentativeFieldCode = B['RepresentativeFieldCode'];
 export type AnswerSubmit = B['AnswerSubmit'];
 export type AnswerView = B['AnswerView'];

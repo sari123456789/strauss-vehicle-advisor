@@ -4,6 +4,8 @@ import {firstValueFrom} from 'rxjs';
 import {API_BASE_URL, newId} from './api-config';
 import type {
   AnswerSubmit,
+  AssignmentFilter,
+  ClaimResult,
   AnswerView,
   CaseContext,
   ComparisonDetails,
@@ -15,6 +17,7 @@ import type {
   OptionCategory,
   RepresentativeFieldCode,
   RepresentativeRequestView,
+  RepresentativeSummary,
 } from './types';
 
 /**
@@ -83,8 +86,15 @@ export class BusinessApi {
 
   // --- representative role ----------------------------------------------------------------
 
-  representativeRequests(statuses: string[]): Promise<EnvelopeOf<RepresentativeRequestView[]>> {
-    const query = statuses.map(s => `status=${encodeURIComponent(s)}`).join('&');
+  representativeRequests(
+    statuses: string[],
+    filters: {assignment?: AssignmentFilter; fieldCode?: string | null; search?: string | null} = {},
+  ): Promise<EnvelopeOf<RepresentativeRequestView[]>> {
+    const params = statuses.map(s => `status=${encodeURIComponent(s)}`);
+    if (filters.assignment) params.push(`assignment=${filters.assignment}`);
+    if (filters.fieldCode) params.push(`fieldCode=${encodeURIComponent(filters.fieldCode)}`);
+    if (filters.search) params.push(`search=${encodeURIComponent(filters.search.slice(0, 100))}`);
+    const query = params.join('&');
     return firstValueFrom(
       this.http.get<EnvelopeOf<RepresentativeRequestView[]>>(`${this.base}/representative-requests?${query}`),
     );
@@ -93,6 +103,30 @@ export class BusinessApi {
   representativeRequest(requestId: string): Promise<EnvelopeOf<RepresentativeRequestView>> {
     return firstValueFrom(
       this.http.get<EnvelopeOf<RepresentativeRequestView>>(`${this.base}/representative-requests/${requestId}`),
+    );
+  }
+
+  representativeSummary(): Promise<EnvelopeOf<RepresentativeSummary>> {
+    return firstValueFrom(
+      this.http.get<EnvelopeOf<RepresentativeSummary>>(`${this.base}/representative-requests/summary`),
+    );
+  }
+
+  claim(requestId: string, expectedRequestVersion: number, operationId = newId()): Promise<EnvelopeOf<ClaimResult>> {
+    return firstValueFrom(
+      this.http.post<EnvelopeOf<ClaimResult>>(`${this.base}/representative-requests/${requestId}/claim`, {
+        expectedRequestVersion,
+        operationId,
+      }),
+    );
+  }
+
+  release(requestId: string, expectedAssignmentVersion: number, operationId = newId()): Promise<EnvelopeOf<unknown>> {
+    return firstValueFrom(
+      this.http.post<EnvelopeOf<unknown>>(`${this.base}/representative-requests/${requestId}/release`, {
+        expectedAssignmentVersion,
+        operationId,
+      }),
     );
   }
 
