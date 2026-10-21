@@ -381,6 +381,9 @@ async def compute(
     question: str,
 ) -> ComparisonResult | None:
     """Readiness gate, then one comparison for every ready option (partial results allowed)."""
+    # Every comparison in the chat shows the difference from today, so the current arrangement
+    # is always required: nothing is calculated until the baseline is ready.
+    include_current = True
     labels = _labels(state, rt)
     # Readiness uses the same fact basis as the comparison it prepares (E2: `kind`).
     readiness_env = await rt.tools.check_calculation_readiness(
@@ -389,9 +392,7 @@ async def compute(
             if include_current
             else ReadinessGoal.CALCULATE_NET,
             selection=selection,
-            # Always check the baseline, so the current state is shown whenever it can be
-            # calculated; only an explicit "compared to today" asks for missing baseline facts.
-            include_current=True,
+            include_current=include_current,
             expected_case_version=rt.case_version,
             kind=kind,
         )
@@ -416,14 +417,10 @@ async def compute(
     if pending != state.get("pending_tasks", {}):
         updates["pending_tasks"] = pending
     missing = [f.value for f in [*readiness.missing_employee_fields, *readiness.ambiguous_fields]]
-    if not include_current:
-        missing = [f for f in missing if not f.startswith("currentArrangement.")]
-        to_confirm = [f for f in to_confirm if not str(f).startswith("currentArrangement.")]
-        propulsion_differs = False
     pending_labels = [
         labels.get(p.option_key or "", "החלופה") for p in readiness.pending_representative_fields
     ]
-    if not readiness.ready_scenario_ids:
+    if not readiness.ready_scenario_ids or readiness.baseline_ready is not True:
         if missing:
             await _ask_missing(state, rt, missing, updates)
         elif to_confirm:
