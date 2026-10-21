@@ -23,6 +23,8 @@ export class ComparisonsStore {
   private readonly conversations = inject(ConversationStore);
 
   readonly result = signal<ComparisonResult | null>(null);
+  /** Set when a comparison had no current state: the chat then asks to confirm the current car. */
+  readonly needsCurrent = signal(false);
   readonly caseId = signal<string | null>(null);
   readonly details = signal<ComparisonDetails | null>(null);
   readonly history = signal<HistoryRow[]>([]);
