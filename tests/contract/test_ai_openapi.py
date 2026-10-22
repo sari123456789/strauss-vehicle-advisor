@@ -8,6 +8,7 @@ EXPECTED = {
     ("/api/v1/conversations", "post"),
     ("/api/v1/conversations", "get"),
     ("/api/v1/conversations/{conversationId}", "get"),
+    ("/api/v1/conversations/{conversationId}", "delete"),
     ("/api/v1/conversations/{conversationId}/messages", "post"),
     ("/api/v1/conversations/{conversationId}/messages", "get"),
     ("/api/v1/conversations/{conversationId}/inputs/{inputId}", "get"),

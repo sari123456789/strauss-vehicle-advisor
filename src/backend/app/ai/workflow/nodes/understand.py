@@ -32,6 +32,7 @@ from app.contracts.catalogue import (
     ResolvePurpose,
     ResolveStatus,
     ResolveVehicleRequest,
+    VehicleCandidate,
     VehicleQuery,
 )
 from app.contracts.common import EnvelopeStatus, ErrorCode, FieldPath, UpdateMode
@@ -164,7 +165,23 @@ async def interpret(state: ConversationState, runtime: Runtime[TurnRuntime]) -> 
     return {"route": "continue"}
 
 
-async def _resolve_current_vehicle(rt: TurnRuntime, text: str) -> VehicleRef | Clarification:
+def _saved_vehicle(rt: TurnRuntime) -> VehicleRef | None:
+    if rt.case is None:
+        return None
+    saved = rt.case.profile.current_arrangement.vehicle
+    return saved.value if saved.status.value == "usable" else None
+
+
+def _is_candidate(ref: VehicleRef, candidate: VehicleCandidate) -> bool:
+    if ref.catalogue_id is not None:
+        return ref.catalogue_id == candidate.catalogue_id
+    return ref.tax_key == candidate.tax_key
+
+
+async def _resolve_current_vehicle(rt: TurnRuntime, text: str) -> VehicleRef | str:
+    """The identified current car, or the question to ask about it (asked after the results;
+    an unidentified car never blocks the rest of the turn). When the description matches the
+    car already saved in the profile, the saved car is used: it is never searched again."""
     year = next((word for word in text.split() if word.isdigit() and len(word) == 4), None)
     name = " ".join(word for word in text.split() if word != year)[:80] or text[:80]
     envelope = await rt.tools.resolve_vehicle(
@@ -174,8 +191,14 @@ async def _resolve_current_vehicle(rt: TurnRuntime, text: str) -> VehicleRef | C
         )
     )
     data = envelope.data
+    unresolved = he.clarification_text(
+        [Clarification(ClarificationCode.VEHICLE_UNRESOLVED, FieldPath.CURRENT_VEHICLE.value)]
+    )
     if envelope.status is EnvelopeStatus.ERROR or data is None:
-        return Clarification(ClarificationCode.VEHICLE_UNRESOLVED, FieldPath.CURRENT_VEHICLE.value)
+        return unresolved
+    saved = _saved_vehicle(rt)
+    if saved is not None and any(_is_candidate(saved, c) for c in data.candidates):
+        return saved
     if data.status is ResolveStatus.RESOLVED and len(data.candidates) == 1:
         candidate = data.candidates[0]
         if candidate.catalogue_id:
@@ -186,9 +209,8 @@ async def _resolve_current_vehicle(rt: TurnRuntime, text: str) -> VehicleRef | C
             f"{c.manufacturer_name} {c.commercial_name} ({c.tax_key.registration_year})"
             for c in data.candidates[:5]
         ]
-        rt.reply(he.vehicle_candidates_text(names), "clarification")
-        rt.halt = True
-    return Clarification(ClarificationCode.VEHICLE_UNRESOLVED, FieldPath.CURRENT_VEHICLE.value)
+        return he.vehicle_candidates_text(names)
+    return unresolved
 
 
 async def _resolve_occupation(
@@ -235,7 +257,9 @@ async def prepare(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
     rt = runtime.context
     assert rt.interpretation is not None
     updates: dict[str, Any] = {}
-    extraction = normalize_facts(list(rt.interpretation.facts))
+    turn = state.get("turn")
+    message = str(turn.get("text") or "") if turn else ""
+    extraction = normalize_facts(list(rt.interpretation.facts), message)
     for mode, text in extraction.occupation_queries.items():
         occupation = await _resolve_occupation(state, rt, text, updates)
         if occupation is None:
@@ -251,9 +275,12 @@ async def prepare(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
         if rt.halt:
             break
         resolved = await _resolve_current_vehicle(rt, text)
-        if isinstance(resolved, Clarification):
-            if not rt.halt:
-                extraction.clarifications.append(resolved)
+        if isinstance(resolved, str):
+            rt.vehicle_question = resolved
+            continue
+        if resolved == _saved_vehicle(rt):  # the car they already have: nothing to write
+            if mode is FactMode.ACTUAL:
+                rt.implicit_confirmations.append(FieldPath.CURRENT_VEHICLE.value)
             continue
         change = SetChange(op="set", field=FieldPath.CURRENT_VEHICLE, value=resolved)
         target = extraction.actual if mode is FactMode.ACTUAL else extraction.hypothetical
@@ -311,16 +338,22 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
             rt.profile_version = result.new_profile_version
         accepted = [f.value for f in result.accepted_fields]
         rt.applied[mode] = accepted
-        if accepted:
+        # A value the safety net kept out of the profile is reported once, after the results.
+        acknowledged = [
+            f
+            for f in accepted
+            if not (mode is UpdateMode.HYPOTHETICAL and f in rt.extraction.not_saved)
+        ]
+        if acknowledged:
             rt.reply(
                 he.updated_text(
-                    accepted,
+                    acknowledged,
                     hypothetical=mode is UpdateMode.HYPOTHETICAL,
                     stale_runs=bool(result.stale_run_ids),
                 ),
                 "update_confirmation",
                 mode=mode.value,
-                fields=accepted,
+                fields=acknowledged,
             )
         # `ok` means committed, not that every fact is usable: report what the server flagged.
         conflicts = [i.field.value for i in result.conflicts if i.field is not None]
@@ -332,6 +365,7 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
     stated = set(rt.applied.get(UpdateMode.ACTUAL_UPDATE, []))
     awaiting = state.get("awaiting_confirmation", [])
     if stated & set(awaiting):  # a corrected value needs no separate confirmation
+        rt.answered_confirmation = True
         return {"awaiting_confirmation": [f for f in awaiting if f not in stated]}
     return {}
 
@@ -339,19 +373,32 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
 async def apply_confirmations(
     state: ConversationState, runtime: Runtime[TurnRuntime]
 ) -> dict[str, Any]:
-    """Confirm saved facts (G3) only when the employee explicitly confirms facts the advisor
-    asked about. Values never change; facts stated in this turn are never confirmed."""
+    """Confirm saved facts (G3) when the employee explicitly confirms facts the advisor asked
+    about, and silently when they restate a saved fact with the same value (their saved current
+    car). Values never change; facts written in this turn are never confirmed."""
     rt = runtime.context
     turn = state.get("turn")
     assert turn is not None
     interpretation, extraction = rt.interpretation, rt.extraction
-    if rt.halt or interpretation is None or interpretation.intent is not Intent.CONFIRM_FACTS:
+    if rt.halt or interpretation is None:
         return {}
     assert extraction is not None
     stated = {c.field.value for c in [*extraction.actual, *extraction.hypothetical]}
-    awaiting = [f for f in state.get("awaiting_confirmation", []) if f not in stated]
-    requested = {f.value for f in interpretation.confirmed_fields} or set(awaiting)
-    fields = [f for f in awaiting if f in requested]
+    explicit: list[str] = []
+    if interpretation.intent is Intent.CONFIRM_FACTS:
+        awaiting = [f for f in state.get("awaiting_confirmation", []) if f not in stated]
+        if not awaiting and rt.case is not None:
+            # Nothing was asked in the chat (e.g. the comparison page asked to confirm the
+            # current car): "הפרטים נכונים" confirms the saved current arrangement only.
+            awaiting = [
+                f.value
+                for f in rt.case.fields_requiring_confirmation
+                if f.value.startswith("currentArrangement.") and f.value not in stated
+            ]
+        requested = {f.value for f in interpretation.confirmed_fields} or set(awaiting)
+        explicit = [f for f in awaiting if f in requested]
+    implicit = [f for f in rt.implicit_confirmations if f not in stated and f not in explicit]
+    fields = [*explicit, *implicit]
     if not fields:
         return {}
     envelope = await rt.tools.confirm_profile_fields(
@@ -374,9 +421,14 @@ async def apply_confirmations(
     rt.case_version = result.new_case_version
     rt.profile_version = result.new_profile_version
     rt.confirmed = [f.value for f in result.confirmed_fields]
-    if rt.confirmed:
-        rt.reply(he.confirmed_text(rt.confirmed), "confirmation", fields=rt.confirmed)
-    not_confirmable = [i.field.value for i in result.not_confirmable if i.field is not None]
+    shown = [f for f in rt.confirmed if f in explicit]  # a silent confirmation says nothing
+    if shown:
+        rt.reply(he.confirmed_text(shown), "confirmation", fields=shown)
+    not_confirmable = [
+        i.field.value
+        for i in result.not_confirmable
+        if i.field is not None and i.field.value in explicit
+    ]
     if not_confirmable:
         rt.reply(he.ask_for_fields(not_confirmable[:2]), "question", fields=not_confirmable[:2])
     done = set(rt.confirmed) | set(not_confirmable)

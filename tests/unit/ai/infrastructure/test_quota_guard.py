@@ -4,8 +4,6 @@ import logging
 from decimal import Decimal
 
 import pytest
-from pydantic import BaseModel, SecretStr
-
 from app.ai.application.ports.llm import (
     LlmMessage,
     LlmOutcome,
@@ -13,7 +11,7 @@ from app.ai.application.ports.llm import (
     LlmTaskKind,
 )
 from app.ai.infrastructure.llm.factory import build_llm_port
-from app.ai.infrastructure.llm.guarded import DisabledLlm, QuotaGuardedLlm
+from app.ai.infrastructure.llm.guarded import DisabledLlm, FailoverLlm, QuotaGuardedLlm
 from app.ai.infrastructure.llm.provider import (
     FinishKind,
     ProviderClient,
@@ -23,7 +21,14 @@ from app.ai.infrastructure.llm.provider import (
 )
 from app.ai.infrastructure.llm.settings import CredentialProfile, load_llm_settings
 from app.ai.infrastructure.llm.usage import UsageTracker
-from tests.fakes.ai.fake_llm import FakeClock, FakeSleep, ScriptedProviderClient, json_response
+from pydantic import BaseModel, SecretStr
+
+from tests.fakes.ai.fake_llm import (
+    FakeClock,
+    FakeSleep,
+    ScriptedProviderClient,
+    json_response,
+)
 
 SECRET = "AIzaFAKE-guard-key-22222222222222222"
 
@@ -64,7 +69,9 @@ def guarded(
     clock = FakeClock()
     sleep = FakeSleep(clock)
     tracker = UsageTracker()
-    llm = QuotaGuardedLlm(profile(**profile_changes), client, tracker, clock=clock, sleep=sleep)
+    llm = QuotaGuardedLlm(
+        profile(**profile_changes), client, tracker, clock=clock, sleep=sleep
+    )
     return llm, clock, sleep, tracker
 
 
@@ -84,12 +91,17 @@ async def test_valid_output_is_parsed_and_counted() -> None:
 @pytest.mark.parametrize(
     ("response", "code"),
     [
-        (ProviderResponse('{"wrong": 1}', FinishKind.COMPLETE), "schema_validation_failed"),
+        (
+            ProviderResponse('{"wrong": 1}', FinishKind.COMPLETE),
+            "schema_validation_failed",
+        ),
         (ProviderResponse("not json", FinishKind.COMPLETE), "schema_validation_failed"),
         (ProviderResponse('{"word": "x"', FinishKind.TRUNCATED), "truncated"),
     ],
 )
-async def test_invalid_output_is_never_used(response: ProviderResponse, code: str) -> None:
+async def test_invalid_output_is_never_used(
+    response: ProviderResponse, code: str
+) -> None:
     llm, *_ = guarded(ScriptedProviderClient([response]))
     result = await llm.generate(TASK)
     assert result.outcome is LlmOutcome.INVALID_OUTPUT and result.value is None
@@ -97,12 +109,16 @@ async def test_invalid_output_is_never_used(response: ProviderResponse, code: st
 
 
 async def test_blocked_response_is_a_refusal() -> None:
-    llm, *_ = guarded(ScriptedProviderClient([ProviderResponse("", FinishKind.BLOCKED)]))
+    llm, *_ = guarded(
+        ScriptedProviderClient([ProviderResponse("", FinishKind.BLOCKED)])
+    )
     assert (await llm.generate(TASK)).outcome is LlmOutcome.REFUSED
 
 
 async def test_short_rate_limit_is_retried_once_on_the_same_profile() -> None:
-    client = ScriptedProviderClient([rate_limited(2.0), json_response(Answer(word="ok"))])
+    client = ScriptedProviderClient(
+        [rate_limited(2.0), json_response(Answer(word="ok"))]
+    )
     llm, clock, sleep, tracker = guarded(client)
     result = await llm.generate(TASK)
     assert result.ok
@@ -119,11 +135,15 @@ async def test_repeated_short_rate_limit_is_not_retried_again() -> None:
     assert len(client.requests) == 2 and sleep.calls == [1.0]
 
 
-async def test_long_rate_limit_returns_and_cools_down_without_calling_the_provider() -> None:
+async def test_long_rate_limit_returns_and_cools_down_without_calling_the_provider() -> (
+    None
+):
     client = ScriptedProviderClient([rate_limited(40.0)])
     llm, clock, sleep, _ = guarded(client)
     first = await llm.generate(TASK)
-    assert first.outcome is LlmOutcome.RATE_LIMITED and first.retry_after_seconds == 40.0
+    assert (
+        first.outcome is LlmOutcome.RATE_LIMITED and first.retry_after_seconds == 40.0
+    )
     assert sleep.calls == []
     clock.advance(10)
     second = await llm.generate(TASK)
@@ -169,7 +189,10 @@ async def test_local_rpm_ceiling_is_enforced_before_the_provider() -> None:
     assert (await llm.generate(TASK)).ok
     assert (await llm.generate(TASK)).ok
     third = await llm.generate(TASK)
-    assert third.outcome is LlmOutcome.RATE_LIMITED and third.diagnostic_code == "local_rpm_limit"
+    assert (
+        third.outcome is LlmOutcome.RATE_LIMITED
+        and third.diagnostic_code == "local_rpm_limit"
+    )
     assert len(client.requests) == 2
 
 
@@ -217,7 +240,9 @@ async def test_other_provider_errors_are_not_retried(
     assert len(client.requests) == 1 and sleep.calls == []
 
 
-async def test_logs_never_contain_the_api_key_or_prompt(caplog: pytest.LogCaptureFixture) -> None:
+async def test_logs_never_contain_the_api_key_or_prompt(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     caplog.set_level(logging.INFO, logger="app.ai.llm")
     llm, *_ = guarded(ScriptedProviderClient([json_response(Answer(word="ok"))]))
     await llm.generate(TASK)
@@ -229,7 +254,10 @@ async def test_logs_never_contain_the_api_key_or_prompt(caplog: pytest.LogCaptur
 
 
 def _two_profile_env(active: str) -> dict[str, str]:
-    env = {"STRAUSS_AI_LLM_PROFILES": "dev,test", "STRAUSS_AI_LLM_ACTIVE_PROFILE": active}
+    env = {
+        "STRAUSS_AI_LLM_PROFILES": "dev,test",
+        "STRAUSS_AI_LLM_ACTIVE_PROFILE": active,
+    }
     for name in ("DEV", "TEST"):
         env.update(
             {
@@ -242,38 +270,121 @@ def _two_profile_env(active: str) -> dict[str, str]:
     return env
 
 
-async def test_exhausted_active_profile_never_rotates_to_another_profile() -> None:
-    built: list[str] = []
+async def test_exhausted_active_profile_fails_over_to_the_next_profile() -> None:
     clients: dict[str, ScriptedProviderClient] = {}
 
     def factory(p: CredentialProfile) -> ProviderClient:
-        built.append(p.name)
+        if p.name == "DEV":
+            script = [
+                ProviderError(
+                    ProviderErrorKind.QUOTA_EXHAUSTED, "daily_quota_exhausted"
+                )
+            ]
+        else:
+            script = [json_response(Answer(word="ok"))]
+        clients[p.name] = ScriptedProviderClient(script)
+        return clients[p.name]
+
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    result = await llm.generate(TASK)
+    assert result.ok
+    assert len(clients["DEV"].requests) == 1
+    assert len(clients["TEST"].requests) == 1
+
+
+async def test_exhausted_quota_on_every_profile_returns_quota_exhausted() -> None:
+    clients: dict[str, ScriptedProviderClient] = {}
+
+    def factory(p: CredentialProfile) -> ProviderClient:
         clients[p.name] = ScriptedProviderClient(
             [ProviderError(ProviderErrorKind.QUOTA_EXHAUSTED, "daily_quota_exhausted")]
         )
         return clients[p.name]
 
-    settings = load_llm_settings(_two_profile_env("dev"))
-    llm = build_llm_port(settings, client_factories={"gemini": factory})
-    first = await llm.generate(TASK)
-    second = await llm.generate(TASK)
-    assert first.outcome is second.outcome is LlmOutcome.QUOTA_EXHAUSTED
-    assert built == ["DEV"]  # the TEST profile's client is never created
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    result = await llm.generate(TASK)
+    assert result.outcome is LlmOutcome.QUOTA_EXHAUSTED
     assert len(clients["DEV"].requests) == 1
+    assert len(clients["TEST"].requests) == 1
+
+
+def test_failover_needs_at_least_one_profile() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        FailoverLlm([])
+
+
+async def test_rate_limited_profile_fails_over_to_the_next_profile() -> None:
+    clients: dict[str, ScriptedProviderClient] = {}
+
+    def factory(p: CredentialProfile) -> ProviderClient:
+        if p.name == "DEV":
+            script = [rate_limited(3600.0)]
+        else:
+            script = [json_response(Answer(word="ok"))]
+        clients[p.name] = ScriptedProviderClient(script)
+        return clients[p.name]
+
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    result = await llm.generate(TASK)
+    assert result.ok
+    assert len(clients["DEV"].requests) == 1
+    assert len(clients["TEST"].requests) == 1
+
+
+async def test_every_profile_rate_limited_reports_the_shortest_wait() -> None:
+    def factory(p: CredentialProfile) -> ProviderClient:
+        wait = 1800.0 if p.name == "DEV" else 600.0
+        return ScriptedProviderClient([rate_limited(wait)])
+
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    result = await llm.generate(TASK)
+    assert result.outcome is LlmOutcome.RATE_LIMITED
+    assert result.retry_after_seconds == 600.0
+
+
+async def test_request_error_does_not_fail_over() -> None:
+    clients: dict[str, ScriptedProviderClient] = {}
+
+    def factory(p: CredentialProfile) -> ProviderClient:
+        clients[p.name] = ScriptedProviderClient(
+            [ProviderError(ProviderErrorKind.BAD_REQUEST, "bad")]
+        )
+        return clients[p.name]
+
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    result = await llm.generate(TASK)
+    assert result.outcome is LlmOutcome.UNAVAILABLE
+    assert (
+        clients["TEST"].requests == []
+    )  # a request error says nothing about the next project
 
 
 async def test_switching_profile_is_a_configuration_change() -> None:
-    built: list[str] = []
+    clients: dict[str, ScriptedProviderClient] = {}
 
     def factory(p: CredentialProfile) -> ProviderClient:
-        built.append(p.name)
-        return ScriptedProviderClient([json_response(Answer(word="ok"))])
+        clients[p.name] = ScriptedProviderClient([json_response(Answer(word="ok"))])
+        return clients[p.name]
 
     llm = build_llm_port(
-        load_llm_settings(_two_profile_env("test")), client_factories={"gemini": factory}
+        load_llm_settings(_two_profile_env("test")),
+        client_factories={"gemini": factory},
     )
     assert (await llm.generate(TASK)).ok
-    assert built == ["TEST"]
+    assert (
+        len(clients["TEST"].requests) == 1
+    )  # the configured active profile is tried first
+    assert clients["DEV"].requests == []
 
 
 async def test_disabled_configuration_never_calls_a_provider() -> None:
@@ -289,7 +400,13 @@ def test_factory_refuses_a_profile_that_is_not_free_tier() -> None:
     unsafe = profile(model="gemini-3.1-pro-preview")
     forged = type(settings)(active_profile="DEV", profiles={"DEV": unsafe})
     with pytest.raises(ValueError, match="free-tier"):
-        build_llm_port(forged, client_factories={"gemini": lambda p: ScriptedProviderClient()})
-    no_ack = type(settings)(active_profile="DEV", profiles={"DEV": profile(free_tier_ack=False)})
+        build_llm_port(
+            forged, client_factories={"gemini": lambda p: ScriptedProviderClient()}
+        )
+    no_ack = type(settings)(
+        active_profile="DEV", profiles={"DEV": profile(free_tier_ack=False)}
+    )
     with pytest.raises(ValueError, match="free-tier"):
-        build_llm_port(no_ack, client_factories={"gemini": lambda p: ScriptedProviderClient()})
+        build_llm_port(
+            no_ack, client_factories={"gemini": lambda p: ScriptedProviderClient()}
+        )

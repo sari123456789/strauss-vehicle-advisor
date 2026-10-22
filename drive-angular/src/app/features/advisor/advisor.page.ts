@@ -1,13 +1,7 @@
 import {Component, OnDestroy, OnInit, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
-import {FIELD_STATUS, PROPULSION, optionLabel} from '../../core/api/labels';
-
-const ARRANGEMENT: Record<string, string> = {
-  company_car: 'רכב חברה',
-  allowance: 'אחזקת רכב',
-  no_car_no_allowance: 'ללא רכב וללא אחזקה',
-};
+import {FIELD_STATUS} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {MoneyPipe} from '../../shared/format/money.pipe';
@@ -18,7 +12,7 @@ import {PayslipImportComponent} from '../payslip/payslip-import.component';
 import {ProfileStore} from '../profile/state/profile.store';
 import {profileRows} from '../profile/profile-rows';
 import {ConversationStore} from './state/conversation.store';
-import {ComparisonsStore} from '../comparisons/state/comparisons.store';
+import {compareMessage} from './compare-message';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 
 /** Message kinds that carry a Business comparison run the employee can open in detail. */
@@ -39,29 +33,17 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly fieldStatus = FIELD_STATUS;
   /** All profile fields for the side panel; missing ones are shown as not yet known. */
   readonly profileRows = computed(() => profileRows(this.profile.profile()));
-  /** The payslip import panel (same reusable component as the profile page). */
+  /** The payslip import panel (reusable component). */
   readonly payslipOpen = signal(false);
-  /** Sent here from the comparison page because the current state could not be calculated. */
-  readonly needsCurrent = inject(ComparisonsStore).needsCurrent;
   readonly currentCarImage = computed(() =>
     vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
   );
-  /** The saved current-car details the employee is asked to confirm, in plain words. */
-  readonly currentDetails = computed(() => {
-    const a = this.profile.profile()?.currentArrangement;
-    if (!a) return [];
-    const missing = 'לא ידוע';
-    const participation = a.participation.value;
-    return [
-      {label: 'סוג ההסדר', value: (a.kind.value && ARRANGEMENT[a.kind.value]) || missing},
-      {label: 'הרכב הנוכחי', value: this.vehicleName(a.vehicle.value?.catalogueId) ?? missing},
-      {label: 'סוג הנעה', value: (a.propulsion.value && PROPULSION[a.propulsion.value as keyof typeof PROPULSION]) || missing},
-      {label: 'השתתפות חודשית ברכב', value: participation ? `${Number(participation).toLocaleString('he-IL')} ₪` : missing},
-    ];
-  });
   /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
   readonly panelCards = signal<OptionItem[] | null>(null);
   text = '';
+  /** The profile field being edited in the side panel; the new value goes to the advisor. */
+  readonly editing = signal<string | null>(null);
+  editValue = '';
 
   async ngOnInit(): Promise<void> {
     void this.profile.load();
@@ -82,16 +64,39 @@ export class AdvisorPage implements OnInit, OnDestroy {
   send(): void {
     const text = this.text;
     this.text = '';
-    this.needsCurrent.set(false);
     void this.store.send(text).then(() => {
       void this.profile.load();
       void this.catalog.load();
     });
   }
 
+  startEdit(label: string): void {
+    this.editing.set(label);
+    this.editValue = '';
+  }
+
+  /** Profile updates keep the advisor's checks and provenance: the edit is sent as a message. */
+  submitEdit(label: string): void {
+    const value = this.editValue.trim();
+    if (!value) return;
+    this.editing.set(null);
+    this.text = `עדכון לפרטים שלי — ${label}: ${value}`;
+    this.send();
+  }
+
   async startNew(): Promise<void> {
     await this.store.startNew();
     await this.router.navigate(['/advisor', this.store.active()?.conversationId]);
+  }
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    if (!confirm('למחוק את השיחה מהרשימה?')) return;
+    const wasActive = this.store.active()?.conversationId === conversationId;
+    await this.store.remove(conversationId);
+    if (wasActive && !this.store.active()) {
+      const next = await this.store.startFresh().catch(() => undefined);
+      if (next) await this.router.navigate(['/advisor', next.conversationId]);
+    }
   }
 
   async switchTo(conversationId: string): Promise<void> {
@@ -118,10 +123,17 @@ export class AdvisorPage implements OnInit, OnDestroy {
     this.panelCards.set(cards);
   }
 
-  private vehicleName(catalogueId: string | null | undefined): string | null {
-    if (!catalogueId) return null;
-    const option = this.catalog.options().find(o => o.catalogueId === catalogueId);
-    return option ? optionLabel(option) : catalogueId;
+  /**
+   * The selected vehicles go to the advisor as a message, so the chat asks only what it still
+   * needs (e.g. one confirmation of saved details) and shows the difference from today itself.
+   */
+  compareInChat(): void {
+    const message = compareMessage(this.catalog.selectedOptions());
+    if (!message || this.store.busy()) return;
+    this.text = message;
+    this.panelCards.set(null);
+    this.catalog.clear();
+    this.send();
   }
 
   runOf(message: {kind: string; payload: Record<string, unknown>}): string | null {

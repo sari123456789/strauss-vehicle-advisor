@@ -7,14 +7,15 @@ Behavior per call:
    once on the **same** profile; anything else is returned to the workflow.
 3. Validate the JSON against the task's output model; invalid output is never used.
 
-There is no fallback to another profile, model or provider. Logs carry the profile name, the
-non-secret project label and outcome codes only.
+`FailoverLlm` tries the profiles in order and moves on when a project's daily quota is exhausted
+or it is rate limited; there is no fallback to another provider. Logs carry the profile name,
+the non-secret project label and outcome codes only.
 """
 
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -187,3 +188,40 @@ class DisabledLlm:
 
     async def generate(self, task: LlmTask[OutputT]) -> LlmResult[OutputT]:
         return LlmResult(LlmOutcome.BLOCKED_BY_POLICY, diagnostic_code="llm_disabled")
+
+
+_FAILOVER_OUTCOMES = frozenset({LlmOutcome.QUOTA_EXHAUSTED, LlmOutcome.RATE_LIMITED})
+
+
+class FailoverLlm:
+    """Tries each profile's guard in order and moves on when that project has no capacity left.
+
+    Quotas and rate limits are per project, so an exhausted daily quota or a rate limit (after the
+    guard's own short retry) is a reason to use the next project. Refusals, invalid output and
+    errors are returned as they are. When every profile is limited, a temporary rate limit is
+    reported in preference to an exhausted quota, with the shortest wait.
+    """
+
+    def __init__(self, guards: Sequence[QuotaGuardedLlm]) -> None:
+        if not guards:
+            raise ValueError("at least one guarded profile is required")
+        self._guards = tuple(guards)
+
+    async def generate(self, task: LlmTask[OutputT]) -> LlmResult[OutputT]:
+        result: LlmResult[OutputT] | None = None
+        rate_limited: list[LlmResult[OutputT]] = []
+        for guard in self._guards:
+            result = await guard.generate(task)
+            if result.outcome not in _FAILOVER_OUTCOMES:
+                return result
+            if result.outcome is LlmOutcome.RATE_LIMITED:
+                rate_limited.append(result)
+        if rate_limited:
+            return min(rate_limited, key=_retry_wait)
+        assert result is not None
+        return result
+
+
+def _retry_wait(result: LlmResult[Any]) -> float:
+    wait = result.retry_after_seconds
+    return float("inf") if wait is None else wait

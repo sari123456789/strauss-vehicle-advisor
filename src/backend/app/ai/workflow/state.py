@@ -56,8 +56,10 @@ class ActiveGoal(TypedDict):
     optionKeys: NotRequired[list[str]]
     """The options the employee explicitly selected (absent for list/all-option goals and in
     goals checkpointed before this field existed). A resumed goal compares exactly these."""
+    includeWaiver: NotRequired[bool]
+    """The goal includes the waiver option; a resumed goal keeps it (e.g. after "yes")."""
     propulsion: NotRequired[list[str]]
-    """A propulsion filter of an all-cars goal ("electric cars"), kept when the goal resumes."""
+    """Drive-type filter (`Propulsion` values) of an all-option goal; kept on resume."""
 
 
 class PendingTask(TypedDict):
@@ -101,6 +103,10 @@ class ConversationState(TypedDict, total=False):
     last_outbox: LastOutbox | None
     awaiting_confirmation: list[str]
     """Saved facts (`FieldPath` values) the advisor asked the employee to confirm."""
+    salary_confirmation_asked: bool
+    """The one-per-conversation confirmation of saved salary facts was asked; never again."""
+    saved_facts_noted: list[str]
+    """Saved salary facts already named in a "calculated with saved facts" note (no repeats)."""
     occupation_candidates: list[OccupationCandidateRef]
     """Official occupations shown for an ambiguous description, awaiting a choice."""
     offered_question: str | None
@@ -146,6 +152,14 @@ class TurnRuntime:
     applied: dict[UpdateMode, list[str]] = field(default_factory=dict)
     confirmed: list[str] = field(default_factory=list)
     """Saved facts confirmed in this turn through `confirm_profile_fields`."""
+    answered_confirmation: bool = False
+    """This turn corrected a saved fact the advisor had asked to confirm (resume the goal)."""
+    implicit_confirmations: list[str] = field(default_factory=list)
+    """Saved facts the employee restated with the same value (e.g. their saved current car):
+    confirmed silently instead of being written again."""
+    vehicle_question: str | None = None
+    """A current car mentioned in this turn could not be identified: asked after the results,
+    which then show no difference from today (never a delta against a car they may not have)."""
     halt: bool = False
     """Stop acting on this turn (an error or clarification has already been replied)."""
     replies: list[Reply] = field(default_factory=list)

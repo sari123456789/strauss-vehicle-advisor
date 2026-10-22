@@ -29,6 +29,11 @@ export class ConversationsApi {
     return firstValueFrom(this.http.get<ConversationDetail>(`${this.base}/${conversationId}`));
   }
 
+  /** Removes it from the employee's list; the server keeps its history. */
+  remove(conversationId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/${conversationId}`));
+  }
+
   send(conversationId: string, text: string, messageId = newId()): Promise<SubmitMessageResponse> {
     return firstValueFrom(
       this.http.post<SubmitMessageResponse>(`${this.base}/${conversationId}/messages`, {messageId, text}),

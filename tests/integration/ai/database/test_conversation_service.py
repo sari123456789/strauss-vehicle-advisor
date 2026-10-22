@@ -276,6 +276,27 @@ async def test_other_employees_cannot_see_or_use_a_conversation(
         await service.get_conversation(owner, uuid4())
 
 
+async def test_hidden_conversation_leaves_the_list_but_keeps_its_history(
+    service: ConversationService,
+) -> None:
+    owner, intruder = _employee(), _employee()
+    kept = await service.start_conversation(
+        owner, client_request_id=uuid4(), calculation_month=MONTH
+    )
+    hidden = await service.start_conversation(
+        owner, client_request_id=uuid4(), calculation_month=MONTH
+    )
+    with pytest.raises(errors.ConversationAccessError):
+        await service.hide_conversation(intruder, hidden.conversation_id)
+    await service.hide_conversation(owner, hidden.conversation_id)
+    await service.hide_conversation(owner, hidden.conversation_id)  # repeating changes nothing
+    listed = await service.list_conversations(owner)
+    assert [c.conversation_id for c in listed] == [kept.conversation_id]
+    assert (await service.get_conversation(owner, hidden.conversation_id)).conversation_id == (
+        hidden.conversation_id
+    )
+
+
 async def test_non_employee_actors_are_rejected(service: ConversationService) -> None:
     representative = ActorRef(
         subject_id=uuid4(), roles=frozenset({Role.REPRESENTATIVE}), origin=Origin.HTTP

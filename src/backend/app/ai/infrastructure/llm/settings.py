@@ -1,9 +1,8 @@
 """LLM credential profiles loaded from environment variables only.
 
-Several profiles may be configured (e.g. one Google AI Studio project for development and one
-for testing). Exactly one is active, chosen explicitly with `STRAUSS_AI_LLM_ACTIVE_PROFILE`.
-Changing the active profile is a configuration change (restart); the adapter never moves to
-another profile on its own, in particular not to get around an exhausted quota.
+Several profiles may be configured, each on its own Google Cloud project. The active profile
+(`STRAUSS_AI_LLM_ACTIVE_PROFILE`) is tried first; when its daily quota is exhausted or it is rate
+limited the adapter moves to the next configured profile, in configuration order.
 
     STRAUSS_AI_LLM_PROFILES=dev,test
     STRAUSS_AI_LLM_ACTIVE_PROFILE=dev
@@ -78,6 +77,11 @@ class LlmSettings:
     @property
     def active(self) -> CredentialProfile:
         return self.profiles[self.active_profile]
+
+    def failover_chain(self) -> tuple[CredentialProfile, ...]:
+        """The active profile first, then the others in configuration order."""
+        others = tuple(p for name, p in self.profiles.items() if name != self.active_profile)
+        return (self.active, *others)
 
 
 def _var(name: str, profile: str | None = None) -> str:

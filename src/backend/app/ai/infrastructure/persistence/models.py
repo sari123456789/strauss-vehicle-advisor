@@ -110,6 +110,8 @@ class ConversationRow(AgentBase):
     next_event_seq: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="1")
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = _now()
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """Set when the owner deleted it from their list; the history itself is kept."""
 
 
 class InputRow(AgentBase):

@@ -352,6 +352,72 @@ tbody tr:hover {
   background: linear-gradient(120deg, #f2ebe3, #ede4db);
 }
 
+// One conversation in the list: the link and its delete button.
+.progress > .conv {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #dcdde1;
+}
+
+.progress > .conv.selected {
+  border-radius: 11px;
+  border-bottom-color: transparent;
+  border-inline-start: 2px solid #ae7f53;
+  background: linear-gradient(120deg, #f2ebe3, #ede4db);
+}
+
+.progress > .conv > a {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-inline-size: 0;
+  padding: 16px 12px;
+  font-size: 17px;
+}
+
+.conv__delete {
+  flex: none;
+  min-block-size: 36px;
+  min-inline-size: 36px;
+  margin-inline-end: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8d93;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.conv__delete {
+  display: grid;
+  place-items: center;
+}
+
+.conv__delete svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.conv__delete:hover,
+.conv__delete:focus-visible {
+  background: #fbeceb;
+  color: #a33a2b;
+}
+
+@media (max-width: 760px) {
+  .progress > .conv {
+    flex: none;
+    border-bottom: 0;
+  }
+
+  .progress > .conv > a {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
 .progress > a.outline {
   margin-top: 20px;
   inline-size: 100%;
@@ -470,6 +536,65 @@ tbody tr:hover {
   margin: 0;
   font-weight: 700;
   text-align: end;
+}
+
+.summary-fields dd.value {
+  margin-inline-start: auto;
+}
+
+.field-edit {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  margin: -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8d93;
+  cursor: pointer;
+}
+
+.field-edit svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+.field-edit:hover,
+.field-edit:focus-visible {
+  background: #f2ebe3;
+  color: #8c5f37;
+}
+
+.summary-fields > div.editing {
+  flex-wrap: wrap;
+}
+
+.summary-fields dd.field-editor {
+  flex-basis: 100%;
+  text-align: start;
+}
+
+.field-editor form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.field-editor input {
+  flex: 1 1 120px;
+  min-block-size: 36px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.field-editor .primary {
+  min-block-size: 36px;
+  padding: 6px 14px;
+  font-size: 14px;
 }
 
 .summary-fields .missing dd {

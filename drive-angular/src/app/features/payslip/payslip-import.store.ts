@@ -15,7 +15,7 @@ import {
 export type PayslipPhase = 'idle' | 'uploading' | 'extracting' | 'review' | 'saving' | 'approving' | 'done';
 
 /**
- * State of ONE payslip import (provided per component instance, so the profile page and the chat
+ * State of ONE payslip import (provided per component instance, so each host can
  * reuse the same workflow independently). Nothing reaches the profile before `approve()`.
  */
 @Injectable()

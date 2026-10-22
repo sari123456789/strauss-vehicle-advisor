@@ -170,8 +170,34 @@ CONFIRM_AGAIN = (
 )
 
 
+def confirm_saved_text(fields: list[str], missing: list[str] | None = None) -> str:
+    """The one confirmation per conversation before a calculation that rests on facts saved in
+    an earlier conversation. Names the facts only; their values are in the side panel."""
+    text = (
+        "לפני שאחשב, רק לוודא שהפרטים ששמרנו משיחה קודמת עדיין נכונים: "
+        f"{labels_text(fields)}. (הם מופיעים בחלונית הצד.) "
+        'אם הכול נכון, מספיק לכתוב "כן"; אם משהו השתנה, פשוט לכתוב את הערך הנכון.'
+    )
+    if missing:
+        text += " " + ask_for_fields(missing[:2])
+    return text
+
+
+def saved_facts_note(fields: list[str]) -> str:
+    """One line under a result that used saved facts the employee did not restate here."""
+    return (
+        f"חישבתי לפי מה ששמרנו משיחה קודמת עבור {labels_text(fields)}. "
+        "אם משהו מזה השתנה, אפשר לכתוב לי ואעדכן את החישוב."
+    )
+
+
 def confirmed_text(fields: list[str]) -> str:
-    return f"מעולה, רשמתי ש{labels_text(fields)} עדיין נכונים."
+    """Short and plain: the group of details, never a list of technical field names."""
+    if fields and all(f.startswith("currentArrangement.") for f in fields):
+        return "מעולה, רשמתי שפרטי הרכב הנוכחי שלך עדיין נכונים."
+    if fields and all(f.startswith("payroll.") for f in fields):
+        return "מעולה, רשמתי שפרטי השכר שלך עדיין נכונים."
+    return "מעולה, רשמתי שהפרטים שלך עדיין נכונים."
 
 
 def conflicts_text(fields: list[str]) -> str:
@@ -222,7 +248,10 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
         ]
     if not scope_complete or unchecked:
         lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
-    lines.append('רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
+    lines.append(
+        "רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? "
+        'אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊'
+    )
     return "\n".join(lines)
 
 
@@ -261,8 +290,10 @@ def comparison_text(
     # the net itself is only secondary context.
     if len(result.alternatives) == 1 and len(with_delta) == 1:
         s = with_delta[0]
+        assert s.delta is not None and s.net is not None  # filtered above
         lines.append(
-            f"עם {labels.get(s.option_key, s.option_key)}: {_delta_phrase(s.delta)} בחודש לעומת היום "
+            f"עם {labels.get(s.option_key, s.option_key)}: "
+            f"{_delta_phrase(s.delta)} בחודש לעומת היום "
             f"(נטו משוער {shekels(s.net)})."
         )
     else:
@@ -281,7 +312,8 @@ def comparison_text(
             else:
                 lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
         if len(with_delta) > 1:
-            best = max(with_delta, key=lambda s: int(s.delta.display))
+            best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
+            assert best.delta is not None  # with_delta holds only scenarios with a delta
             lines.append(
                 f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
                 f"{_delta_phrase(best.delta)} בחודש לעומת היום."
@@ -339,7 +371,11 @@ def representative_answer_text(
             lines.append(f"זה בתוקף החל מ-{start}.")
         else:
             lines.append(f"זה בתוקף עד {end}.")
-    if answer is not None and answer.application is not None and answer.application.value == "not_applicable":
+    if (
+        answer is not None
+        and answer.application is not None
+        and answer.application.value == "not_applicable"
+    ):
         lines.append("שימו לב: התשובה לא חלה על חודש החישוב של השיחה הזו, אז החישוב לא משתנה.")
     elif recalculated:
         lines.append("עדכנתי את החישוב לפי התשובה 👇")
@@ -352,6 +388,13 @@ def representative_undetermined_text(label: str) -> str:
     return (
         f"נציג התחבורה לא יכול היה לקבוע את המידע לגבי {label}, אז את החלופה הזו לא אוכל לחשב. "
         "כל השאר ממשיך כרגיל."
+    )
+
+
+def not_saved_text(fields: list[str]) -> str:
+    """Safety net: a value given inside a conditional sentence was calculated, not saved."""
+    return (
+        f"לא עדכנתי את {labels_text(fields)} בפרטים השמורים שלך. אם צריך לעדכן, אפשר פשוט לכתוב לי."
     )
 
 
@@ -411,7 +454,7 @@ OFFER_DECLINED = "בסדר גמור, לא שלחתי. במה עוד אפשר ל�
 def offer_question_text(question: str) -> str:
     return (
         "על זה הכי טוב שיענה נציג התחבורה, כי זה תלוי בנהלים של החברה.\n"
-        f"לשלוח לו את השאלה: \"{question}\"?"
+        f'לשלוח לו את השאלה: "{question}"?'
     )
 
 
@@ -524,8 +567,8 @@ def data_sources_text(fields: list[tuple[str, str, str | None]]) -> str:
         "שווי השימוש: נתוני רשות המסים."
     )
     lines.append(
-        "הפרטים האישיים הם כפי שדווחו, וייתכן שחלקם כבר לא מעודכנים. אפשר לראות אותם במסך "
-        '"הנתונים שלי", ולתקן כל פרט כאן בשיחה.'
+        "הפרטים האישיים הם כפי שדווחו, וייתכן שחלקם כבר לא מעודכנים. אפשר לראות אותם בכרטיס "
+        '"הנתונים שלי" שליד השיחה, ולתקן כל פרט כאן בשיחה.'
     )
     return "\n".join(lines)
 

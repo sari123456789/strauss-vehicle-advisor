@@ -39,17 +39,23 @@ class RepresentativeRequestService:
                 views: list[MyRequestView] = []
                 for found in requests:
                     answer = await uow.representative_answers.get(found.request_id)
-                    general = found.field_code.value == RepresentativeFieldCode.GENERAL_QUESTION.value
+                    general = (
+                        found.field_code.value == RepresentativeFieldCode.GENERAL_QUESTION.value
+                    )
                     views.append(
                         MyRequestView(
                             request_id=found.request_id,
                             status=RequestStatus(found.status.value),
                             field_code=RepresentativeFieldCode(found.field_code.value),
                             question_text=found.question_text,
-                            source="form" if found.subject_snapshot.get("source") == "form" else "chat",
+                            source="form"
+                            if found.subject_snapshot.get("source") == "form"
+                            else "chat",
                             created_at=found.created_at,
                             updated_at=found.updated_at,
-                            answer=None if answer is None else answer_view(answer, text_answer=general),
+                            answer=None
+                            if answer is None
+                            else answer_view(answer, text_answer=general),
                         )
                     )
         return views
@@ -73,7 +79,8 @@ class RepresentativeRequestService:
             if answer is None
             else answer_view(
                 answer,
-                text_answer=found.field_code.value == RepresentativeFieldCode.GENERAL_QUESTION.value,
+                text_answer=found.field_code.value
+                == RepresentativeFieldCode.GENERAL_QUESTION.value,
             ),
             created_at=found.created_at,
             updated_at=found.updated_at,

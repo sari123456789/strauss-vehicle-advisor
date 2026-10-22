@@ -291,11 +291,21 @@ class AgentStore:
     ) -> list[ConversationRecord]:
         rows = await self._session.scalars(
             select(ConversationRow)
-            .where(ConversationRow.owner_subject_id == owner_subject_id)
+            .where(
+                ConversationRow.owner_subject_id == owner_subject_id,
+                ConversationRow.hidden_at.is_(None),
+            )
             .order_by(ConversationRow.updated_at.desc(), ConversationRow.id)
             .limit(limit)
         )
         return [_conversation(row) for row in rows]
+
+    async def hide_conversation(self, conversation_id: UUID) -> None:
+        """Leave the conversation out of its owner's list; repeating it changes nothing."""
+        row = await self._lock(conversation_id)
+        if row.hidden_at is None:
+            row.hidden_at = func.now()
+            await self._session.flush()
 
     async def bind_case(self, conversation_id: UUID, case_id: UUID) -> Written[ConversationRecord]:
         """`initializing` -> `active` with its case; replaying the same binding is a no-op."""

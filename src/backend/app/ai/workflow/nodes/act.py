@@ -13,6 +13,7 @@ from langgraph.runtime import Runtime
 from app.ai.tools.gateway import ToolBudgetExceeded
 from app.ai.workflow import messages_he as he
 from app.ai.workflow.models import Intent, OptionReference
+from app.ai.workflow.nodes.understand import profile_statuses
 from app.ai.workflow.rendering import comparison_placeholders
 from app.ai.workflow.state import (
     ActiveGoal,
@@ -57,6 +58,16 @@ from app.contracts.representatives import (
 
 MAX_ASKS_PER_FIELD = 2
 """After this many unanswered questions a field is treated as unknown (no question loops)."""
+
+SALARY_FIELDS = (
+    FieldPath.BASE_GROSS.value,
+    FieldPath.COMMISSIONS_GROSS.value,
+    FieldPath.BONUS_GROSS.value,
+    FieldPath.PENSION_EMPLOYEE_RATE.value,
+    FieldPath.STUDY_FUND_EMPLOYEE_RATE.value,
+    FieldPath.CREDIT_POINTS.value,
+)
+"""Salary facts every net calculation uses, whether or not it compares with today."""
 
 REPRESENTATIVE_FIELDS: dict[str, RepresentativeFieldCode] = {
     FieldPath.ENTITLEMENT_GROUP.value: RepresentativeFieldCode.ENTITLEMENT_GROUP,
@@ -260,20 +271,51 @@ def _error(rt: TurnRuntime, envelope: Any, updates: dict[str, Any] | None = None
 
 
 def _ask_confirmation(
-    state: ConversationState, rt: TurnRuntime, fields: list[str], updates: dict[str, Any]
+    state: ConversationState,
+    rt: TurnRuntime,
+    fields: list[str],
+    updates: dict[str, Any],
+    *,
+    text: str | None = None,
 ) -> None:
     """Ask only about the saved facts the current calculation needs (never a blanket check)."""
     awaiting = updates.get("awaiting_confirmation", state.get("awaiting_confirmation", []))
     updates["awaiting_confirmation"] = list(dict.fromkeys([*awaiting, *fields]))
-    if fields and set(fields) <= set(awaiting):
+    if text is None and fields and set(fields) <= set(awaiting):
         # Already asked with the full list: a short reminder instead of the same block again.
         rt.reply(he.CONFIRM_AGAIN, "confirmation_request", fields=fields)
         return
     rt.reply(
-        he.confirm_request_text(fields, _saved_values(rt, fields)),
+        text or he.confirm_request_text(fields, _saved_values(rt, fields)),
         "confirmation_request",
         fields=fields,
     )
+
+
+def _saved_salary(rt: TurnRuntime) -> tuple[list[str], bool]:
+    """(saved salary facts a calculation would use although the employee neither stated nor
+    confirmed them in this conversation, whether the employee already gave salary facts here).
+
+    Statuses only: salary values are never read. Facts written or confirmed in this turn count
+    as given, since the case context was loaded before them. Without a loaded case context
+    nothing is known to be saved-only, so nothing is asked or noted.
+    """
+    if rt.case is None:
+        return [], True
+    statuses = profile_statuses(rt.case)
+    unconfirmed = {f.value for f in rt.case.fields_requiring_confirmation}
+    given_now = {
+        *rt.applied.get(UpdateMode.ACTUAL_UPDATE, []),
+        *rt.applied.get(UpdateMode.HYPOTHETICAL, []),
+        *rt.confirmed,
+        *(o.field.value for o in rt.case.hypothetical_overrides),
+    }
+    saved = [f for f in SALARY_FIELDS if f in unconfirmed and f not in given_now]
+    given = any(
+        f in given_now or (statuses.get(f) == "usable" and f not in unconfirmed)
+        for f in SALARY_FIELDS
+    )
+    return saved, given
 
 
 def _saved_values(rt: TurnRuntime, fields: list[str]) -> dict[str, str]:
@@ -468,11 +510,18 @@ async def compute(
     kind: RunKind,
     updates: dict[str, Any],
     question: str,
+    employee_request: bool = True,
 ) -> ComparisonResult | None:
-    """Readiness gate, then one comparison for every ready option (partial results allowed)."""
-    # Every comparison in the chat shows the difference from today, so the current arrangement
-    # is always required: nothing is calculated until the baseline is ready.
-    include_current = True
+    """Readiness gate, then one comparison for every ready option (partial results allowed).
+
+    `employee_request=False` (a representative answer resumes the work) never asks to confirm
+    saved salary facts; the result then says which saved facts it used.
+
+    `include_current` follows the question: "what would my net be with X" needs the salary facts
+    only; "how would my net change compared to today" also needs the current arrangement. A
+    baseline that is not ready blocks only the difference from today, never the net of a ready
+    alternative (agent spec §2.5 and §6).
+    """
     labels = _labels(state, rt)
     # Readiness uses the same fact basis as the comparison it prepares (E2: `kind`).
     readiness_env = await rt.tools.check_calculation_readiness(
@@ -509,7 +558,28 @@ async def compute(
     pending_labels = [
         labels.get(p.option_key or "", "החלופה") for p in readiness.pending_representative_fields
     ]
-    if not readiness.ready_scenario_ids or readiness.baseline_ready is not True:
+    saved_salary, salary_given = _saved_salary(rt)
+    if (
+        employee_request
+        and readiness.ready_scenario_ids
+        and saved_salary
+        and not salary_given
+        and not any(f in SALARY_FIELDS for f in missing)
+        and not state.get("salary_confirmation_asked")
+    ):
+        # Once per conversation, and only when the result would rest entirely on salary facts
+        # saved in an earlier conversation. A comparison asks about today's arrangement in the
+        # same message, so the employee answers once.
+        baseline_missing = (
+            [f for f in missing if f.startswith("currentArrangement.")] if include_current else []
+        )
+        fields = list(dict.fromkeys([*saved_salary, *(to_confirm if include_current else [])]))
+        _ask_confirmation(
+            state, rt, fields, updates, text=he.confirm_saved_text(fields, baseline_missing)
+        )
+        updates["salary_confirmation_asked"] = True
+        return None
+    if not readiness.ready_scenario_ids:
         if missing:
             await _ask_missing(state, rt, missing, updates)
         elif to_confirm:
@@ -525,7 +595,7 @@ async def compute(
             ]
             rt.reply("\n".join(blocked) or he.NO_RESULTS_YET, "blocked")
         return None
-    with_current = readiness.baseline_ready is True
+    with_current = include_current and readiness.baseline_ready is True
     envelope = await rt.tools.compare_scenarios(
         CompareRequest(
             selection=Selection(
@@ -547,6 +617,11 @@ async def compute(
     text = he.comparison_text(result, labels, full_disclaimer=full)
     rt.reply(text, "comparison", runId=str(result.run_id))
     updates["disclaimer_shown"] = True
+    noted = list(state.get("saved_facts_noted", []))
+    unnoted = [f for f in saved_salary if f not in noted]
+    if unnoted:  # calculated with saved facts the employee did not restate: say so, once
+        rt.reply(he.saved_facts_note(unnoted), "info", fields=unnoted)
+        updates["saved_facts_noted"] = [*noted, *unnoted]
     if _has_reason(envelope.issues, LIST_BUILT_FROM_OTHER_FACTS):
         updates["result_set_id"] = None
         rt.reply(he.OPTIONS_CHANGED, "options_changed")
@@ -614,14 +689,17 @@ async def _selection(
         keys = _goal_keys(resume)
     if keys:
         return Selection(mode=SelectionMode.EXPLICIT, option_keys=keys[:30])
-    propulsion = list(rt.interpretation.propulsion) or (
-        [Propulsion(p) for p in resume.get("propulsion", [])] if resume else []
-    ) or None
+    # A resumed goal (e.g. after "yes") keeps its waiver option and drive-type filter.
+    resumed_propulsion = resume.get("propulsion", []) if resume else []
+    propulsion = list(rt.interpretation.propulsion) or [Propulsion(p) for p in resumed_propulsion]
+    include_waiver = rt.interpretation.include_waiver or bool(
+        resume and resume.get("includeWaiver")
+    )
     result_set_id = state.get("result_set_id")
     if result_set_id and not rt.interpretation.all_options and not propulsion:
         return Selection(mode=SelectionMode.RESULT_SET, result_set_id=UUID(result_set_id))
     categories = [OptionCategory.REGULAR, OptionCategory.FAMILY]
-    if rt.interpretation.include_waiver:
+    if include_waiver:
         categories.append(OptionCategory.WAIVER)
     # Car names for the result text (no option list was shown in this conversation).
     listing = await rt.tools.list_eligible_options(
@@ -695,10 +773,13 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     actual_now = bool(rt.applied.get(UpdateMode.ACTUAL_UPDATE))
     previous = state.get("active_goal")
     resume_after_confirm = bool(rt.confirmed and previous and intent is Intent.CONFIRM_FACTS)
+    # "Yes, but my salary went up to 19,000" answers the confirmation too: calculate right away.
+    resume_after_correction = bool(rt.answered_confirmation and previous and actual_now)
+    resumed = resume_after_confirm or resume_after_correction
     if (
         intent in _COMPUTE_INTENTS
         or (hypothetical_now and intent is Intent.UPDATE_FACTS)
-        or resume_after_confirm
+        or resumed
     ):
         resuming = intent in (Intent.UPDATE_FACTS, Intent.CONFIRM_FACTS)
         selection = await _selection(state, rt, updates, resume=previous if resuming else None)
@@ -715,22 +796,29 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
         kind = RunKind.HYPOTHETICAL if hypothetical else RunKind.REGULAR
         if intent in _COMPUTE_INTENTS:
             goal_intent = intent.value
-        elif resume_after_confirm and previous:
+        elif resumed and previous:
             goal_intent = previous["intent"]
         else:
             goal_intent = Intent.CALCULATE_OPTIONS.value
         goal = ActiveGoal(intent=goal_intent, includeCurrent=include_current, kind=kind.value)
         if selection.mode is SelectionMode.EXPLICIT and selection.option_keys:
             goal["optionKeys"] = list(selection.option_keys)
-        elif selection.filters is not None and selection.filters.propulsion:
-            goal["propulsion"] = [p.value for p in selection.filters.propulsion]
+        carried = previous if resuming and previous else None
+        if interpretation.include_waiver or (carried and carried.get("includeWaiver")):
+            goal["includeWaiver"] = True
+        carried_propulsion = carried.get("propulsion", []) if carried else []
+        propulsion = [p.value for p in interpretation.propulsion] or list(carried_propulsion)
+        if propulsion:
+            goal["propulsion"] = propulsion
         updates["active_goal"] = goal
         await compute(
             state,
             rt,
             input_id=turn["inputId"],
             selection=selection,
-            include_current=include_current,
+            # A current car mentioned but not identified: no difference against a car they may
+            # no longer have; the goal keeps `includeCurrent`, so the answer resumes it.
+            include_current=include_current and rt.vehicle_question is None,
             kind=kind,
             updates=updates,
             question=str(turn.get("text") or ""),
@@ -743,7 +831,11 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     elif intent is Intent.DATA_SOURCES:
         rt.reply(he.data_sources_text(_profile_sources(rt)), "info")
     elif intent is Intent.UPDATE_FACTS:
-        if not (actual_now or hypothetical_now):
+        if actual_now or hypothetical_now or rt.vehicle_question is not None:
+            pass  # acknowledged by the update, or asked about after this turn
+        elif rt.confirmed:  # they restated a saved fact ("יש לי קורולה קרוס"): nothing to write
+            rt.reply(he.confirmed_text(rt.confirmed), "confirmation", fields=rt.confirmed)
+        else:
             rt.reply(he.UNCLEAR, "clarification")
     elif intent is Intent.CONFIRM_FACTS:
         if not rt.confirmed and not rt.replies:
@@ -799,6 +891,18 @@ async def act(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[s
     except ToolBudgetExceeded:
         rt.reply(he.BUDGET_EXCEEDED, "error", code="TOOL_BUDGET_EXCEEDED")
         rt.compose = None
+    if rt.vehicle_question is not None:  # after whatever could be calculated without it
+        vehicle = FieldPath.CURRENT_VEHICLE.value
+        rt.reply(rt.vehicle_question, "question", fields=[vehicle])
+        awaiting = updates.get("awaiting_confirmation", state.get("awaiting_confirmation", []))
+        updates["awaiting_confirmation"] = list(dict.fromkeys([*awaiting, vehicle]))
+    not_saved = [
+        f
+        for f in (rt.extraction.not_saved if rt.extraction else [])
+        if f in rt.applied.get(UpdateMode.HYPOTHETICAL, [])
+    ]
+    if not_saved:
+        rt.reply(he.not_saved_text(not_saved), "info", fields=not_saved)
     return updates
 
 
@@ -881,6 +985,7 @@ async def _handle_answer(
         kind=RunKind(task["kind"]),
         updates=updates,
         question="",
+        employee_request=False,
     )
     return updates
 
@@ -897,7 +1002,9 @@ async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime])
     if task is None:
         # Not asked through the chat (e.g. the stand-alone request form): a general question's
         # answer is still relayed here, since this conversation is bound to the request's case.
-        task = PendingTask(fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular")
+        task = PendingTask(
+            fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular"
+        )
         lookup = await rt.tools.get_representative_request(
             RepresentativeRequestLookup(request_id=UUID(request_id))
         )

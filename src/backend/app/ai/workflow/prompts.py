@@ -20,14 +20,20 @@ already made for this employee, e.g. "explain the calculation"), show_history (p
 comparison), data_sources (where the employee's details or the advisor's information come from,
 e.g. "where do you have my details from?"),
 update_facts (only giving/correcting personal details), confirm_facts (the
-employee says saved details listed in STATE.awaitingConfirmation are still correct; never use it
-when nothing is awaiting confirmation), cancel,
+employee says saved details listed in STATE.awaitingConfirmation are still correct; when nothing
+is awaiting confirmation, only when they say their saved details or current car are still
+correct, e.g. "הפרטים נכונים", "כן, זה עדיין הרכב שלי"), cancel,
 ask_representative (only when THIS message asks to contact or ask the transportation
 representative; put the detail they should provide in unknown_fields when it is named),
 general_question (concept questions such as credit points or how net pay is calculated in
 general, questions about the advisor or why it answered or showed something - e.g. "why did you
 show me options if we did not calculate?" is general_question, not explain_result),
 smalltalk, unclear.
+compare_to_current only when the employee asks how their net would CHANGE relative to what they
+have today (their current car, allowance or arrangement): "אם אחליף מהקורולה ל-BYD כמה ישתנה לי
+הנטו?", "כמה ארוויח או אפסיד לעומת היום?", "מה ההפרש מהרכב שיש לי עכשיו?".
+calculate_options when they ask what their net would BE with a car, without relating it to
+today: "כמה יהיה לי נטו אם אקח BYD?", "כמה נטו נשאר לי עם ה-MG4?".
 Which car is best, most worth it, cheapest or leaves the most net ("איזה רכב הכי שווה לי",
 "מה הכי משתלם") is compare_to_current with all_options=true (or the named cars as option_refs).
 Whether a car is offered, which cars the employee may get, or whether the employee is eligible
@@ -56,12 +62,18 @@ facts: only values the employee explicitly states about themselves. For each fac
 - mode "actual" for real current facts or corrections ("my salary is", "I was wrong");
   "hypothetical" for what-if checks ("what if", "suppose", "if I get"); "ambiguous" when unclear
   (e.g. "check with salary 20000").
+  In Hebrew, a fact inside a condition or question about a possibility is hypothetical even with
+  a past-tense verb: "ואם השכר שלי השתנה ל-20000?", "אם אקבל בונוס של 2000", "מה אם הפנסיה
+  שלי 7%?", "נניח שהשכר שלי 25000", "בהנחה שאין לי עמלות". Actual is a plain statement without
+  a condition: "השכר שלי עלה ל-20000", "טעיתי, השכר שלי 20000", "אין לי יותר עמלות".
 - value: money as plain digits without separators (write "none" for an explicit "no/none");
   rates as the percent number with a % sign ("6%"); group as one Hebrew letter;
   currentArrangement.kind as company_car / allowance / no_car_no_allowance;
   propulsion as petrol / hybrid / plug_in_hybrid / electric; booleans as true/false;
-  currentArrangement.vehicle as a catalogue id like CAR-09 only if stated, otherwise the
-  vehicle description as stated (model and registration year);
+  currentArrangement.vehicle as a catalogue id like CAR-09 only if stated, otherwise the model
+  name as car catalogues spell it, in Latin letters and without Hebrew prefixes or words
+  ("מהקורולה קרוס" -> "COROLLA CROSS", "יש לי מאזדה 3 מ-2023" -> "MAZDA 3 2023"), plus the
+  registration year only when stated;
   employee.occupationId as the job title exactly as stated, or the list number when the
   employee picks from STATE.occupationChoices.
 - Use payroll.salaryUnspecified when a salary is given without saying whether it is base gross,
@@ -111,7 +123,8 @@ ADVISOR_FACTS = f"""\
 - The employee's personal details (salary components, pension and study-fund rates, credit
   points, occupation, entitlement group, children, current car) are kept in their saved profile.
   They were reported by the employee or entered for them, may be outdated, and can be corrected in
-  this chat or by importing a payslip on the "הנתונים שלי" page.
+  this chat (also with the edit button of each field in the "הנתונים שלי" panel beside the chat)
+  or by importing a payslip from that panel.
 - The car list and eligibility come from the company's car catalogue and eligibility rules in the
   system. The value of use of each car comes from the Israel Tax Authority data. Every amount is
   calculated by the company's business system, not by you, and is an estimate, not a payslip.

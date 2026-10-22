@@ -411,6 +411,46 @@
       }
     },
     "/api/v1/conversations/{conversationId}": {
+      "delete": {
+        "description": "Removes the conversation from the employee's list; its history is kept.",
+        "operationId": "delete_conversation_api_v1_conversations__conversationId__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversationid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Conversation",
+        "tags": [
+          "conversations"
+        ]
+      },
       "get": {
         "operationId": "get_conversation_api_v1_conversations__conversationId__get",
         "parameters": [

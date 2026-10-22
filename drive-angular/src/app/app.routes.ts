@@ -13,7 +13,7 @@ export const routes: Routes = [
     canActivate: [employeeGuard],
     loadComponent: () => import('./features/advisor/advisor.page').then(m => m.AdvisorPage),
   },
-  {path: 'profile', canActivate: [employeeGuard], loadComponent: () => import('./features/profile/profile.page').then(m => m.ProfilePage)},
+  {path: 'profile', redirectTo: 'advisor'}, // the details are shown and edited beside the chat
   {path: 'catalog', canActivate: [employeeGuard], loadComponent: () => import('./features/catalog/catalog.page').then(m => m.CatalogPage)},
   {
     path: 'comparison',

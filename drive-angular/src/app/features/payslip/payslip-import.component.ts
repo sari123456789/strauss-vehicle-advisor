@@ -12,7 +12,7 @@ import {PayslipApprovalResult, PayslipDraftField, PayslipFieldPath, RATE_FIELDS}
 
 /**
  * The ONE payslip-import workflow: upload -> extraction -> review/correction -> explicit
- * approval. Hosted by the profile page (main entry) and by the chat when salary data is missing;
+ * approval. Hosted by the chat's details panel;
  * the host passes the conversation and the current profile version and refreshes the profile on
  * `applied`. Nothing is written to the profile before the employee presses the approve button.
  */

@@ -33,12 +33,10 @@ export class SiteHeaderComponent {
   private readonly publicLinks: NavLink[] = [
     {path: '/how-it-works', label: 'איך זה עובד'},
     {path: '/catalog', label: 'השוואת רכבים'},
-    {path: '/profile', label: 'הנתונים שלי'},
   ];
   // Employees follow the three steps (shown under the header); the menu keeps only what is outside them.
   private readonly employeeLinks: NavLink[] = [
     {path: '/advisor', label: 'התחלה'},
-    {path: '/profile', label: 'הפרטים שלי'},
     {path: '/history', label: 'ההשוואות שלי'},
     {path: '/requests', label: 'פנייה לנציג'},
   ];
