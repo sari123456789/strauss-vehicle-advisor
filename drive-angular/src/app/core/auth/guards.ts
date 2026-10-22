@@ -21,3 +21,11 @@ export const representativeGuard: CanActivateFn = async (_route, state) => {
   if (session.isEmployee()) return router.parseUrl('/advisor');
   return router.createUrlTree(['/sign-in'], {queryParams: {returnUrl: state.url}});
 };
+
+/** The home page is the employee's entry point; a representative goes to the request centre. */
+export const homeGuard: CanActivateFn = async () => {
+  const session = inject(SessionService);
+  const router = inject(Router);
+  await session.restore();
+  return session.isRepresentative() ? router.parseUrl('/representative') : true;
+};

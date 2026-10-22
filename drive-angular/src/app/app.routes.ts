@@ -1,10 +1,10 @@
 import {Routes} from '@angular/router';
-import {employeeGuard, representativeGuard} from './core/auth/guards';
+import {employeeGuard, homeGuard, representativeGuard} from './core/auth/guards';
 import {devRoutes} from './dev/dev-routes';
 
 export const routes: Routes = [
   ...devRoutes,
-  {path: '', loadComponent: () => import('./features/home/home.page').then(m => m.HomePage)},
+  {path: '', canActivate: [homeGuard], loadComponent: () => import('./features/home/home.page').then(m => m.HomePage)},
   {path: 'how-it-works', loadComponent: () => import('./features/how-it-works/how.page').then(m => m.HowPage)},
   {path: 'sign-in', loadComponent: () => import('./features/auth/sign-in.page').then(m => m.SignInPage)},
   {path: 'advisor', canActivate: [employeeGuard], loadComponent: () => import('./features/advisor/advisor.page').then(m => m.AdvisorPage)},
