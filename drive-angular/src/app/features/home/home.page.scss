@@ -134,6 +134,14 @@
   text-align: center;
 }
 
+// Phones: three columns are ~100px each at 360px, so stack the benefits.
+@include bp.below-md {
+  .benefits {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .benefits li {
   display: flex;
   flex-direction: column;
