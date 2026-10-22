@@ -62,12 +62,14 @@ VALUE_TYPES = {
     RepresentativeFieldCode.ENTITLEMENT_GROUP: ExpectedValueType.ENTITLEMENT_GROUP,
     RepresentativeFieldCode.VEHICLE_PROPULSION: ExpectedValueType.PROPULSION,
     RepresentativeFieldCode.VEHICLE_TAX_KEY: ExpectedValueType.TAX_KEY,
+    RepresentativeFieldCode.GENERAL_QUESTION: ExpectedValueType.TEXT,
 }
 CASE_LEVEL = frozenset(
     {
         RepresentativeFieldCode.ENTITLEMENT_GROUP,
         RepresentativeFieldCode.VEHICLE_PROPULSION,
         RepresentativeFieldCode.VEHICLE_TAX_KEY,
+        RepresentativeFieldCode.GENERAL_QUESTION,
     }
 )
 
@@ -94,6 +96,8 @@ def subject_snapshot(
     field: RepresentativeFieldCode, option_key: str | None, profile: EmployeeProfile
 ) -> dict[str, object]:
     """Minimal question context (D11): no salary, no other personal data."""
+    if field is RepresentativeFieldCode.GENERAL_QUESTION:
+        return {}
     if field is RepresentativeFieldCode.ALTERNATIVE_PARTICIPATION:
         assert option_key is not None
         return {"catalogueId": option_key.removeprefix(VEHICLE_PREFIX)}
@@ -191,6 +195,12 @@ class RepresentativeQuestionService:
                         subject_snapshot=freeze_object(snapshot),
                         subject_fingerprint=canonical_request_hash(
                             {"fieldCode": field.value, "subject": snapshot}
+                            # Each general question is its own request: its text is the subject.
+                            | (
+                                {"question": request.question_text}
+                                if field is RepresentativeFieldCode.GENERAL_QUESTION
+                                else {}
+                            )
                         ),
                         case_version_at_creation=case.version,
                         request_version=0,

@@ -30,7 +30,9 @@ export type CreateQuestionResult = B['CreateQuestionResult'];
  * until `npm run api:types` is re-run with the generator installed.
  */
 export type HandlingStatus = 'unclaimed' | 'assigned_to_me' | 'assigned_to_other' | 'completed';
-export type RepresentativeRequestView = B['RepresentativeRequestView'] & {
+export type RepresentativeRequestView = Omit<B['RepresentativeRequestView'], 'fieldCode' | 'expectedValueType'> & {
+  fieldCode: RepresentativeFieldCode;
+  expectedValueType: B['RepresentativeRequestView']['expectedValueType'] | 'text';
   assignmentVersion?: number | null;
   canAnswer?: boolean;
   canClaim?: boolean;
@@ -55,7 +57,7 @@ export interface ClaimResult {
   claimedAt: string;
 }
 export type AssignmentFilter = 'all' | 'unclaimed' | 'mine' | 'others';
-export type RepresentativeFieldCode = B['RepresentativeFieldCode'];
+export type RepresentativeFieldCode = B['RepresentativeFieldCode'] | 'general.question';
 export type AnswerSubmit = B['AnswerSubmit'];
 export type AnswerView = B['AnswerView'];
 export type RunSummary = B['RunSummary'];

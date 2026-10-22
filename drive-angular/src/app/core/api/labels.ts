@@ -43,6 +43,7 @@ export const FIELD_CODE: Record<RepresentativeFieldCode, string> = {
   'employee.entitlementGroup': 'קבוצת זכאות',
   'currentArrangement.propulsion': 'סוג ההנעה של הרכב הנוכחי',
   'currentArrangement.vehicle': 'פרטי הרכב הנוכחי',
+  'general.question': 'שאלה כללית',
 };
 
 export const REQUEST_STATUS: Record<string, string> = {

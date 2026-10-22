@@ -87,6 +87,15 @@ class TurnInterpretation(_Strict):
     include_waiver: bool = False
     unknown_fields: list[FactField] = Field(default_factory=list, max_length=16)
     """Facts the employee says they do not know."""
+    representative_topic: Literal["answerable", "needs_representative", "out_of_scope"] = (
+        "answerable"
+    )
+    """For a question: answerable by the advisor, a company-car question only a transportation
+    representative can answer, or unrelated to company cars and pay (never sent)."""
+    question_for_representative: str | None = Field(default=None, max_length=300)
+    """The employee's question rewritten as one short, self-contained Hebrew question."""
+    accepts_offer: bool = False
+    """The employee agrees to send the question offered in STATE.offeredQuestion."""
     confirmed_fields: list[FactField] = Field(default_factory=list, max_length=16)
     """Saved facts the employee explicitly says are still correct. Code confirms only facts
     the advisor asked about; an empty list with `confirm_facts` means all of them."""

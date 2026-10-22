@@ -30,6 +30,16 @@ show me options if we did not calculate?" is general_question, not explain_resul
 smalltalk, unclear.
 Which car is best, most worth it, cheapest or leaves the most net ("איזה רכב הכי שווה לי",
 "מה הכי משתלם") is compare_to_current with all_options=true (or the named cars as option_refs).
+representative_topic (for questions): "answerable" when a general explanation is enough (how
+net pay, value of use, credit points or the advisor work); "needs_representative" for questions
+about company-car policy or process only the company knows (replacing a car mid-year, delivery
+times, insurance, accidents, maintenance, mileage, leaving the company with a car, special
+approvals); "out_of_scope" for anything not about company cars, car benefits or their effect on
+pay (weather, news, sports, recipes, personal matters, unrelated salary questions). With
+"needs_representative" or ask_representative about a free question, fill
+question_for_representative with the question as one short, polite Hebrew sentence, without
+numbers or personal details. accepts_offer=true only when STATE.offeredQuestion is set and the
+employee agrees to send it ("כן", "תשלח", "בטח"); a refusal or a new topic is false.
 Classify by EMPLOYEE_MESSAGE. Earlier messages only help resolve references such as "the second
 one"; a new topic replaces the previous one, and a question about cars is never ask_representative
 just because the previous message was about the representative.

@@ -236,6 +236,17 @@
           "outcome": {
             "$ref": "#/components/schemas/AnswerOutcome"
           },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
           "unit": {
             "anyOf": [
               {
@@ -3021,7 +3032,8 @@
           "entitlement_group",
           "propulsion",
           "tax_key",
-          "boolean"
+          "boolean",
+          "text"
         ],
         "title": "ExpectedValueType",
         "type": "string"
@@ -4264,7 +4276,8 @@
           "occupation.waiverPolicy",
           "employee.entitlementGroup",
           "currentArrangement.propulsion",
-          "currentArrangement.vehicle"
+          "currentArrangement.vehicle",
+          "general.question"
         ],
         "title": "RepresentativeFieldCode",
         "type": "string"

@@ -114,7 +114,19 @@ export class InquiriesStore {
   }
 
   async answer(request: RepresentativeRequestView, draft: AnswerDraft): Promise<boolean> {
-    const body: AnswerSubmit = {
+    const isText = request.expectedValueType === 'text';
+    const textAnswer = draft.note.trim();
+    const body: AnswerSubmit = isText ? {
+      operationId: this.operationId,
+      expectedRequestVersion: request.requestVersion,
+      outcome: draft.outcome,
+      // The short answer goes in `value` (max 200); the full text is kept in `note`.
+      value: draft.outcome === 'answered' ? textAnswer.slice(0, 200) : null,
+      unit: null,
+      effectiveFrom: null,
+      effectiveTo: null,
+      note: textAnswer || null,
+    } : {
       operationId: this.operationId,
       expectedRequestVersion: request.requestVersion,
       outcome: draft.outcome,

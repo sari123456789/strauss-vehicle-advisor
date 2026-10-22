@@ -101,6 +101,8 @@ class ConversationState(TypedDict, total=False):
     """Saved facts (`FieldPath` values) the advisor asked the employee to confirm."""
     occupation_candidates: list[OccupationCandidateRef]
     """Official occupations shown for an ambiguous description, awaiting a choice."""
+    offered_question: str | None
+    """A general question the advisor offered to send to the representative (awaiting yes)."""
     representative_help_shown: bool
     """The last reply explained what the representative can help with (prevents a repeat)."""
     disclaimer_shown: bool

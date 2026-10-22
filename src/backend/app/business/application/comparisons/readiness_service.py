@@ -47,7 +47,11 @@ from app.business.domain.arrangements import WAIVER_OPTION_KEY, AlternativeSpec
 from app.business.domain.eligibility import EligibilityStatus
 from app.business.domain.employee_profiles import EmployeeProfile
 from app.business.domain.provenance import FieldValue
-from app.business.domain.representatives import RepresentativeRequest, RequestStatus
+from app.business.domain.representatives import (
+    RepresentativeFieldCode,
+    RepresentativeRequest,
+    RequestStatus,
+)
 from app.business.domain.results import MissingFact, MissingReason
 from app.contracts.common import EnvelopeStatus, FieldPath, Issue, IssueCode
 from app.contracts.readiness import (
@@ -178,7 +182,12 @@ class ReadinessService:
             return _from_missing(missing, ready=[], blocked=[], pending=[])
         occupation = await self._planner.occupation(pinned, profile)
         decision = evaluate_waiver_option(eligibility_facts(profile), occupation, pinned.rules)
-        requests = [r for r in open_requests if r.option_key in (None, WAIVER_OPTION_KEY)]
+        requests = [
+            r
+            for r in open_requests
+            if r.option_key in (None, WAIVER_OPTION_KEY)
+            and r.field_code is not RepresentativeFieldCode.GENERAL_QUESTION
+        ]
         if decision.status is EligibilityStatus.ELIGIBLE:
             return _from_missing([], ready=[WAIVER_OPTION_KEY], blocked=[], pending=requests)
         if decision.status is EligibilityStatus.INELIGIBLE:

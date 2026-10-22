@@ -105,7 +105,12 @@ export class RepresentativePage implements OnInit, OnDestroy {
 
   /** Values the server cannot apply yet (decisions Q2/Q3) can only be "cannot determine". */
   valueAllowed(request: RepresentativeRequestView): boolean {
-    return request.expectedValueType === 'money' || request.expectedValueType === 'entitlement_group' || request.expectedValueType === 'propulsion';
+    return (
+      request.expectedValueType === 'money' ||
+      request.expectedValueType === 'entitlement_group' ||
+      request.expectedValueType === 'propulsion' ||
+      request.expectedValueType === 'text'
+    );
   }
 
   async submit(request: RepresentativeRequestView): Promise<void> {

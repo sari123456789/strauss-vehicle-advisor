@@ -43,6 +43,8 @@ class RepresentativeFieldCode(StrEnum):
     ENTITLEMENT_GROUP = "employee.entitlementGroup"
     VEHICLE_PROPULSION = "currentArrangement.propulsion"
     VEHICLE_TAX_KEY = "currentArrangement.vehicle"
+    GENERAL_QUESTION = "general.question"
+    """An open question about company cars, answered in text; never applied to a calculation."""
 
 
 class ExpectedValueType(StrEnum):
@@ -51,6 +53,7 @@ class ExpectedValueType(StrEnum):
     PROPULSION = "propulsion"
     TAX_KEY = "tax_key"
     BOOLEAN = "boolean"
+    TEXT = "text"
 
 
 class AnswerOutcome(StrEnum):
@@ -89,6 +92,8 @@ class AnswerView(ContractModel):
     effective_to: date | None = None
     answered_at: datetime
     application: AnswerApplication | None = None
+    text: str | None = None
+    """The representative's full text answer, for `general.question` requests only."""
 
 
 class RepresentativeRequestLookup(ContractModel):

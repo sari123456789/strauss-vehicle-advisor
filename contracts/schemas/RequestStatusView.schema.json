@@ -64,6 +64,18 @@
         "outcome": {
           "$ref": "#/$defs/AnswerOutcome"
         },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
         "unit": {
           "anyOf": [
             {
@@ -104,7 +116,8 @@
         "occupation.waiverPolicy",
         "employee.entitlementGroup",
         "currentArrangement.propulsion",
-        "currentArrangement.vehicle"
+        "currentArrangement.vehicle",
+        "general.question"
       ],
       "title": "RepresentativeFieldCode",
       "type": "string"
