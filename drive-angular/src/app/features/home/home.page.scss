@@ -134,11 +134,29 @@
   text-align: center;
 }
 
-// Phones: three columns are ~100px each at 360px, so stack the benefits.
+// Phones: keep the three benefits in one compact row (stacking them left a tall, empty column).
 @include bp.below-md {
   .benefits {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .benefits li {
+    padding-inline: 4px;
+  }
+
+  .benefits img {
+    inline-size: 30px;
+    block-size: 26px;
+    margin-bottom: 4px;
+  }
+
+  .benefits b {
+    font-size: 13px;
+  }
+
+  .benefits span {
+    font-size: 11px;
+    line-height: 1.35;
   }
 }
 
