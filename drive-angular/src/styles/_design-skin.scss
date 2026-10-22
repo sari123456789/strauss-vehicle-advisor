@@ -390,6 +390,16 @@ tbody tr:hover {
   cursor: pointer;
 }
 
+.conv__delete {
+  display: grid;
+  place-items: center;
+}
+
+.conv__delete svg {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
 .conv__delete:hover,
 .conv__delete:focus-visible {
   background: #fbeceb;
