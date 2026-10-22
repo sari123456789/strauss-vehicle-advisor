@@ -357,6 +357,24 @@ tbody tr:hover {
   inline-size: 100%;
 }
 
+// Desktop/tablet: the conversation list scrolls inside its column instead of stretching the page.
+@media (min-width: 760.02px) {
+  .workspace > .progress {
+    align-self: start;
+    position: sticky;
+    inset-block-start: 12px;
+    max-block-size: calc(100dvh - var(--header-height) - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .workspace > .progress > .primary {
+    position: sticky;
+    inset-block-start: -24px;
+    z-index: 1;
+  }
+}
+
 .conversation {
   display: flex;
   flex-direction: column;
