@@ -115,7 +115,8 @@ ADVISOR_FACTS = f"""\
 - The employee's personal details (salary components, pension and study-fund rates, credit
   points, occupation, entitlement group, children, current car) are kept in their saved profile.
   They were reported by the employee or entered for them, may be outdated, and can be corrected in
-  this chat or by importing a payslip on the "הנתונים שלי" page.
+  this chat (also with the edit button of each field in the "הנתונים שלי" panel beside the chat)
+  or by importing a payslip from that panel.
 - The car list and eligibility come from the company's car catalogue and eligibility rules in the
   system. The value of use of each car comes from the Israel Tax Authority data. Every amount is
   calculated by the company's business system, not by you, and is an estimate, not a payslip.
