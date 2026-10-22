@@ -7,9 +7,9 @@ Behavior per call:
    once on the **same** profile; anything else is returned to the workflow.
 3. Validate the JSON against the task's output model; invalid output is never used.
 
-`FailoverLlm` tries the profiles in order and moves on when a project's daily quota is exhausted
-or it is rate limited; there is no fallback to another provider. Logs carry the profile name,
-the non-secret project label and outcome codes only.
+`FailoverLlm` tries the profiles in order and moves on when a project's daily quota is exhausted,
+it is rate limited, its key is rejected or it has no free quota; there is no other provider.
+Logs carry the profile name, the non-secret project label and outcome codes only.
 """
 
 import asyncio
@@ -162,14 +162,14 @@ class QuotaGuardedLlm:
             self._tracker.record_not_free_tier(key, now)
             return LlmResult(LlmOutcome.BLOCKED_BY_POLICY, diagnostic_code=error.code), None
         self._tracker.record_error(key, now, error.code)
-        # Timeouts and temporary unavailability (e.g. HTTP 503) are retried once.
+        # Timeouts and temporary unavailability (e.g. HTTP 503) are retried once; a rejected key
+        # or a bad request would fail the same way again.
         if kind is ProviderErrorKind.TIMEOUT:
             return LlmResult(
                 LlmOutcome.TIMEOUT, diagnostic_code=error.code
             ), TRANSIENT_RETRY_SECONDS
-        return LlmResult(
-            LlmOutcome.UNAVAILABLE, diagnostic_code=error.code
-        ), TRANSIENT_RETRY_SECONDS
+        retry = TRANSIENT_RETRY_SECONDS if kind is ProviderErrorKind.UNAVAILABLE else None
+        return LlmResult(LlmOutcome.UNAVAILABLE, diagnostic_code=error.code), retry
 
     def _log(self, task: LlmTask[Any], result: LlmResult[Any]) -> None:
         logger.info(
@@ -191,15 +191,28 @@ class DisabledLlm:
 
 
 _FAILOVER_OUTCOMES = frozenset({LlmOutcome.QUOTA_EXHAUSTED, LlmOutcome.RATE_LIMITED})
+_REJECTED_KEY_CODES = frozenset({"authentication_failed", "invalid_api_key"})
+
+
+def _profile_unusable(result: LlmResult[Any]) -> bool:
+    """The outcome says something about this profile's project or key, not about the request."""
+    if result.outcome in _FAILOVER_OUTCOMES:
+        return True
+    if result.outcome is LlmOutcome.BLOCKED_BY_POLICY:  # this project has no free quota
+        return True
+    return (
+        result.outcome is LlmOutcome.UNAVAILABLE and result.diagnostic_code in _REJECTED_KEY_CODES
+    )
 
 
 class FailoverLlm:
-    """Tries each profile's guard in order and moves on when that project has no capacity left.
+    """Tries each profile's guard in order and moves on when that project cannot serve the call.
 
     Quotas and rate limits are per project, so an exhausted daily quota or a rate limit (after the
-    guard's own short retry) is a reason to use the next project. Refusals, invalid output and
-    errors are returned as they are. When every profile is limited, a temporary rate limit is
-    reported in preference to an exhausted quota, with the shortest wait.
+    guard's own short retry) is a reason to use the next project, and so is a rejected key or a
+    project without free quota: one bad profile must not stop the others. Refusals, invalid
+    output and other errors are returned as they are. When every profile is limited, a temporary
+    rate limit is reported in preference to anything else, with the shortest wait.
     """
 
     def __init__(self, guards: Sequence[QuotaGuardedLlm]) -> None:
@@ -212,7 +225,7 @@ class FailoverLlm:
         rate_limited: list[LlmResult[OutputT]] = []
         for guard in self._guards:
             result = await guard.generate(task)
-            if result.outcome not in _FAILOVER_OUTCOMES:
+            if not _profile_unusable(result):
                 return result
             if result.outcome is LlmOutcome.RATE_LIMITED:
                 rate_limited.append(result)

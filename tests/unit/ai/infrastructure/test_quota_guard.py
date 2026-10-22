@@ -350,6 +350,25 @@ async def test_every_profile_rate_limited_reports_the_shortest_wait() -> None:
     assert result.retry_after_seconds == 600.0
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        ProviderError(ProviderErrorKind.AUTHENTICATION, "authentication_failed"),
+        ProviderError(ProviderErrorKind.AUTHENTICATION, "invalid_api_key"),
+        ProviderError(ProviderErrorKind.NOT_FREE_TIER, "free_tier_quota_is_zero"),
+    ],
+)
+async def test_unusable_profile_does_not_stop_the_others(error: ProviderError) -> None:
+    def factory(p: CredentialProfile) -> ProviderClient:
+        script = [error] if p.name == "DEV" else [json_response(Answer(word="ok"))]
+        return ScriptedProviderClient(script)
+
+    llm = build_llm_port(
+        load_llm_settings(_two_profile_env("dev")), client_factories={"gemini": factory}
+    )
+    assert (await llm.generate(TASK)).ok
+
+
 async def test_request_error_does_not_fail_over() -> None:
     clients: dict[str, ScriptedProviderClient] = {}
 
