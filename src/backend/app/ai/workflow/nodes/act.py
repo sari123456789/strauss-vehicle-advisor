@@ -380,10 +380,13 @@ async def compute(
     updates: dict[str, Any],
     question: str,
 ) -> ComparisonResult | None:
-    """Readiness gate, then one comparison for every ready option (partial results allowed)."""
-    # Every comparison in the chat shows the difference from today, so the current arrangement
-    # is always required: nothing is calculated until the baseline is ready.
-    include_current = True
+    """Readiness gate, then one comparison for every ready option (partial results allowed).
+
+    `include_current` follows the question: "what would my net be with X" needs the salary facts
+    only; "how would my net change compared to today" also needs the current arrangement. A
+    baseline that is not ready blocks only the difference from today, never the net of a ready
+    alternative (agent spec §2.5 and §6).
+    """
     labels = _labels(state, rt)
     # Readiness uses the same fact basis as the comparison it prepares (E2: `kind`).
     readiness_env = await rt.tools.check_calculation_readiness(
@@ -420,7 +423,7 @@ async def compute(
     pending_labels = [
         labels.get(p.option_key or "", "החלופה") for p in readiness.pending_representative_fields
     ]
-    if not readiness.ready_scenario_ids or readiness.baseline_ready is not True:
+    if not readiness.ready_scenario_ids:
         if missing:
             await _ask_missing(state, rt, missing, updates)
         elif to_confirm:
@@ -436,7 +439,7 @@ async def compute(
             ]
             rt.reply("\n".join(blocked) or he.NO_RESULTS_YET, "blocked")
         return None
-    with_current = readiness.baseline_ready is True
+    with_current = include_current and readiness.baseline_ready is True
     envelope = await rt.tools.compare_scenarios(
         CompareRequest(
             selection=Selection(
