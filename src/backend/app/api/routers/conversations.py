@@ -186,6 +186,17 @@ async def list_conversations(request: Request, actor: Actor) -> ConversationList
     return ConversationList(conversations=[_summary(v) for v in views])
 
 
+@router.delete("/{conversationId}", status_code=204)
+async def delete_conversation(
+    request: Request, actor: Actor, conversation_id: ConversationId
+) -> None:
+    """Removes the conversation from the employee's list; its history is kept."""
+    try:
+        await conversation_service(request).hide_conversation(actor, conversation_id)
+    except errors.ConversationError as error:
+        _problem(error)
+
+
 @router.get("/{conversationId}", response_model=ConversationDetail)
 async def get_conversation(
     request: Request, actor: Actor, conversation_id: ConversationId

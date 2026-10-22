@@ -94,6 +94,16 @@ export class AdvisorPage implements OnInit, OnDestroy {
     await this.router.navigate(['/advisor', this.store.active()?.conversationId]);
   }
 
+  async deleteConversation(conversationId: string): Promise<void> {
+    if (!confirm('למחוק את השיחה מהרשימה?')) return;
+    const wasActive = this.store.active()?.conversationId === conversationId;
+    await this.store.remove(conversationId);
+    if (wasActive && !this.store.active()) {
+      const next = await this.store.startFresh().catch(() => undefined);
+      if (next) await this.router.navigate(['/advisor', next.conversationId]);
+    }
+  }
+
   async switchTo(conversationId: string): Promise<void> {
     await this.router.navigate(['/advisor', conversationId]);
     await this.store.open(conversationId);

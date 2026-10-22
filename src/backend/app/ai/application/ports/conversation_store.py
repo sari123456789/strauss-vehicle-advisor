@@ -287,6 +287,10 @@ class ConversationStore(Protocol):
         self, owner_subject_id: UUID, *, limit: int = 50
     ) -> list[ConversationRecord]: ...
 
+    async def hide_conversation(self, conversation_id: UUID) -> None:
+        """Leave it out of `list_owned_conversations`; the conversation itself is kept."""
+        ...
+
     async def bind_case(
         self, conversation_id: UUID, case_id: UUID
     ) -> Written[ConversationRecord]: ...

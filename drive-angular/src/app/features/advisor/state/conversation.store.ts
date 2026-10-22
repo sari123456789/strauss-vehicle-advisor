@@ -109,6 +109,26 @@ export class ConversationStore {
     }
   }
 
+  /** Deletes a conversation from the list; deleting the active one leaves no active conversation. */
+  async remove(conversationId: string): Promise<void> {
+    this.error.set(null);
+    try {
+      await this.api.remove(conversationId);
+    } catch (error) {
+      this.error.set(hebrewError(error));
+      return;
+    }
+    this.conversations.update(list => list.filter(c => c.conversationId !== conversationId));
+    if (this.active()?.conversationId === conversationId) {
+      this.stopPolling();
+      this.generation++;
+      this.active.set(null);
+      this.messages.set([]);
+      this.pending.set(null);
+      this.lastSequence = 0;
+    }
+  }
+
   async open(conversationId: string): Promise<void> {
     this.stopPolling();
     this.loading.set(true);

@@ -151,6 +151,12 @@ class ConversationService:
             records = await store.list_owned_conversations(actor.subject_id, limit=limit)
         return [_view(r) for r in records]
 
+    async def hide_conversation(self, actor: ActorRef, conversation_id: UUID) -> None:
+        """The employee deletes an owned conversation from their list (history is kept)."""
+        await self._owned(actor, conversation_id)
+        async with self._tx.transaction() as store:
+            await store.hide_conversation(conversation_id)
+
     async def turn_binding(
         self, actor: ActorRef, conversation_id: UUID, *, trace_id: str | None = None
     ) -> TurnBinding:

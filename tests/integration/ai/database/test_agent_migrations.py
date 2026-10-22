@@ -36,7 +36,7 @@ def _tables(url: str, schema: str) -> set[str]:
 def test_upgrade_creates_agent_tables_and_own_version_table(migrated_ai_db: str) -> None:
     assert _tables(migrated_ai_db, SCHEMA) == AGENT_TABLES
     version = sql(migrated_ai_db, "SELECT version_num FROM agent.alembic_version_ai")
-    assert version == [("0003_response_staging",)]
+    assert version == [("0004_conversation_hidden",)]
 
 
 def test_ai_migrations_do_not_touch_other_schemas(migrated_ai_db: str) -> None:
