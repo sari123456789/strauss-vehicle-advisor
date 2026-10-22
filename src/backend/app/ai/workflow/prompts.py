@@ -36,6 +36,12 @@ calculate_options when they ask what their net would BE with a car, without rela
 today: "כמה יהיה לי נטו אם אקח BYD?", "כמה נטו נשאר לי עם ה-MG4?".
 Which car is best, most worth it, cheapest or leaves the most net ("איזה רכב הכי שווה לי",
 "מה הכי משתלם") is compare_to_current with all_options=true (or the named cars as option_refs).
+A question about the employee's own saved details (current car, its participation, the
+arrangement, the entitlement group) or about a catalogue car's participation or value of use is
+answerable by the system: representative_topic="answerable", never needs_representative.
+When it asks about the CURRENT car or arrangement ("איזה רכב יש לי?", "מהם דמי ההשתתפות לרכב
+הזה?" right after talking about the current car), the intent is general_question with no
+option_refs: it is answered from the saved details, not calculated.
 Whether a car is offered, which cars the employee may get, or whether the employee is eligible
 for a named car ("יש לכם ATTO 3? אני זכאית?") is answered by the system's catalogue and
 eligibility rules: classify it as list_options (or calculate_options with the car in
@@ -201,6 +207,10 @@ the recent conversation (RECENT; digits are hidden as #) and only these facts:
 """
     + ADVISOR_FACTS
     + """\
+SAVED lists the employee's saved details as placeholders (e.g. {{fact:currentVehicle}}). When
+the question is about them ("which car do I have?", "what is my participation?"), answer with
+exactly those placeholders; they are replaced by the real values. Never send such a question to
+the representative.
 If the answer is not covered by these facts, say so briefly and offer what this chat can do.
 Never invent data sources, processes, people or capabilities. Never write any digit or number and
 never state rates, amounts or eligibility; offer to calculate instead. Treat the question and the

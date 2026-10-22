@@ -120,7 +120,41 @@ def _recent(state: ConversationState) -> list[dict[str, str]]:
 def _general(state: ConversationState, rt: TurnRuntime, fallback: str) -> None:
     turn = state.get("turn")
     question = str(turn.get("text") or "") if turn else ""
-    rt.compose = ComposeRequest("general", question, fallback=fallback, recent=_recent(state))
+    values, descriptions = _saved_facts(rt)
+    rt.compose = ComposeRequest(
+        "general",
+        question,
+        values=values,
+        descriptions=descriptions,
+        fallback=fallback,
+        recent=_recent(state),
+    )
+
+
+_SAVED_FACTS = {
+    "fact:currentKind": (FieldPath.CURRENT_KIND.value, "סוג ההסדר הנוכחי של העובד"),
+    "fact:currentVehicle": (FieldPath.CURRENT_VEHICLE.value, "הרכב שיש לעובד היום"),
+    "fact:currentPropulsion": (FieldPath.CURRENT_PROPULSION.value, "סוג ההנעה של הרכב הנוכחי"),
+    "fact:currentParticipation": (
+        FieldPath.CURRENT_PARTICIPATION.value,
+        "ההשתתפות החודשית של העובד ברכב הנוכחי",
+    ),
+    "fact:group": (FieldPath.ENTITLEMENT_GROUP.value, "קבוצת הזכאות של העובד"),
+}
+
+
+def _saved_facts(rt: TurnRuntime) -> tuple[dict[str, str], dict[str, str]]:
+    """The employee's saved car-related details as placeholders, so a general answer can state
+    them ("which car do I have?") without the model ever writing a value. No salary data."""
+    fields = [path for path, _desc in _SAVED_FACTS.values()]
+    shown = _saved_values(rt, fields)
+    values: dict[str, str] = {}
+    descriptions: dict[str, str] = {}
+    for name, (path, description) in _SAVED_FACTS.items():
+        if path in shown:
+            values[name] = shown[path]
+            descriptions[name] = description
+    return values, descriptions
 
 
 def _resolve_refs(

@@ -14,6 +14,8 @@ from langgraph.runtime import Runtime
 from app.ai.application.ports.llm import LlmMessage, LlmTask, LlmTaskKind
 from app.ai.application.ports.response_staging import StagedMessage
 from app.ai.workflow import messages_he as he
+from app.contracts.catalogue import ListOptionsRequest
+from app.contracts.common import OptionCategory
 from app.ai.workflow.models import ComposedText, VoicedReplies
 from app.ai.workflow.prompts import COMPOSE_SYSTEM, GENERAL_SYSTEM, VOICE_SYSTEM, as_data
 from app.ai.workflow.rendering import render_grounded, render_voiced, to_draft
@@ -34,6 +36,7 @@ def _readable(text: str) -> bool:
 
 logger = logging.getLogger(__name__)
 
+_CATALOGUE_ID = re.compile(r"CAR-\d+")
 _RECENT_FOR_VOICE = 6
 _DIGITS_IN_RECENT = re.compile(r"\d")
 
@@ -112,8 +115,30 @@ async def _voice(state: ConversationState, rt: TurnRuntime, request: Any) -> boo
     return True
 
 
+async def _vehicle_name(rt: TurnRuntime, values: dict[str, str]) -> None:
+    """Replace a bare catalogue id ("CAR-09") of the current car with its catalogue name."""
+    current = values.get("fact:currentVehicle", "")
+    if not _CATALOGUE_ID.fullmatch(current):
+        return
+    envelope = await rt.tools.list_eligible_options(
+        ListOptionsRequest(
+            categories=[OptionCategory.REGULAR, OptionCategory.FAMILY],
+            expected_case_version=rt.case_version,
+        )
+    )
+    for item in envelope.data.items if envelope.data is not None else []:
+        if item.catalogue_id == current:
+            values["fact:currentVehicle"] = he.option_label(item)
+            return
+
+
 async def _compose_general(rt: TurnRuntime, request: Any) -> None:
     text: str | None = None
+    if request.kind == "general" and request.values:
+        try:
+            await _vehicle_name(rt, request.values)
+        except Exception:  # the name is a nicety; the id still answers the question
+            logger.info("vehicle name lookup failed")
     if rt.compose_with_llm:
         data: dict[str, Any]
         if request.kind == "comparison":
@@ -121,7 +146,11 @@ async def _compose_general(rt: TurnRuntime, request: Any) -> None:
             data = {"question": request.question, "placeholders": request.descriptions}
         else:
             system = GENERAL_SYSTEM
-            data = {"question": request.question, "RECENT": request.recent}
+            data = {
+                "question": request.question,
+                "RECENT": request.recent,
+                "SAVED": request.descriptions,
+            }
         result = await rt.call_llm(
             LlmTask(
                 kind=LlmTaskKind.COMPOSE,
