@@ -32,7 +32,9 @@ export class SignInPage {
       this.error.set(
         error instanceof HttpErrorResponse && error.status === 401
           ? 'שם המשתמש או הסיסמה אינם נכונים.'
-          : hebrewError(error),
+          : error instanceof HttpErrorResponse && error.status === 429
+            ? 'היו יותר מדי ניסיונות כניסה שגויים, ולכן הכניסה נחסמה זמנית. נסו שוב בעוד 15 דקות.'
+            : hebrewError(error),
       );
     } finally {
       this.busy.set(false);

@@ -50,10 +50,23 @@ def _clear(api: BusinessApi, response: Response) -> None:
     )
 
 
+def _client(request: Request) -> str | None:
+    """The caller's address for the sign-in throttle. Behind a proxy (Render) it is the last
+    `X-Forwarded-For` entry, which the proxy appends itself; earlier entries are client-supplied
+    and could be forged to dodge the throttle. Otherwise the socket peer."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    last = forwarded.split(",")[-1].strip()
+    if last:
+        return last[:64]
+    return request.client.host if request.client else None
+
+
 @router.post("/login", response_model=SessionResponse)
-async def login(body: LoginRequest, api: Api, response: Response) -> SessionResponse:
+async def login(
+    body: LoginRequest, api: Api, request: Request, response: Response
+) -> SessionResponse:
     try:
-        tokens = await api.auth.login(body.login, body.password)
+        tokens = await api.auth.login(body.login, body.password, client=_client(request))
     except BusinessError as error:
         raise as_problem(error) from None
     return _session(tokens, api, response)

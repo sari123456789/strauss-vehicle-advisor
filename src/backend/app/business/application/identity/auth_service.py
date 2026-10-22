@@ -3,7 +3,7 @@
 - **Login**: login + password -> a short-lived access token and a rotating refresh token.
   Unknown login, wrong password and inactive account give the same `UNAUTHENTICATED` answer,
   and an unknown login still pays the full hashing cost (no account enumeration). Repeated
-  failures for one login are throttled (`RATE_LIMITED`, in-process window; MVP single API).
+  failures for one login from one client address are throttled (`RATE_LIMITED`, in-process window; MVP single API).
 - **Access token**: carries only subject and session family - never roles. `authenticate`
   verifies it, checks that the session family is still active (logout revokes immediately)
   and builds the `ActorRef` from the *current* account: roles from the store, `Origin.HTTP`.
@@ -118,10 +118,15 @@ class AuthService:
 
     # --- login / refresh / logout ------------------------------------------------------
 
-    async def login(self, login: str, password: str) -> SessionTokens:
+    async def login(
+        self, login: str, password: str, *, client: str | None = None
+    ) -> SessionTokens:
+        """`client` (the caller's network address, when known) scopes the failure throttle:
+        repeated wrong passwords block that login from that client only, not for everyone."""
         key = login.strip().lower()
+        throttle_key = key if client is None else f"{key}|{client}"
         now = self._clock.now()
-        self._throttle.check(key, now)
+        self._throttle.check(throttle_key, now)
         async with self._unit_of_work() as uow:
             account = await uow.users.get_by_login(key)
             stored = (
@@ -131,9 +136,9 @@ class AuthService:
             )
             valid = self._hasher.verify(password, stored or self._dummy_hash)
             if account is None or stored is None or not valid or not account.active:
-                self._throttle.fail(key, now)
+                self._throttle.fail(throttle_key, now)
                 raise UnauthenticatedError(INVALID_CREDENTIALS)
-            self._throttle.clear(key)
+            self._throttle.clear(throttle_key)
             tokens = await self._open_session(uow, account, family_id=uuid4(), now=now)
             await uow.commit()
             return tokens
