@@ -357,13 +357,17 @@ tbody tr:hover {
   inline-size: 100%;
 }
 
-// Desktop/tablet: the conversation list scrolls inside its column instead of stretching the page.
+// Desktop/tablet: the workspace fills the screen below the header; each column scrolls on its own.
 @media (min-width: 760.02px) {
-  .workspace > .progress {
-    align-self: start;
-    position: sticky;
-    inset-block-start: 12px;
-    max-block-size: calc(100dvh - var(--header-height) - 24px);
+  .workspace {
+    block-size: calc(100dvh - var(--header-height));
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .workspace > .progress,
+  .workspace > .summary {
+    min-block-size: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -373,6 +377,44 @@ tbody tr:hover {
     inset-block-start: -24px;
     z-index: 1;
   }
+
+  .workspace > .conversation {
+    min-block-size: 0;
+  }
+
+  .workspace > .conversation .messages {
+    min-block-size: 0;
+    max-height: none;
+  }
+}
+
+// Profile facts beside the chat: every field the calculation needs, missing ones marked.
+.summary-fields {
+  margin: 0 0 12px;
+}
+
+.summary-fields > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ececef;
+  font-size: 14px;
+}
+
+.summary-fields dt {
+  color: #555;
+}
+
+.summary-fields dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: end;
+}
+
+.summary-fields .missing dd {
+  font-weight: 400;
+  color: #a06a35;
 }
 
 .conversation {
@@ -563,6 +605,16 @@ tbody tr:hover {
     display: block;
     grid-column: 1 / -1;
   }
+
+  // Chat row keeps the screen height; the profile panel below it is page-scrolled, not clipped.
+  .workspace {
+    block-size: auto;
+    grid-template-rows: calc(100dvh - var(--header-height) - 24px) auto;
+  }
+
+  .workspace > .summary {
+    overflow-y: visible;
+  }
 }
 
 // Between 1100px and the reference width the fixed column minimums squeeze the conversation.
@@ -606,7 +658,7 @@ tbody tr:hover {
 
 // "My details" panel in the chat: the car photo fills the bottom of the card, inside its edges.
 .workspace > .summary {
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .summary .summary-car {

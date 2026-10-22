@@ -16,6 +16,7 @@ import {VehicleCardComponent} from '../../shared/ui/vehicle-card.component';
 import {CatalogStore} from '../catalog/state/catalog.store';
 import {PayslipImportComponent} from '../payslip/payslip-import.component';
 import {ProfileStore} from '../profile/state/profile.store';
+import {profileRows} from '../profile/profile-rows';
 import {ConversationStore} from './state/conversation.store';
 import {ComparisonsStore} from '../comparisons/state/comparisons.store';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
@@ -36,6 +37,8 @@ export class AdvisorPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly fieldStatus = FIELD_STATUS;
+  /** All profile fields for the side panel; missing ones are shown as not yet known. */
+  readonly profileRows = computed(() => profileRows(this.profile.profile()));
   /** The payslip import panel (same reusable component as the profile page). */
   readonly payslipOpen = signal(false);
   /** Sent here from the comparison page because the current state could not be calculated. */
