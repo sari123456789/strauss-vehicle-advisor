@@ -387,6 +387,14 @@ async def apply_confirmations(
     explicit: list[str] = []
     if interpretation.intent is Intent.CONFIRM_FACTS:
         awaiting = [f for f in state.get("awaiting_confirmation", []) if f not in stated]
+        if not awaiting and rt.case is not None:
+            # Nothing was asked in the chat (e.g. the comparison page asked to confirm the
+            # current car): "הפרטים נכונים" confirms the saved current arrangement only.
+            awaiting = [
+                f.value
+                for f in rt.case.fields_requiring_confirmation
+                if f.value.startswith("currentArrangement.") and f.value not in stated
+            ]
         requested = {f.value for f in interpretation.confirmed_fields} or set(awaiting)
         explicit = [f for f in awaiting if f in requested]
     implicit = [f for f in rt.implicit_confirmations if f not in stated and f not in explicit]

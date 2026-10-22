@@ -1187,3 +1187,39 @@ async def test_a_plain_salary_update_before_a_conditional_car_question_is_saved(
     update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
     assert update.mode is UpdateMode.ACTUAL_UPDATE
     assert "לא עדכנתי את" not in text_of(outcome)
+
+
+# --- "הפרטים נכונים" when the advisor did not ask (e.g. after the comparison page) ------------
+
+
+async def test_details_are_correct_confirms_the_saved_current_arrangement_without_a_question() -> (
+    None
+):
+    runner, port, llm = make()
+    await saved_salary(port, (*SALARY_FIELDS, VEHICLE, PARTICIPATION))
+    port.override(
+        "confirm_profile_fields",
+        ConfirmProfileFieldsResult,
+        {
+            "status": "ok",
+            "data": {
+                "confirmedFields": [VEHICLE, PARTICIPATION],
+                "newCaseVersion": 4,
+                "newProfileVersion": 6,
+            },
+        },
+    )
+    llm.interpret(interpretation(Intent.CONFIRM_FACTS))
+    outcome = await say(runner, "הפרטים נכונים")
+    confirm: ConfirmProfileFieldsRequest = port.requests("confirm_profile_fields")[0]
+    assert [f.value for f in confirm.fields] == [VEHICLE, PARTICIPATION]  # never salary here
+    assert any(m.kind == "confirmation" for m in outcome.messages)
+    assert he.NOTHING_TO_CONFIRM not in text_of(outcome)
+
+
+async def test_details_are_correct_with_nothing_saved_to_confirm_says_so() -> None:
+    runner, port, llm = make()
+    llm.interpret(interpretation(Intent.CONFIRM_FACTS))
+    outcome = await say(runner, "הפרטים נכונים")
+    assert "confirm_profile_fields" not in port.tools()
+    assert he.NOTHING_TO_CONFIRM in text_of(outcome)

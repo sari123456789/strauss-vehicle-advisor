@@ -20,8 +20,9 @@ already made for this employee, e.g. "explain the calculation"), show_history (p
 comparison), data_sources (where the employee's details or the advisor's information come from,
 e.g. "where do you have my details from?"),
 update_facts (only giving/correcting personal details), confirm_facts (the
-employee says saved details listed in STATE.awaitingConfirmation are still correct; never use it
-when nothing is awaiting confirmation), cancel,
+employee says saved details listed in STATE.awaitingConfirmation are still correct; when nothing
+is awaiting confirmation, only when they say their saved details or current car are still
+correct, e.g. "הפרטים נכונים", "כן, זה עדיין הרכב שלי"), cancel,
 ask_representative (only when THIS message asks to contact or ask the transportation
 representative; put the detail they should provide in unknown_fields when it is named),
 general_question (concept questions such as credit points or how net pay is calculated in
