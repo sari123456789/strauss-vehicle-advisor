@@ -642,10 +642,9 @@ tbody tr:hover {
   font-weight: 600;
 }
 
-// Journey: the next step is always one clear primary button.
-.conversation .next-step {
-  align-self: flex-start;
-  margin-top: 8px;
+// The message box is always the last thing in the conversation card, pinned to its bottom.
+.conversation > .chat-input {
+  margin-top: auto;
 }
 
 a.primary.disabled {
