@@ -9,6 +9,8 @@ import {CatalogStore} from '../catalog/state/catalog.store';
 import {ProfileStore} from '../profile/state/profile.store';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 import {ComparisonsStore} from './state/comparisons.store';
+import {compareMessage} from '../advisor/compare-message';
+import {ConversationStore} from '../advisor/state/conversation.store';
 
 /**
  * A real comparison of the selected options against the current arrangement
@@ -24,6 +26,7 @@ export class ComparisonPage implements OnInit {
   readonly fieldPath = FIELD_PATH;
   private readonly router = inject(Router);
   private readonly profile = inject(ProfileStore);
+  private readonly conversations = inject(ConversationStore);
   /** Photo of the employee's current car, when it is a catalogue vehicle. */
   readonly currentImage = computed(() =>
     vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
@@ -44,10 +47,13 @@ export class ComparisonPage implements OnInit {
   async run(): Promise<void> {
     await this.store.compare(this.catalog.selected());
     const r = this.store.result();
-    // Without the current state there is no difference to show: confirm the details in the chat first.
+    // Without the current state there is no difference to show: the selection goes to the chat,
+    // where the advisor asks what it still needs and shows the difference itself.
     if (r && !r.current?.net) {
-      this.store.needsCurrent.set(true);
+      const message = compareMessage(this.catalog.selectedOptions());
+      this.catalog.clear();
       await this.router.navigate(['/advisor']);
+      if (message) void this.conversations.send(message);
     }
   }
 
