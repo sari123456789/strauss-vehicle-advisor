@@ -157,12 +157,18 @@ async def _converse(
 
 
 async def test_waiver_conversation_shows_only_the_business_amounts(app_db: str) -> None:
-    llm = ScriptedLlm().interpret(interpretation(Intent.CALCULATE_OPTIONS, include_waiver=True))
+    llm = ScriptedLlm().interpret(
+        interpretation(Intent.CALCULATE_OPTIONS, include_waiver=True),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
     app = application(app_db, llm=llm, worker_in_process=True)
     async with running(app) as client:
         headers = await login(client, "e005")
         conversation = (await start_conversation(client, headers))["conversationId"]
-        replies = await _converse(client, headers, conversation, "כמה אקבל אם אוותר על הרכב?")
+        # The seeded salary was saved before this conversation: one confirmation, then "yes".
+        asked = await _converse(client, headers, conversation, "כמה אקבל אם אוותר על הרכב?")
+        assert [r["kind"] for r in asked].count("confirmation_request") == 1, asked
+        replies = await _converse(client, headers, conversation, "כן")
         text = "\n".join(r["text"] for r in replies)
         assert not RAW_CODES.search(text)
         comparisons = [r for r in replies if r["kind"] == "comparison"]

@@ -124,9 +124,16 @@ def test_langgraph_shows_engine_values_and_rejects_invented_numbers(stage_b_db: 
             ctx = await open_case(services, demo_subject("E-001"))
             port, llm = RecordingPort(services.tools), ScriptedLlm()
             runner = LangGraphTurnRunner(port, llm)  # type: ignore[arg-type]
-            llm.interpret(interpretation(Intent.CALCULATE_OPTIONS, option_refs=[car("CAR-10")]))
+            llm.interpret(
+                interpretation(Intent.CALCULATE_OPTIONS, option_refs=[car("CAR-10")]),
+                interpretation(Intent.CONFIRM_FACTS),
+            )
             llm.compose("לפי החישוב הנטו שלך יהיה 99999 ש״ח")  # an invented amount
-            outcome = await say(runner, ctx, "כמה נטו יישאר לי עם ATTO 3?")
+            # The seeded salary was saved before this conversation: one confirmation first.
+            asked = await say(runner, ctx, "כמה נטו יישאר לי עם ATTO 3?")
+            assert len(of_kind(asked, "confirmation_request")) == 1
+            assert "compare_scenarios" not in port.calls
+            outcome = await say(runner, ctx, "כן")
             assert port.calls[-2:] == ["check_calculation_readiness", "compare_scenarios"]
             card = of_kind(outcome, "comparison")[0]
             details = await services.tools.get_comparison_details(
@@ -210,10 +217,15 @@ def test_langgraph_replay_history_and_foreign_case(stage_b_db: str) -> None:
             port, llm = RecordingPort(services.tools), ScriptedLlm()
             runner = LangGraphTurnRunner(port, llm)  # type: ignore[arg-type]
             input_id = uuid4()
-            llm.interpret(interpretation(Intent.CALCULATE_OPTIONS, option_refs=[car("CAR-05")]))
-            first = await say(runner, ctx, "כמה נטו עם NIRO?", input_id)
+            llm.interpret(
+                interpretation(Intent.CALCULATE_OPTIONS, option_refs=[car("CAR-05")]),
+                interpretation(Intent.CONFIRM_FACTS),
+            )
+            asked = await say(runner, ctx, "כמה נטו עם NIRO?")
+            assert len(of_kind(asked, "confirmation_request")) == 1  # saved salary, asked once
+            first = await say(runner, ctx, "כן", input_id)
             run_id = of_kind(first, "comparison")[0].payload["runId"]
-            replay = await say(runner, ctx, "כמה נטו עם NIRO?", input_id)
+            replay = await say(runner, ctx, "כן", input_id)
             assert replay.status is TurnStatus.DUPLICATE and replay.tool_calls == 0
             llm.interpret(interpretation(Intent.SHOW_HISTORY))
             history = await say(runner, ctx, "תראה לי את החישוב הקודם")

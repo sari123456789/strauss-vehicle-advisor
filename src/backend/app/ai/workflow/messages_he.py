@@ -127,6 +127,27 @@ def confirm_request_text(fields: list[str]) -> str:
     )
 
 
+def confirm_saved_text(fields: list[str], missing: list[str] | None = None) -> str:
+    """The one confirmation per conversation before a calculation that rests on facts saved in
+    an earlier conversation. Names the facts only; their values are in the side panel."""
+    text = (
+        "לפני שאחשב, רק לוודא שהפרטים ששמרנו משיחה קודמת עדיין נכונים: "
+        f"{labels_text(fields)}. (הם מופיעים בחלונית הצד.) "
+        'אם הכול נכון, מספיק לכתוב "כן"; אם משהו השתנה, פשוט לכתוב את הערך הנכון.'
+    )
+    if missing:
+        text += " " + ask_for_fields(missing[:2])
+    return text
+
+
+def saved_facts_note(fields: list[str]) -> str:
+    """One line under a result that used saved facts the employee did not restate here."""
+    return (
+        f"חישבתי לפי מה ששמרנו משיחה קודמת עבור {labels_text(fields)}. "
+        "אם משהו מזה השתנה, אפשר לכתוב לי ואעדכן את החישוב."
+    )
+
+
 def confirmed_text(fields: list[str]) -> str:
     return f"מעולה, רשמתי ש{labels_text(fields)} עדיין נכונים."
 

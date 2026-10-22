@@ -927,3 +927,30 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
   operations on real PostgreSQL. It checks the invariants afterwards and never mocks the database.
 
 ---
+
+## 22. Agent: net-only versus comparison, and one confirmation of saved salary (approved 2026-10-22)
+
+**Decision authority:** project owner, 2026-10-22. Agent behavior only; Business readiness
+(Q2, G3, G4) is unchanged.
+
+- **Net versus comparison:** "what would my net be with X" needs the salary facts only;
+  "how would my net change compared to today" also needs the current arrangement. A baseline
+  that is not ready blocks only the difference from today, never the net of a ready alternative
+  (agent spec §2.5, §6; T08, T81, T84). "Which car is best / leaves the most net" is a net
+  question unless the employee also asks for the difference from today.
+- **One confirmation of saved salary facts per conversation:** asked only when the employee
+  requests a calculation that would rest entirely on salary facts saved in an earlier
+  conversation (G4: neither stated nor confirmed in this case). Never asked when the employee
+  gives any salary fact in this conversation (actual or hypothetical), never when listing
+  vehicles, and never a second time in the same conversation, answered or not.
+- **One message:** a comparison asks about the saved current-arrangement facts in the same
+  confirmation message. "Yes" confirms all; a corrected value is written as an actual update and
+  the calculation resumes immediately, keeping the question's options, waiver and drive filter.
+- **Transparency instead of blocking:** when a result uses saved salary facts the employee did not
+  restate (a partial update, or an unanswered confirmation), one line under the result names
+  them, once per conversation.
+- **Representative answers:** the asynchronous recalculation after an answer never asks for the
+  confirmation; it names the saved facts it used instead.
+- **Privacy:** the confirmation and the note name the facts and point to the side panel; they do
+  not repeat salary amounts in chat messages (existing agent rule). Showing amounts in the message
+  would be a separate decision.
