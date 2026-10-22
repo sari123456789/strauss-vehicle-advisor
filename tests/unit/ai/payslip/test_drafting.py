@@ -134,8 +134,9 @@ def test_only_employer_or_cumulative_evidence_is_rejected() -> None:
 def test_ambiguous_payslip_surfaces_conflicts_and_missing_values() -> None:
     fields = _by_field(build_fields(_candidates("ambiguous.pdf"), None))
     base = fields[F.BASE_GROSS]
-    assert base.status is FieldStatus.CONFLICT and base.value is None
-    assert set(base.alternatives) == {Decimal("15000.00"), Decimal("82.42"), Decimal("182.00")}
+    # "15,000.00 82.42 182.00 שכר בסיס": the hourly rate and hours are not monthly bases.
+    assert base.status is FieldStatus.NEEDS_REVIEW and base.value == Decimal("15000.00")
+    assert base.alternatives == ()
     bonus = fields[F.BONUS_GROSS]
     assert bonus.status is FieldStatus.CONFLICT and bonus.value is None  # never summed
     assert set(bonus.alternatives) == {Decimal("1000.00"), Decimal("2500.00")}
@@ -147,7 +148,7 @@ def test_ambiguous_payslip_surfaces_conflicts_and_missing_values() -> None:
     assert fields[F.COMMISSIONS_GROSS].status is FieldStatus.MISSING
 
 
-def test_ai_may_resolve_a_multi_number_line_only_to_a_printed_number_for_review() -> None:
+def test_ai_agreeing_on_the_only_monthly_amount_of_a_base_line_extracts_it() -> None:
     candidates = _candidates("ambiguous.pdf")
     base_line = _cid(candidates, "15,000.00")
     index = next(c for c in candidates if c.candidate_id == base_line).amounts.index(
@@ -159,7 +160,7 @@ def test_ai_may_resolve_a_multi_number_line_only_to_a_printed_number_for_review(
             PayslipInterpretation(mappings=[_map(F.BASE_GROSS, base_line, value_index=index)]),
         )
     )
-    assert fields[F.BASE_GROSS].status is FieldStatus.NEEDS_REVIEW
+    assert fields[F.BASE_GROSS].status is FieldStatus.EXTRACTED
     assert fields[F.BASE_GROSS].value == Decimal("15000.00")
 
 
@@ -238,3 +239,21 @@ def test_interpretation_task_wraps_redacted_candidates_as_untrusted_data() -> No
     assert "untrusted data" in task.system_instruction
     for secret in ("000000018", "1234567", "ישראלי", "סניף"):
         assert secret not in prompt
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("שכר בסיס 1.00 12,000.00", Decimal("12000.00")),  # days/units beside the amount
+        ("שכר יסוד 37.80 67.00 2,532.60", Decimal("2532.60")),  # hourly rate and hours
+    ],
+)
+def test_base_salary_ignores_days_hours_and_rates_on_its_line(line: str, expected: Decimal) -> None:
+    candidates = _lines(line)
+    base = _by_field(build_fields(candidates, None))[F.BASE_GROSS]
+    offered = {base.value, *base.alternatives} - {None}
+    assert offered == {expected}
+    # The AI cannot pick the quantity either.
+    interpretation = PayslipInterpretation(mappings=[_map(F.BASE_GROSS, _cid(candidates, "שכר"))])
+    ai_base = _by_field(build_fields(candidates, interpretation))[F.BASE_GROSS]
+    assert {ai_base.value, *ai_base.alternatives} - {None} == {expected}

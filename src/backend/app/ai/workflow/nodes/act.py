@@ -618,7 +618,11 @@ async def compute(
     updates["latest_run_id"] = str(result.run_id)
     full = not state.get("disclaimer_shown")
     text = he.comparison_text(result, labels, full_disclaimer=full)
-    rt.reply(text, "comparison", runId=str(result.run_id), **he.comparison_cards(result))
+    ranked = he.ranking(result)
+    if ranked:
+        rt.reply(text, "comparison", runId=str(result.run_id), ranked=ranked)
+    else:
+        rt.reply(text, "comparison", runId=str(result.run_id))
     updates["disclaimer_shown"] = True
     noted = list(state.get("saved_facts_noted", []))
     unnoted = [f for f in saved_salary if f not in noted]

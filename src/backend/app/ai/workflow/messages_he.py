@@ -165,8 +165,7 @@ def confirm_request_text(fields: list[str], values: dict[str, str] | None = None
 
 
 CONFIRM_AGAIN = (
-    'כדי להמשיך אני רק צריך אישור לפרטים שלמעלה — כתבו "כן" אם הכול נכון, '
-    "או את מה שהשתנה."
+    'כדי להמשיך אני רק צריך אישור לפרטים שלמעלה — כתבו "כן" אם הכול נכון, או את מה שהשתנה.'
 )
 
 
@@ -272,19 +271,6 @@ def _delta_phrase(delta: MoneyAmount) -> str:
     return "אין שינוי"
 
 
-def comparison_cards(result: ComparisonResult) -> dict[str, object]:
-    """Payload for the chat's side panel: the calculated cars' keys, best difference first.
-    Amounts never travel in a message payload (staging rule); the panel reads them from the
-    stored run (`runId`)."""
-    rows = [
-        s
-        for s in result.alternatives
-        if s.status is ScenarioStatus.CALCULATED and s.delta is not None
-    ]
-    rows.sort(key=lambda s: -int(s.delta.display))
-    return {"optionKeys": [s.option_key for s in rows]}
-
-
 def comparison_text(
     result: ComparisonResult, labels: dict[str, str], *, full_disclaimer: bool = True
 ) -> str:
@@ -310,25 +296,63 @@ def comparison_text(
             f"(נטו משוער {shekels(s.net)})."
         )
     elif len(with_delta) > 1:
-        # Several cars: one friendly line with the best one; every car, with its photo and
-        # difference, is shown in the side panel (payload `optionKeys` / `deltas`).
-        best = max(with_delta, key=lambda s: int(s.delta.display))
+        # Several cars: a short, friendly summary; the full ranked list is on the cards
+        # opened from the message's button (payload `ranked`, see `ranking`).
+        best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
+        assert best.delta is not None  # with_delta holds only scenarios with a delta
+        lines.append(f"סידרתי לך את {len(with_delta)} הרכבים לפי כמה הם ישנו לך בנטו כל חודש 🚗")
         lines.append(
             f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
             f"{_delta_phrase(best.delta)} בחודש לעומת היום."
         )
-        lines.append(f"בדקתי {len(with_delta)} רכבים, ואת כולם עם ההפרש אפשר לראות בצד 👉")
+        missing = len(result.alternatives) - len(with_delta)
+        if missing:
+            lines.append(f"עוד {missing} רכבים לא הצלחתי לחשב.")
+        lines.append("את כל הרשימה המסודרת אפשר לראות בכפתור למטה.")
     else:
-        for scenario in result.alternatives:
+        if with_delta:
+            lines.append("ההפרש בנטו החודשי שלך לעומת היום:")
+        ordered = sorted(
+            result.alternatives,
+            key=lambda s: -int(s.delta.display) if s.delta is not None else 10**9,
+        )
+        for scenario in ordered:
             label = labels.get(scenario.option_key, scenario.option_key)
-            if scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
+            if scenario.status is ScenarioStatus.CALCULATED and scenario.delta is not None:
+                lines.append(f"• {label}: {shekels(scenario.delta, signed=True)} בחודש")
+            elif scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
                 lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}")
             else:
                 lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
+        if len(with_delta) > 1:
+            best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
+            assert best.delta is not None  # with_delta holds only scenarios with a delta
+            lines.append(
+                f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
+                f"{_delta_phrase(best.delta)} בחודש לעומת היום."
+            )
     if result.kind.value == "hypothetical":
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
     return "\n".join(lines)
+
+
+def ranking(result: ComparisonResult) -> list[dict[str, str]]:
+    """The calculated cars, best monthly difference first, for the cards behind a result with
+    several cars. Amounts are the engine's, formatted as in the text."""
+    with_delta = [
+        s
+        for s in result.alternatives
+        if s.status is ScenarioStatus.CALCULATED and s.delta is not None
+    ]
+    if len(with_delta) < 2:
+        return []
+    ordered = sorted(with_delta, key=lambda s: -int(s.delta.display) if s.delta else 0)
+    return [
+        {"optionKey": s.option_key, "deltaText": shekels(s.delta, signed=True)}
+        for s in ordered
+        if s.delta is not None
+    ]
 
 
 def pending_text(labels: list[str]) -> str:
@@ -442,6 +466,8 @@ OUT_OF_SCOPE = (
     "אני כאן כדי לעזור בנושאי רכב החברה וההשפעה שלהם על השכר 🙂 "
     "על זה לא אוכל לעזור, אבל אשמח לבדוק איתך רכבים או לחשב כמה רכב מסוים ישנה לך בחודש."
 )
+
+
 def named_car_eligible_text(label: str) -> str:
     return f"כן! {label} נמצא בקטלוג ומגיע לך 🎉"
 

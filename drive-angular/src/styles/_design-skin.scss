@@ -949,23 +949,27 @@ a.primary.disabled {
   }
 }
 
-// Comparison cards in the chat's side panel: the monthly difference is the headline.
-article.vehicle p.vehicle__delta {
+// Ranked result in the side panel: each car's monthly difference above its card.
+.panel-item__delta {
   display: flex;
-  flex-direction: column;
-  margin: 2px 0 12px;
-  line-height: 1.2;
-  color: #1f6b3a;
-  font-size: 26px;
-  font-weight: 800;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #2c6b3a;
 }
 
-article.vehicle p.vehicle__delta.neg {
+.panel-item__delta.negative {
   color: #a33a2b;
 }
 
-article.vehicle p.vehicle__delta small {
-  color: #777;
+.panel-item__delta span {
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  background: #f2ebe3;
+  color: #8c5f37;
   font-size: 13px;
-  font-weight: 400;
 }

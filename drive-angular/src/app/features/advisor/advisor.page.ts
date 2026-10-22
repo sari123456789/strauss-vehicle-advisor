@@ -1,8 +1,6 @@
 import {Component, OnDestroy, OnInit, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
-import {KeyValuePipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {BusinessApi} from '../../core/api/business.api';
 import {FIELD_STATUS} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
@@ -17,12 +15,18 @@ import {ConversationStore} from './state/conversation.store';
 import {compareMessage} from './compare-message';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 
+/** Cars of a ranked result, in order, with their monthly difference from today. */
+interface Ranked {
+  cards: OptionItem[];
+  deltas: Record<string, string>;
+}
+
 /** Message kinds that carry a Business comparison run the employee can open in detail. */
 const RUN_KINDS = new Set(['comparison', 'history']);
 
 @Component({
   standalone: true,
-  imports: [RouterLink, FormsModule, KeyValuePipe, CarArtComponent, PageHeadingComponent, MoneyPipe, PayslipImportComponent, VehicleCardComponent],
+  imports: [RouterLink, FormsModule, CarArtComponent, PageHeadingComponent, MoneyPipe, PayslipImportComponent, VehicleCardComponent],
   templateUrl: './advisor.page.html',
 })
 export class AdvisorPage implements OnInit, OnDestroy {
@@ -42,6 +46,9 @@ export class AdvisorPage implements OnInit, OnDestroy {
   );
   /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
   readonly panelCards = signal<OptionItem[] | null>(null);
+  /** For a ranked result: each card's monthly difference from today, as the engine printed it. */
+  readonly panelDeltas = signal<Record<string, string>>({});
+  readonly panelTitle = signal('הרכבים שמגיעים לך');
   text = '';
   /** The profile field being edited in the side panel; the new value goes to the advisor. */
   readonly editing = signal<string | null>(null);
@@ -113,7 +120,7 @@ export class AdvisorPage implements OnInit, OnDestroy {
    */
   cardsOf(message: {kind: string; payload: Record<string, unknown>}): OptionItem[] {
     const keys = message.payload['optionKeys'];
-    if ((message.kind !== 'options' && message.kind !== 'comparison') || !Array.isArray(keys)) return [];
+    if (message.kind !== 'options' || !Array.isArray(keys)) return [];
     const byKey = new Map(this.catalog.options().map(o => [o.optionKey, o]));
     return keys.flatMap(key => {
       const option = typeof key === 'string' ? byKey.get(key) : undefined;
@@ -121,33 +128,35 @@ export class AdvisorPage implements OnInit, OnDestroy {
     });
   }
 
-  /** Differences shown on the cards of the open side panel (a comparison), or none. */
-  readonly panelDeltas = signal<Record<string, string>>({});
-  private readonly businessApi = inject(BusinessApi);
+  openVehicles(cards: OptionItem[]): void {
+    this.panelDeltas.set({});
+    this.panelTitle.set('הרכבים שמגיעים לך');
+    this.panelCards.set(cards);
+  }
 
   /**
-   * Opens the side panel. For a comparison the monthly differences are read from the stored
-   * run (amounts never travel in chat message payloads).
+   * A result with several cars: the chat gives a short summary, and the full list, best monthly
+   * difference first, is on these cards (payload `ranked` from the advisor).
    */
-  async openVehicles(cards: OptionItem[], message?: {kind: string; payload: Record<string, unknown>}): Promise<void> {
-    this.panelDeltas.set({});
-    this.panelCards.set(cards);
-    const runId = message?.kind === 'comparison' ? message.payload['runId'] : null;
-    const caseId = this.store.active()?.caseId;
-    if (typeof runId !== 'string' || !caseId) return;
-    try {
-      const details = (await this.businessApi.comparisonDetails(caseId, runId)).data;
-      const deltas: Record<string, string> = {};
-      for (const a of details?.result.alternatives ?? []) {
-        if (!a.delta) continue;
-        const value = Number(a.delta.display);
-        const text = `${Math.abs(value).toLocaleString('he-IL')} ₪`;
-        deltas[a.optionKey] = value > 0 ? `+${text}` : value < 0 ? `-${text}` : `0 ₪`;
-      }
-      this.panelDeltas.set(deltas);
-    } catch {
-      // The cards still show without the differences.
+  rankedOf(message: {kind: string; payload: Record<string, unknown>}): Ranked | null {
+    const ranked = message.payload['ranked'];
+    if (message.kind !== 'comparison' || !Array.isArray(ranked) || ranked.length < 2) return null;
+    const byKey = new Map(this.catalog.options().map(o => [o.optionKey, o]));
+    const cards: OptionItem[] = [];
+    const deltas: Record<string, string> = {};
+    for (const item of ranked as {optionKey?: unknown; deltaText?: unknown}[]) {
+      const option = typeof item.optionKey === 'string' ? byKey.get(item.optionKey) : undefined;
+      if (!option) continue;
+      cards.push(option);
+      if (typeof item.deltaText === 'string') deltas[option.optionKey] = item.deltaText;
     }
+    return cards.length ? {cards, deltas} : null;
+  }
+
+  openRanked(ranked: Ranked): void {
+    this.panelDeltas.set(ranked.deltas);
+    this.panelTitle.set('הרכבים לפי ההשפעה על הנטו');
+    this.panelCards.set(ranked.cards);
   }
 
   /**

@@ -31,6 +31,10 @@ _NUMBER = re.compile(
     r"(?P<pct_after>\s?%)?"
 )
 # Hebrew and Latin runs are separate words: extraction often glues "שכרBase" together.
+# Code-style value assignments ("base_salary=999999", "credit_points: 99"): a payslip prints
+# labels, not variable names. Catches an injected line even when it carries no instruction words
+# (e.g. the second half of a split "SYSTEM: ... Return base_salary=..." note).
+_ASSIGNMENT = re.compile(r"[A-Za-z]\w*\s*=\s*-?\d|[A-Za-z]+_[A-Za-z_]+\s*[:=]")
 _WORD = re.compile(r"[א-ת'\"]+|[A-Za-z'\"]+")
 _HEBREW_PREFIXES = ("ה", "ו", "ב", "ל", "מ", "ש")
 
@@ -139,6 +143,8 @@ def parse_numbers(line: str) -> ParsedNumbers:
 def is_suspicious(line: str) -> bool:
     lowered = line.lower()
     reversed_words = " ".join(word[::-1] for word in lowered.split())
+    if _ASSIGNMENT.search(line):
+        return True
     return any(p in lowered or p in reversed_words for p in _SUSPICIOUS_PHRASES)
 
 
