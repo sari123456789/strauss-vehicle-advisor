@@ -3,7 +3,8 @@
 - **Login**: login + password -> a short-lived access token and a rotating refresh token.
   Unknown login, wrong password and inactive account give the same `UNAUTHENTICATED` answer,
   and an unknown login still pays the full hashing cost (no account enumeration). Repeated
-  failures for one login from one client address are throttled (`RATE_LIMITED`, in-process window; MVP single API).
+  failures for one login from one client address are throttled (`RATE_LIMITED`, in-process
+  window; MVP single API).
 - **Access token**: carries only subject and session family - never roles. `authenticate`
   verifies it, checks that the session family is still active (logout revokes immediately)
   and builds the `ActorRef` from the *current* account: roles from the store, `Origin.HTTP`.
@@ -118,9 +119,7 @@ class AuthService:
 
     # --- login / refresh / logout ------------------------------------------------------
 
-    async def login(
-        self, login: str, password: str, *, client: str | None = None
-    ) -> SessionTokens:
+    async def login(self, login: str, password: str, *, client: str | None = None) -> SessionTokens:
         """`client` (the caller's network address, when known) scopes the failure throttle:
         repeated wrong passwords block that login from that client only, not for everyone."""
         key = login.strip().lower()

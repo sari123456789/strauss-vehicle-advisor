@@ -242,6 +242,7 @@ def comparison_text(
     # the net itself is only secondary context.
     if len(result.alternatives) == 1 and len(with_delta) == 1:
         s = with_delta[0]
+        assert s.delta is not None and s.net is not None  # filtered above
         lines.append(
             f"עם {labels.get(s.option_key, s.option_key)}: "
             f"{_delta_phrase(s.delta)} בחודש לעומת היום "
@@ -263,7 +264,8 @@ def comparison_text(
             else:
                 lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
         if len(with_delta) > 1:
-            best = max(with_delta, key=lambda s: int(s.delta.display))
+            best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
+            assert best.delta is not None  # with_delta holds only scenarios with a delta
             lines.append(
                 f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
                 f"{_delta_phrase(best.delta)} בחודש לעומת היום."

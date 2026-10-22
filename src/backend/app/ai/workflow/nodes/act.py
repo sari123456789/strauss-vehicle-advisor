@@ -953,7 +953,9 @@ async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime])
     if task is None:
         # Not asked through the chat (e.g. the stand-alone request form): a general question's
         # answer is still relayed here, since this conversation is bound to the request's case.
-        task = PendingTask(fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular")
+        task = PendingTask(
+            fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular"
+        )
         lookup = await rt.tools.get_representative_request(
             RepresentativeRequestLookup(request_id=UUID(request_id))
         )
