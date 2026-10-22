@@ -988,3 +988,8 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
   for a model mistake, a salary fact the model marks as actual inside a conditional sentence is
   calculated case-locally and never written to the profile; one line says which details were not
   updated and that the employee can ask to update them. The net guards the six salary facts only.
+- **Explanations only on request (approved 2026-10-22):** a comparison result is shown without an
+  automatic model-written explanation (it repeated the same general text every time). The advisor
+  explains a result only when the employee asks ("למה?", "תסביר"). This departs from the
+  challenge's "two-line plain explanation per alternative"; the result message and the calculation
+  details page carry the per-alternative figures.

@@ -32,7 +32,7 @@ from app.contracts.case_inputs import (
 )
 from app.contracts.catalogue import ResolveOccupationResult, ResolveVehicleResult
 from app.contracts.common import Envelope, FieldPath, UpdateMode
-from app.contracts.comparisons import CompareRequest, ComparisonResult
+from app.contracts.comparisons import CompareRequest, ComparisonDetailsRequest, ComparisonResult
 from app.contracts.readiness import ReadinessRequest, ReadinessResult, SelectionMode
 from app.contracts.representatives import RequestStatusView
 from app.contracts.tool_context import ActorRef, Origin, Role, ToolContext
@@ -166,18 +166,38 @@ async def test_ordinal_reference_resolves_against_the_displayed_list() -> None:
 async def test_net_calculation_amounts_come_from_the_tool_result() -> None:
     runner, port, llm = make()
     llm.interpret(interpretation(Intent.COMPARE_TO_CURRENT, all_options=True))
-    llm.compose("לפי החישוב, {{delta:vehicle:CAR-10}} לעומת היום.")
     outcome = await say(runner, "מה עדיף לי, הרכב הנוכחי או רכב אחר?")
     compare: CompareRequest = port.requests("compare_scenarios")[0]
     assert compare.include_current is True and compare.kind.value == "regular"
     assert compare.expected_case_version == 3 and compare.expected_profile_version == 5
     text = text_of(outcome)
     # The message names the car's net and the monthly difference (not today's net).
-    assert "11,693 ₪" in text and "+661 ₪" in text
-    assert outcome.messages[-1].kind == "explanation"
-    assert "לפי החישוב, +661 ₪ לעומת היום." in text
-    assert outcome.llm_calls == 2
+    assert "11,693 ₪" in text and "661 ₪" in text
+    # No automatic explanation under a result: the advisor explains only when asked.
+    assert all(m.kind != "explanation" for m in outcome.messages)
+    assert outcome.llm_calls == 1
     assert_employee_safe(outcome)
+
+
+async def test_the_explanation_comes_only_when_asked_and_uses_the_engine_amounts() -> None:
+    runner, port, llm = make()
+    llm.interpret(
+        interpretation(Intent.COMPARE_TO_CURRENT, all_options=True),
+        interpretation(Intent.EXPLAIN_RESULT),
+    )
+    llm.compose("לפי החישוב, {{delta:vehicle:CAR-10}} לעומת היום.")
+    await say(runner, "מה עדיף לי, הרכב הנוכחי או רכב אחר?")
+    # The stored run is the comparison just shown (as with the real Business).
+    compared = await port.fake.compare_scenarios(CTX, port.requests("compare_scenarios")[0])
+    stored = await port.fake.get_comparison_details(CTX, ComparisonDetailsRequest(run_id=uuid4()))
+    assert compared.data is not None and stored.data is not None
+    port.overrides["get_comparison_details"] = stored.model_copy(
+        update={"data": stored.data.model_copy(update={"result": compared.data})}
+    )
+    explained = await say(runner, "למה?")
+    assert explained.messages[-1].kind == "explanation"
+    assert "לפי החישוב, +661 ₪ לעומת היום." in text_of(explained)
+    assert_employee_safe(explained)
 
 
 async def test_model_prose_with_invented_numbers_is_dropped() -> None:
