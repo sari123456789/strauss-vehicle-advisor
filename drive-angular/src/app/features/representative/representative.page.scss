@@ -495,3 +495,82 @@ blockquote {
   color: #555;
   font-size: 13px;
 }
+
+// Desktop: the page fits one screen; only the request table and the detail panel scroll.
+@media (min-width: 1100.02px) {
+  :host {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    padding-block: 10px 12px;
+  }
+
+  .rep {
+    flex: 1;
+    min-block-size: 0;
+    align-items: stretch;
+  }
+
+  .rep__main {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    padding: 14px 16px;
+  }
+
+  .rep__detail {
+    position: static;
+    min-block-size: 0;
+    max-block-size: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  // Compact top so the request list gets the height.
+  .rep__head {
+    margin-bottom: 10px;
+  }
+
+  .rep__head h1 {
+    font-size: 24px;
+  }
+
+  .rep__head p {
+    font-size: 14px;
+  }
+
+  .tiles {
+    margin-bottom: 10px;
+  }
+
+  .tile {
+    padding: 8px 12px;
+  }
+
+  .tile__icon {
+    inline-size: 32px;
+    block-size: 32px;
+  }
+
+  .tile b {
+    font-size: 20px;
+  }
+
+  .toolbar {
+    margin-bottom: 10px;
+  }
+
+  .table-wrap {
+    flex: 1;
+    min-block-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+  }
+}

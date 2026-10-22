@@ -73,6 +73,23 @@ export class ConversationStore {
     return this.startNew();
   }
 
+  /**
+   * Arriving at the chat: a fresh conversation. The most recent one is reused only while it is
+   * still empty, so repeated visits do not pile up blank conversations.
+   */
+  async startFresh(): Promise<ConversationSummary> {
+    const generation = this.generation;
+    await this.loadConversations();
+    const latest = this.conversations()[0];
+    if (latest) {
+      await this.open(latest.conversationId);
+      const opened = this.active();
+      if (generation + 1 !== this.generation && opened) return opened; // the user chose meanwhile
+      if (opened && !this.messages().length) return opened;
+    }
+    return this.startNew();
+  }
+
   async startNew(): Promise<ConversationSummary> {
     this.stopPolling();
     this.error.set(null);

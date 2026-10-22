@@ -8,7 +8,7 @@ const NEW_SCREENS = [
   {path: '/dev/ui-states', name: 'ui-states'},
 ];
 
-/** Legacy demo screens: only the new header/footer are asserted; their bodies are replaced later. */
+/** Legacy demo screens: only the new header is asserted; their bodies are replaced later. */
 const LEGACY_SCREENS = ['/how-it-works', '/sign-in', '/catalog', '/profile', '/advisor', '/comparison', '/calculation', '/history', '/representative'];
 
 for (const viewport of VIEWPORTS) {
@@ -27,7 +27,7 @@ for (const viewport of VIEWPORTS) {
       });
     }
 
-    test('shell on legacy demo screens: no overflow from header/footer, 44px targets, axe', async ({page}) => {
+    test('shell on legacy demo screens: no overflow from header, 44px targets, axe', async ({page}) => {
       test.setTimeout(180_000);
       for (const path of LEGACY_SCREENS) {
         await page.goto(`/#${path}`);
@@ -35,7 +35,6 @@ for (const viewport of VIEWPORTS) {
         const shellTargets = (await smallTouchTargets(page)).filter(t => /תפריט|כניסה|יציאה|DRIVE|מסך נציג|דילוג/.test(t));
         expect(shellTargets, `${path}: small shell controls`).toEqual([]);
         expect(await seriousAxeViolations(page, 'dr-site-header'), `${path}: header axe`).toEqual([]);
-        expect(await seriousAxeViolations(page, 'dr-site-footer'), `${path}: footer axe`).toEqual([]);
         const overflow = await horizontalOverflow(page);
         test.info().annotations.push({type: `legacy ${path} page overflow (report only)`, description: `${overflow}px`});
       }

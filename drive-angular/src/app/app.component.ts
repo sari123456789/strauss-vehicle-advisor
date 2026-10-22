@@ -3,13 +3,12 @@ import {toSignal} from '@angular/core/rxjs-interop';
 import {NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet} from '@angular/router';
 import {SessionService} from './core/auth/session.service';
 import {filter, map} from 'rxjs';
-import {SiteFooterComponent} from './shared/layout/site-footer.component';
 import {SiteHeaderComponent} from './shared/layout/site-header.component';
 import {JourneyStepsComponent} from './shared/layout/journey-steps.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, JourneyStepsComponent, SiteHeaderComponent, SiteFooterComponent],
+  imports: [RouterOutlet, RouterLink, JourneyStepsComponent, SiteHeaderComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,8 +50,6 @@ export class AppComponent {
     if (url.startsWith('/comparison') || url.startsWith('/calculation')) return 2;
     return -1;
   });
-  /** The chat is a full workspace: no site footer under it. */
-  protected readonly isChat = computed(() => this.url().startsWith('/advisor'));
   /** "Back to the chat" button: for a signed-in employee on every page except the chat itself. */
   protected readonly showChatButton = computed(
     () => this.session.isEmployee() && !this.url().startsWith('/advisor') && !this.url().startsWith('/sign-in'),

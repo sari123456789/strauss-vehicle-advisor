@@ -346,3 +346,25 @@ $nav-inline: 1400px;
     left: calc(var(--gutter-inline-end) + 300px);
   }
 }
+
+// Narrow phones (≤ 420px): the logos and tagline were wider than the screen and pushed the
+// menu button off the page. Drop the tagline and shrink both logos.
+@media (max-width: 420px) {
+  :host .brand {
+    gap: 8px;
+    min-inline-size: 0;
+  }
+
+  :host .brand__tag {
+    display: none;
+  }
+
+  :host .brand__drive-logo {
+    block-size: 22px;
+  }
+
+  .brand__logo {
+    block-size: 36px;
+    padding-right: 8px;
+  }
+}
