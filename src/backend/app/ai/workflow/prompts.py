@@ -58,12 +58,18 @@ facts: only values the employee explicitly states about themselves. For each fac
 - mode "actual" for real current facts or corrections ("my salary is", "I was wrong");
   "hypothetical" for what-if checks ("what if", "suppose", "if I get"); "ambiguous" when unclear
   (e.g. "check with salary 20000").
+  In Hebrew, a fact inside a condition or question about a possibility is hypothetical even with
+  a past-tense verb: "ואם השכר שלי השתנה ל-20000?", "אם אקבל בונוס של 2000", "מה אם הפנסיה
+  שלי 7%?", "נניח שהשכר שלי 25000", "בהנחה שאין לי עמלות". Actual is a plain statement without
+  a condition: "השכר שלי עלה ל-20000", "טעיתי, השכר שלי 20000", "אין לי יותר עמלות".
 - value: money as plain digits without separators (write "none" for an explicit "no/none");
   rates as the percent number with a % sign ("6%"); group as one Hebrew letter;
   currentArrangement.kind as company_car / allowance / no_car_no_allowance;
   propulsion as petrol / hybrid / plug_in_hybrid / electric; booleans as true/false;
-  currentArrangement.vehicle as a catalogue id like CAR-09 only if stated, otherwise the
-  vehicle description as stated (model and registration year);
+  currentArrangement.vehicle as a catalogue id like CAR-09 only if stated, otherwise the model
+  name as car catalogues spell it, in Latin letters and without Hebrew prefixes or words
+  ("מהקורולה קרוס" -> "COROLLA CROSS", "יש לי מאזדה 3 מ-2023" -> "MAZDA 3 2023"), plus the
+  registration year only when stated;
   employee.occupationId as the job title exactly as stated, or the list number when the
   employee picks from STATE.occupationChoices.
 - Use payroll.salaryUnspecified when a salary is given without saying whether it is base gross,

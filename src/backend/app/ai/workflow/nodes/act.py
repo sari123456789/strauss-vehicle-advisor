@@ -767,7 +767,9 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
             rt,
             input_id=turn["inputId"],
             selection=selection,
-            include_current=include_current,
+            # A current car mentioned but not identified: no difference against a car they may
+            # no longer have; the goal keeps `includeCurrent`, so the answer resumes it.
+            include_current=include_current and rt.vehicle_question is None,
             kind=kind,
             updates=updates,
             question=str(turn.get("text") or ""),
@@ -780,7 +782,11 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     elif intent is Intent.DATA_SOURCES:
         rt.reply(he.data_sources_text(_profile_sources(rt)), "info")
     elif intent is Intent.UPDATE_FACTS:
-        if not (actual_now or hypothetical_now):
+        if actual_now or hypothetical_now or rt.vehicle_question is not None:
+            pass  # acknowledged by the update, or asked about after this turn
+        elif rt.confirmed:  # they restated a saved fact ("יש לי קורולה קרוס"): nothing to write
+            rt.reply(he.confirmed_text(rt.confirmed), "confirmation", fields=rt.confirmed)
+        else:
             rt.reply(he.UNCLEAR, "clarification")
     elif intent is Intent.CONFIRM_FACTS:
         if not rt.confirmed and not rt.replies:
@@ -836,6 +842,18 @@ async def act(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[s
     except ToolBudgetExceeded:
         rt.reply(he.BUDGET_EXCEEDED, "error", code="TOOL_BUDGET_EXCEEDED")
         rt.compose = None
+    if rt.vehicle_question is not None:  # after whatever could be calculated without it
+        vehicle = FieldPath.CURRENT_VEHICLE.value
+        rt.reply(rt.vehicle_question, "question", fields=[vehicle])
+        awaiting = updates.get("awaiting_confirmation", state.get("awaiting_confirmation", []))
+        updates["awaiting_confirmation"] = list(dict.fromkeys([*awaiting, vehicle]))
+    not_saved = [
+        f
+        for f in (rt.extraction.not_saved if rt.extraction else [])
+        if f in rt.applied.get(UpdateMode.HYPOTHETICAL, [])
+    ]
+    if not_saved:
+        rt.reply(he.not_saved_text(not_saved), "info", fields=not_saved)
     return updates
 
 

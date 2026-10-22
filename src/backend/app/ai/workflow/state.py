@@ -154,6 +154,12 @@ class TurnRuntime:
     """Saved facts confirmed in this turn through `confirm_profile_fields`."""
     answered_confirmation: bool = False
     """This turn corrected a saved fact the advisor had asked to confirm (resume the goal)."""
+    implicit_confirmations: list[str] = field(default_factory=list)
+    """Saved facts the employee restated with the same value (e.g. their saved current car):
+    confirmed silently instead of being written again."""
+    vehicle_question: str | None = None
+    """A current car mentioned in this turn could not be identified: asked after the results,
+    which then show no difference from today (never a delta against a car they may not have)."""
     halt: bool = False
     """Stop acting on this turn (an error or clarification has already been replied)."""
     replies: list[Reply] = field(default_factory=list)

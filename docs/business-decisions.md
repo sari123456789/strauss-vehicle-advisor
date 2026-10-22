@@ -977,3 +977,14 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
 - **Privacy:** the confirmation and the note name the facts and point to the side panel; they do
   not repeat salary amounts in chat messages (existing agent rule). Showing amounts in the message
   would be a separate decision.
+- **Current car named in a message (approved 2026-10-22):** the model writes the model name in
+  the catalogue's Latin spelling for the lookup (the employee keeps writing Hebrew). A car that
+  matches the saved current car is not searched or written again; it is confirmed silently, so
+  it is not asked about. A car that cannot be identified never blocks the turn: the results are
+  shown without a difference from today, then the advisor asks which car it is, and the answer
+  resumes the comparison.
+- **Salary in a conditional sentence (approved 2026-10-22):** Hebrew conditions ("ואם השכר שלי
+  השתנה ל-20000?", "נניח", "בהנחה ש") are hypothetical even with a past-tense verb. As a safety net
+  for a model mistake, a salary fact the model marks as actual inside a conditional sentence is
+  calculated case-locally and never written to the profile; one line says which details were not
+  updated and that the employee can ask to update them. The net guards the six salary facts only.

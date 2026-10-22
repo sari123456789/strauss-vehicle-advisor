@@ -30,7 +30,7 @@ from app.contracts.case_inputs import (
     UpdateInputsRequest,
     UpdateInputsResult,
 )
-from app.contracts.catalogue import ResolveOccupationResult
+from app.contracts.catalogue import ResolveOccupationResult, ResolveVehicleResult
 from app.contracts.common import Envelope, FieldPath, UpdateMode
 from app.contracts.comparisons import CompareRequest, ComparisonResult
 from app.contracts.readiness import ReadinessRequest, ReadinessResult, SelectionMode
@@ -1040,3 +1040,147 @@ async def test_yes_keeps_the_waiver_and_drive_filter_of_the_question() -> None:
     assert "waiver" in [c.value for c in readiness.selection.categories or []]
     assert readiness.selection.filters is not None
     assert [p.value for p in readiness.selection.filters.propulsion or []] == ["electric"]
+
+
+# --- the current car mentioned in a message, and conditional salary statements -------------
+
+VEHICLE = "currentArrangement.vehicle"
+COROLLA_CROSS = {
+    "taxKey": {
+        "taxYear": "2026",
+        "registrationYear": "2025",
+        "vehicleTypeCode": "1",
+        "manufacturerCode": "00413",
+        "modelCode": "00296",
+    },
+    "manufacturerName": "טויוטה יפן",
+    "commercialName": "COROLLA CROSS",
+    "modelDescription": "ZVG12L-KHXGBW",
+    "valueOfUse": "4070",
+    "catalogueId": "CAR-09",
+}
+OLDER_COROLLA_CROSS = {
+    **COROLLA_CROSS,
+    "taxKey": {**COROLLA_CROSS["taxKey"], "registrationYear": "2023"},  # type: ignore[dict-item]
+    "valueOfUse": "3900",
+    "catalogueId": None,
+}
+
+
+def current_car_search(port: SwitchablePort, status: str, *candidates: dict[str, Any]) -> None:
+    port.override(
+        "resolve_vehicle",
+        ResolveVehicleResult,
+        {"status": "ok", "data": {"status": status, "candidates": list(candidates)}},
+    )
+
+
+def confirms_vehicle(port: SwitchablePort) -> None:
+    port.override(
+        "confirm_profile_fields",
+        ConfirmProfileFieldsResult,
+        {
+            "status": "ok",
+            "data": {"confirmedFields": [VEHICLE], "newCaseVersion": 4, "newProfileVersion": 6},
+        },
+    )
+
+
+async def test_the_saved_current_car_is_not_searched_again_and_counts_as_stated() -> None:
+    runner, port, llm = make()
+    current_car_search(port, "ambiguous", COROLLA_CROSS, OLDER_COROLLA_CROSS)
+    confirms_vehicle(port)
+    llm.interpret(
+        interpretation(
+            Intent.COMPARE_TO_CURRENT,
+            option_refs=[OptionReference(kind="catalogue_id", value="CAR-10")],
+            facts=[fact(FactField.CURRENT_VEHICLE, "COROLLA CROSS", quote="מהקורולה קרוס")],
+        )
+    )
+    outcome = await say(runner, "אם אחליף מהקורולה קרוס ל-ATTO 3, כמה ישתנה לי הנטו?")
+    assert "update_conversation_inputs" not in port.tools()  # same car: nothing is written
+    confirm: ConfirmProfileFieldsRequest = port.requests("confirm_profile_fields")[0]
+    assert [f.value for f in confirm.fields] == [VEHICLE]
+    assert not any(m.kind == "confirmation" for m in outcome.messages)  # silent
+    assert "לאיזה מהם" not in text_of(outcome)  # never "which year?" for the saved car
+    assert "compare_scenarios" in port.tools()
+
+
+async def test_an_unidentified_current_car_does_not_block_the_calculation() -> None:
+    runner, port, llm = make()
+    current_car_search(port, "not_found")
+    llm.interpret(
+        interpretation(
+            Intent.COMPARE_TO_CURRENT,
+            option_refs=[OptionReference(kind="catalogue_id", value="CAR-10")],
+            facts=[fact(FactField.CURRENT_VEHICLE, "ZZZ 9", quote="מהזזז 9")],
+        )
+    )
+    outcome = await say(runner, "אם אחליף מהזזז 9 ל-ATTO 3, כמה ישתנה לי הנטו?")
+    compare: CompareRequest = port.requests("compare_scenarios")[0]
+    assert compare.include_current is False  # never a delta against the old saved car
+    assert any(m.kind == "comparison" for m in outcome.messages)
+    assert outcome.messages[-1].kind == "question"
+    assert outcome.messages[-1].payload["fields"] == [VEHICLE]
+    state = await runner.conversation_state("thread-1")
+    assert VEHICLE in state["awaiting_confirmation"]
+    assert state["active_goal"]["includeCurrent"] is True  # kept for the answer
+
+
+async def test_answering_which_car_resumes_the_comparison_with_today() -> None:
+    runner, port, llm = make()
+    current_car_search(port, "not_found")
+    llm.interpret(
+        interpretation(
+            Intent.COMPARE_TO_CURRENT,
+            option_refs=[OptionReference(kind="catalogue_id", value="CAR-10")],
+            facts=[fact(FactField.CURRENT_VEHICLE, "ZZZ 9", quote="מהזזז 9")],
+        ),
+        interpretation(
+            Intent.UPDATE_FACTS,
+            facts=[fact(FactField.CURRENT_VEHICLE, "COROLLA CROSS 2023", quote="קורולה קרוס 2023")],
+        ),
+    )
+    await say(runner, "אם אחליף מהזזז 9 ל-ATTO 3, כמה ישתנה לי הנטו?")
+    current_car_search(port, "resolved", OLDER_COROLLA_CROSS)
+    accepts(port, VEHICLE)
+    await say(runner, "קורולה קרוס 2023")
+    compare: CompareRequest = port.requests("compare_scenarios")[-1]
+    assert compare.include_current is True
+
+
+async def test_a_salary_in_a_conditional_question_is_calculated_but_never_saved() -> None:
+    runner, port, llm = make()
+    accepts(port, "payroll.baseGross")
+    llm.interpret(
+        interpretation(
+            Intent.CALCULATE_OPTIONS,
+            all_options=True,
+            # The model wrongly marks it actual; the sentence is a condition.
+            facts=[fact(FactField.BASE_GROSS, "20000", quote="השכר שלי השתנה ל20000")],
+        )
+    )
+    outcome = await say(runner, "ואם השכר שלי השתנה ל20000?")
+    update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
+    assert update.mode is UpdateMode.HYPOTHETICAL and update.expected_profile_version is None
+    assert port.requests("compare_scenarios")[0].kind.value == "hypothetical"
+    assert "מה אם" not in text_of(outcome)  # plain words, no "what-if" jargon
+    assert outcome.messages[-1].kind == "info"
+    assert outcome.messages[-1].payload["fields"] == ["payroll.baseGross"]
+    assert "לא עדכנתי את" in outcome.messages[-1].text
+
+
+async def test_a_plain_salary_update_before_a_conditional_car_question_is_saved() -> None:
+    runner, port, llm = make()
+    accepts(port, "payroll.baseGross")
+    llm.interpret(
+        interpretation(
+            Intent.CALCULATE_OPTIONS,
+            all_options=True,
+            facts=[fact(FactField.BASE_GROSS, "20000", quote="השכר שלי עלה ל-20000")],
+        )
+    )
+    outcome = await say(runner, "השכר שלי עלה ל-20000. אם אקח ATTO 3, כמה יהיה לי נטו?")
+    update: UpdateInputsRequest = port.requests("update_conversation_inputs")[0]
+    assert update.mode is UpdateMode.ACTUAL_UPDATE
+    assert "לא עדכנתי את" not in text_of(outcome)

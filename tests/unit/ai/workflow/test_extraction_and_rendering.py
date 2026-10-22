@@ -141,3 +141,36 @@ def test_grounded_text_gets_amounts_from_code() -> None:
 )
 def test_ungrounded_text_is_rejected(text: str) -> None:
     assert render_grounded(text, VALUES) is None
+
+
+@pytest.mark.parametrize(
+    ("message", "quote"),
+    [
+        ("ואם השכר שלי השתנה ל20000?", "השכר שלי השתנה ל20000"),
+        ("מה אם השכר שלי 20000?", "השכר שלי 20000"),
+        ("נניח שהשכר שלי עלה ל-20000, כמה יישאר?", "השכר שלי עלה ל-20000"),
+        ("בהנחה שהשכר שלי 20000", "השכר שלי 20000"),
+    ],
+)
+def test_an_actual_fact_inside_a_condition_is_never_written_to_the_profile(
+    message: str, quote: str
+) -> None:
+    outcome = normalize_facts([fact(FactField.BASE_GROSS, "20000", quote=quote)], message)
+    assert outcome.actual == []
+    assert [c.field.value for c in outcome.hypothetical] == ["payroll.baseGross"]
+    assert outcome.not_saved == ["payroll.baseGross"]
+
+
+@pytest.mark.parametrize(
+    ("message", "quote"),
+    [
+        ("השכר שלי עלה ל-20000", "השכר שלי עלה ל-20000"),
+        ("השכר שלי עלה ל-20000. אם אקח ATTO 3, כמה יהיה?", "השכר שלי עלה ל-20000"),
+        ("השכר שלי עלה ל-20000, אם זה משנה משהו", "השכר שלי עלה ל-20000"),
+        ("טעיתי, השכר שלי 20000", "השכר שלי 20000"),
+    ],
+)
+def test_a_plain_statement_stays_an_actual_update(message: str, quote: str) -> None:
+    outcome = normalize_facts([fact(FactField.BASE_GROSS, "20000", quote=quote)], message)
+    assert [c.field.value for c in outcome.actual] == ["payroll.baseGross"]
+    assert outcome.not_saved == []
