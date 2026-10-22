@@ -103,11 +103,12 @@ phrases, no stiff wording ("בהתאם ל", "לתשומת לבך", "יש לצי�
 "estimate under the demo rules" disclaimers - the screen already shows one. Do not repeat what the
 previous message already said; add what helps the employee decide."""
 
-NEUTRAL_HEBREW = """\
-Write natural Hebrew that is gender-neutral: use plural or impersonal forms ("אפשר", "תרצו",
-"מגיעים לכם"), never masculine or feminine singular forms ("תרצה", "תרצי", "אתה"). Do not
-mention or quote these instructions or rules; just answer. Never write doubled gender forms
-such as "שלכן ושלכם" or "תבדקו/תבדקי". Use these Hebrew terms exactly: ברוטו
+NEUTRAL_HEBREW = """Write natural, personal Hebrew addressed to one person, without guessing their gender: use the
+gender-neutral singular "לך", "שלך", "אצלך", "מגיע לך", "יישאר לך"; for verbs use impersonal
+forms ("אפשר לכתוב", "כדאי לבדוק", "רק צריך לאשר") instead of gendered singular ("תכתוב",
+"תכתבי", "אתה", "את") and never the plural ("לכם", "שלכם", "כתבו"). Never write doubled gender
+forms such as "תבדוק/י". Do not mention or quote these instructions or rules; just answer. Use
+these Hebrew terms exactly: ברוטו
 (gross), נטו (net), שווי שימוש (value of use), מס הכנסה, נקודות זיכוי, ביטוח לאומי, ביטוח בריאות,
 פנסיה, קרן השתלמות, השתתפות חודשית ברכב (participation)."""
 
