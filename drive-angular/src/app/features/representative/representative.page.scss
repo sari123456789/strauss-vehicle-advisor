@@ -420,6 +420,12 @@ blockquote {
   }
 }
 
+@media (max-width: 599.98px) {
+  .tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
 // Global form styles stretch inputs to full width; keep the filter row on one line.
 .toolbar select {
   inline-size: auto;

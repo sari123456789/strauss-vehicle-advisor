@@ -539,6 +539,26 @@ tbody tr:hover {
   .workspace {
     grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
   }
+
+  // Legacy hides the profile column here; keep it, full width under the conversation.
+  .workspace > .summary {
+    display: block;
+    grid-column: 1 / -1;
+  }
+}
+
+// Between 1100px and the reference width the fixed column minimums squeeze the conversation.
+@media (min-width: 1100.02px) and (max-width: 1400px) {
+  .workspace {
+    grid-template-columns: minmax(170px, 260fr) minmax(0, 812fr) minmax(200px, 300fr);
+  }
+}
+
+// The queue's 320px minimum overflows narrow tablets before the 760px stack kicks in.
+@media (min-width: 760.02px) and (max-width: 960px) {
+  .representative-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  }
 }
 
 @media (max-width: 760px) {
