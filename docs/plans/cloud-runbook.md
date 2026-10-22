@@ -17,7 +17,7 @@ None of them was executed during the integration work.
 | Demo seed (e001–e006, rep01, ops01; six profiles) | Done |
 | Demo passwords for `e001` and `rep01` | Done (kept privately) |
 | Business migration `0004_representative_answers` (answers, case facts, outbox, audit) | **Done** (2026-10-20, approved; verified: version 0004 and the four tables exist) |
-| AI migrations `0001`–`0003` (`agent` schema) | **Done** (verified 2026-10-20: `0003_response_staging`) |
+| AI migrations `0001`–`0004` (`agent` schema) | **Done** (`0004_conversation_hidden` applied 2026-10-22, approved; verified: `agent.conversations.hidden_at` exists) |
 | LangGraph checkpointer tables | **Done** (verified 2026-10-20) |
 | Passwords for further demo logins (e.g. `e005` for the waiver demo) | Optional |
 
