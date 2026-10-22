@@ -332,6 +332,7 @@ async def apply_updates(state: ConversationState, runtime: Runtime[TurnRuntime])
     stated = set(rt.applied.get(UpdateMode.ACTUAL_UPDATE, []))
     awaiting = state.get("awaiting_confirmation", [])
     if stated & set(awaiting):  # a corrected value needs no separate confirmation
+        rt.answered_confirmation = True
         return {"awaiting_confirmation": [f for f in awaiting if f not in stated]}
     return {}
 

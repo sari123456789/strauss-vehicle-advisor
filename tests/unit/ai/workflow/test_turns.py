@@ -21,6 +21,7 @@ from app.ai.workflow.models import (
     OptionReference,
     ProposedFact,
 )
+from app.ai.workflow.nodes.act import SALARY_FIELDS
 from app.ai.workflow.runner import LangGraphTurnRunner
 from app.contracts.case_inputs import (
     ConfirmProfileFieldsRequest,
@@ -30,7 +31,7 @@ from app.contracts.case_inputs import (
     UpdateInputsResult,
 )
 from app.contracts.catalogue import ResolveOccupationResult
-from app.contracts.common import Envelope, UpdateMode
+from app.contracts.common import Envelope, FieldPath, UpdateMode
 from app.contracts.comparisons import CompareRequest, ComparisonResult
 from app.contracts.readiness import ReadinessRequest, ReadinessResult, SelectionMode
 from app.contracts.representatives import RequestStatusView
@@ -858,3 +859,184 @@ async def test_committed_update_with_conflicts_is_not_treated_as_usable() -> Non
     outcome = await say(runner, "הרכב שלי חשמלי")
     assert any(m.kind == "conflict" for m in outcome.messages)
     assert "סתירה" in text_of(outcome)
+
+
+# --- one confirmation of saved salary facts per conversation -------------------------------
+# Rules (approved 2026-10-22): ask once, only when a calculation would rest entirely on salary
+# facts saved in an earlier conversation; never when the employee gives salary facts here;
+# a comparison asks about today's arrangement in the same message; never a second time.
+
+
+async def saved_salary(port: SwitchablePort, fields: tuple[str, ...] = SALARY_FIELDS) -> None:
+    """The case context reports these salary facts as saved but not stated in this case."""
+    envelope = await port.fake.get_conversation_context(CTX)
+    assert envelope.data is not None
+    data = envelope.data.model_copy(
+        update={"fields_requiring_confirmation": [FieldPath(f) for f in fields]}
+    )
+    port.overrides["get_conversation_context"] = envelope.model_copy(update={"data": data})
+
+
+def accepts(port: SwitchablePort, *fields: str) -> None:
+    port.override(
+        "update_conversation_inputs",
+        UpdateInputsResult,
+        {
+            "status": "ok",
+            "data": {"acceptedFields": list(fields), "newCaseVersion": 4, "newProfileVersion": 6},
+        },
+    )
+
+
+def confirms_salary(port: SwitchablePort, *extra: str) -> None:
+    port.override(
+        "confirm_profile_fields",
+        ConfirmProfileFieldsResult,
+        {
+            "status": "ok",
+            "data": {
+                "confirmedFields": [*SALARY_FIELDS, *extra],
+                "newCaseVersion": 4,
+                "newProfileVersion": 6,
+            },
+        },
+    )
+
+
+async def test_net_from_saved_salary_asks_one_confirmation_before_calculating() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(interpretation(Intent.CALCULATE_OPTIONS, all_options=True))
+    outcome = await say(runner, "כמה יהיה לי נטו אם אקח BYD?")
+    asks = [m for m in outcome.messages if m.kind == "confirmation_request"]
+    assert len(asks) == 1 and asks[0].payload["fields"] == list(SALARY_FIELDS)
+    assert "compare_scenarios" not in port.tools()
+    assert "18500" not in text_of(outcome) and "18,500" not in text_of(outcome)  # names only
+    assert_employee_safe(outcome)
+
+
+async def test_yes_resumes_the_calculation_and_the_question_is_never_repeated() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+        interpretation(Intent.CONFIRM_FACTS),
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+    )
+    await say(runner, "כמה יהיה לי נטו אם אקח BYD?")
+    confirms_salary(port)
+    outcome = await say(runner, "כן")
+    assert "compare_scenarios" in port.tools()
+    assert not any(m.kind == "confirmation_request" for m in outcome.messages)
+    again = await say(runner, "ומה עם כל הרכבים?")
+    assert not any(m.kind == "confirmation_request" for m in again.messages)
+    assert len(port.requests("compare_scenarios")) == 2
+
+
+async def test_salary_given_in_this_conversation_needs_no_confirmation() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    accepts(port, "payroll.baseGross")
+    llm.interpret(
+        interpretation(
+            Intent.CALCULATE_OPTIONS,
+            all_options=True,
+            facts=[fact(FactField.BASE_GROSS, "19000")],
+        )
+    )
+    outcome = await say(runner, "השכר שלי עלה ל-19000, כמה יהיה לי נטו עם BYD?")
+    assert not any(m.kind == "confirmation_request" for m in outcome.messages)
+    assert "compare_scenarios" in port.tools()
+    notes = [m for m in outcome.messages if m.kind == "info" and "fields" in m.payload]
+    assert len(notes) == 1  # the other saved facts are named once, under the result
+    assert "payroll.baseGross" not in notes[0].payload["fields"]
+
+
+async def test_hypothetical_salary_counts_as_given_and_needs_no_confirmation() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    accepts(port, "payroll.baseGross")
+    llm.interpret(
+        interpretation(
+            Intent.CALCULATE_OPTIONS,
+            all_options=True,
+            facts=[fact(FactField.BASE_GROSS, "20000", FactMode.HYPOTHETICAL)],
+        )
+    )
+    outcome = await say(runner, "מה יקרה אם המשכורת שלי תעלה ל-20000?")
+    assert not any(m.kind == "confirmation_request" for m in outcome.messages)
+    assert port.requests("compare_scenarios")[0].kind.value == "hypothetical"
+
+
+async def test_an_unanswered_confirmation_is_not_asked_again() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+    )
+    await say(runner, "כמה יהיה לי נטו אם אקח BYD?")
+    second = await say(runner, "פשוט תחשב בבקשה")
+    assert not any(m.kind == "confirmation_request" for m in second.messages)
+    assert "compare_scenarios" in port.tools()
+    noted = [m for m in second.messages if m.kind == "info" and "fields" in m.payload]
+    assert len(noted) == 1  # transparent about the saved facts used
+    third = await say(runner, "ועוד פעם")
+    assert not any("fields" in m.payload and m.kind == "info" for m in third.messages)
+
+
+async def test_comparison_asks_salary_and_current_arrangement_in_one_message() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    needs_confirmation(port)
+    llm.interpret(interpretation(Intent.COMPARE_TO_CURRENT, all_options=True))
+    outcome = await say(runner, "אם אחליף מהקורולה ל-BYD כמה ישתנה לי הנטו?")
+    asks = [m for m in outcome.messages if m.kind == "confirmation_request"]
+    assert len(asks) == 1
+    assert asks[0].payload["fields"] == [*SALARY_FIELDS, PARTICIPATION]
+    assert "compare_scenarios" not in port.tools()
+
+
+async def test_a_correction_answers_the_confirmation_and_calculates_right_away() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(
+        interpretation(Intent.CALCULATE_OPTIONS, all_options=True),
+        interpretation(Intent.UPDATE_FACTS, facts=[fact(FactField.BASE_GROSS, "19000")]),
+    )
+    await say(runner, "כמה יהיה לי נטו אם אקח BYD?")
+    accepts(port, "payroll.baseGross")
+    outcome = await say(runner, "השכר עלה ל-19000")
+    assert "compare_scenarios" in port.tools()
+    assert not any(m.kind == "confirmation_request" for m in outcome.messages)
+
+
+async def test_listing_vehicles_never_asks_to_confirm_salary() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(interpretation(Intent.LIST_OPTIONS))
+    outcome = await say(runner, "אילו רכבים יש לי?")
+    assert not any(m.kind == "confirmation_request" for m in outcome.messages)
+
+
+async def test_yes_keeps_the_waiver_and_drive_filter_of_the_question() -> None:
+    runner, port, llm = make()
+    await saved_salary(port)
+    llm.interpret(
+        interpretation(
+            Intent.CALCULATE_OPTIONS,
+            all_options=True,
+            include_waiver=True,
+            propulsion=["electric"],
+        ),
+        interpretation(Intent.CONFIRM_FACTS),
+    )
+    await say(runner, "כמה אקבל אם אוותר על הרכב, או עם רכב חשמלי?")
+    confirms_salary(port)
+    await say(runner, "כן")
+    readiness: ReadinessRequest = port.requests("check_calculation_readiness")[-1]
+    assert readiness.selection is not None
+    assert "waiver" in [c.value for c in readiness.selection.categories or []]
+    assert readiness.selection.filters is not None
+    assert [p.value for p in readiness.selection.filters.propulsion or []] == ["electric"]

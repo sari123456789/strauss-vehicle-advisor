@@ -28,8 +28,14 @@ general_question (concept questions such as credit points or how net pay is calc
 general, questions about the advisor or why it answered or showed something - e.g. "why did you
 show me options if we did not calculate?" is general_question, not explain_result),
 smalltalk, unclear.
+compare_to_current only when the employee asks how their net would CHANGE relative to what they
+have today (their current car, allowance or arrangement): "אם אחליף מהקורולה ל-BYD כמה ישתנה לי
+הנטו?", "כמה ארוויח או אפסיד לעומת היום?", "מה ההפרש מהרכב שיש לי עכשיו?".
+calculate_options when they ask what their net would BE with a car, without relating it to
+today: "כמה יהיה לי נטו אם אקח BYD?", "כמה נטו נשאר לי עם ה-MG4?".
 Which car is best, most worth it, cheapest or leaves the most net ("איזה רכב הכי שווה לי",
-"מה הכי משתלם") is compare_to_current with all_options=true (or the named cars as option_refs).
+"מה הכי משתלם") is calculate_options with all_options=true (or the named cars as option_refs),
+unless the same message also asks for the difference from today.
 representative_topic (for questions): "answerable" when a general explanation is enough (how
 net pay, value of use, credit points or the advisor work); "needs_representative" for questions
 about company-car policy or process only the company knows (replacing a car mid-year, delivery
