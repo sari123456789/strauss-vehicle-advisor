@@ -328,6 +328,45 @@ async def _ask_missing(
         rt.reply(he.unknown_field_guidance(missing[:2]), "guidance", fields=missing[:2])
 
 
+GENERAL_FIELD = RepresentativeFieldCode.GENERAL_QUESTION.value
+
+
+async def _create_general_question(
+    state: ConversationState, rt: TurnRuntime, question: str, updates: dict[str, Any]
+) -> None:
+    """Send an open company-car question to the representative. Digits are masked so no salary
+    or personal number reaches the representative."""
+    assert rt.case is not None
+    text = _DIGITS.sub("#", question).strip()[:1000] or question[:1000]
+    envelope = await rt.tools.create_representative_question(
+        CreateQuestionRequest(
+            field_code=RepresentativeFieldCode.GENERAL_QUESTION,
+            option_key=None,
+            question_text=text,
+            idempotency_key=stable_id(rt.case.case_id, "representative", GENERAL_FIELD, text),
+            expected_case_version=rt.case_version,
+        )
+    )
+    updates["offered_question"] = None
+    if envelope.status is EnvelopeStatus.ERROR or envelope.data is None:
+        rt.reply(
+            "לא הצלחתי לשלוח את השאלה לנציג כרגע. אפשר לנסות שוב בהמשך.",
+            "error",
+            code=envelope.error.code.value if envelope.error else None,
+        )
+        return
+    pending = dict(updates.get("pending_tasks", state.get("pending_tasks", {})))
+    pending[str(envelope.data.request_id)] = PendingTask(
+        fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular"
+    )
+    updates["pending_tasks"] = pending
+    rt.reply(
+        he.general_question_sent_text(),
+        "representative_request",
+        requestId=str(envelope.data.request_id),
+    )
+
+
 async def _create_question(
     state: ConversationState,
     rt: TurnRuntime,
@@ -578,6 +617,20 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
     turn = state.get("turn")
     assert interpretation is not None and extraction is not None and turn is not None
     intent = interpretation.intent
+    offered = state.get("offered_question")
+    if offered:
+        if interpretation.accepts_offer:
+            await _create_general_question(state, rt, offered, updates)
+            return
+        updates["offered_question"] = None
+    topic = interpretation.representative_topic
+    if topic == "out_of_scope" and intent in (
+        Intent.GENERAL_QUESTION,
+        Intent.UNCLEAR,
+        Intent.ASK_REPRESENTATIVE,
+    ):
+        rt.reply(he.OUT_OF_SCOPE, "info")
+        return
     if intent is not Intent.ASK_REPRESENTATIVE and state.get("representative_help_shown"):
         updates["representative_help_shown"] = False
     if extraction.clarifications and intent is not Intent.LIST_OPTIONS:
@@ -658,13 +711,24 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
         fields = [f for f in dict.fromkeys(known) if f in REPRESENTATIVE_FIELDS]
         if fields:
             await _create_question(state, rt, fields[0], None, updates)
+        elif interpretation.question_for_representative:
+            await _create_general_question(
+                state, rt, interpretation.question_for_representative, updates
+            )
+        elif any(t["fieldCode"] == GENERAL_FIELD for t in state.get("pending_tasks", {}).values()):
+            rt.reply(he.GENERAL_ALREADY_SENT, "representative_waiting")
         elif state.get("representative_help_shown"):
             rt.reply(he.REPRESENTATIVE_HELP_AGAIN, "clarification")
         else:
             rt.reply(he.REPRESENTATIVE_HELP, "clarification")
             updates["representative_help_shown"] = True
     elif intent is Intent.GENERAL_QUESTION:
-        _general(state, rt, he.GENERAL_FALLBACK)
+        question = interpretation.question_for_representative
+        if topic == "needs_representative" and question:
+            updates["offered_question"] = question
+            rt.reply(he.offer_question_text(question), "question")
+        else:
+            _general(state, rt, he.GENERAL_FALLBACK)
     elif intent is Intent.SMALLTALK:  # a greeting or thanks gets a natural, fitting reply
         _general(state, rt, he.HELP)
     else:
@@ -717,6 +781,16 @@ async def _handle_answer(
         return {}
     updates: dict[str, Any] = {"pending_tasks": remaining}
     if view.status is RequestStatus.CANCELLED:
+        return updates
+    if task["fieldCode"] == GENERAL_FIELD:
+        answered = view.status is RequestStatus.ANSWERED and view.answer is not None
+        rt.reply(
+            he.general_answer_text(view.answer.text or view.answer.value)
+            if answered and view.answer is not None
+            else "נציג התחבורה לא יכול היה לענות על השאלה הזו. אם תרצו, אפשר לנסח אותה אחרת.",
+            "representative_answer",
+            requestId=request_id,
+        )
         return updates
     label = _labels(state, rt).get(task["optionKey"] or "", he.field_label(task["fieldCode"]))
     if view.status is RequestStatus.CANNOT_DETERMINE or (

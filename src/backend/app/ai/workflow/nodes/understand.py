@@ -117,6 +117,7 @@ def _interpret_task(state: ConversationState, rt: TurnRuntime) -> LlmTask[TurnIn
         ],
         "activeGoal": goal["intent"] if goal else None,
         "awaitingConfirmation": list(state.get("awaiting_confirmation", [])),
+        "offeredQuestion": state.get("offered_question"),
         "occupationChoices": [
             f"{index}. {c['label']}"
             for index, c in enumerate(state.get("occupation_candidates", []), start=1)

@@ -411,7 +411,10 @@ class RepresentativeAnswerService:
                     new_status=AssignmentStatus.COMPLETED,
                     completed_at=now,
                 )
-                view = answer_view(answer)
+                view = answer_view(
+                    answer,
+                    text_answer=request.field_code is RepresentativeFieldCode.GENERAL_QUESTION,
+                )
                 await uow.operations.complete(
                     key, freeze_object(view.model_dump(mode="json", by_alias=True))
                 )
@@ -435,11 +438,14 @@ class RepresentativeAnswerService:
         case: ComparisonCase,
         request: RepresentativeRequest,
         submit: AnswerSubmit,
-        value: Decimal | EntitlementGroup | Propulsion | None,
+        value: Decimal | EntitlementGroup | Propulsion | str | None,
         now: datetime,
     ) -> _Applied:
         if value is None:  # cannot_determine: nothing is applied to the case
             return _Applied(None)
+        if request.field_code is RepresentativeFieldCode.GENERAL_QUESTION:
+            # A text answer delivered to the employee as is; it never becomes a case fact.
+            return _Applied(AnswerApplication.APPLIED)
         if request.field_code is RepresentativeFieldCode.ALTERNATIVE_PARTICIPATION:
             assert isinstance(value, Decimal)
             return await self._apply_participation(uow, case, request, submit, value, now)
@@ -521,7 +527,7 @@ class RepresentativeAnswerService:
 
 def _parse_value(
     request: RepresentativeRequest, submit: AnswerSubmit, max_amount: Decimal
-) -> Decimal | EntitlementGroup | Propulsion | None:
+) -> Decimal | EntitlementGroup | Propulsion | str | None:
     """The validated Domain value of an `answered` submission; None for cannot_determine."""
     if submit.outcome is ContractOutcome.CANNOT_DETERMINE:
         if submit.unit is not None:
@@ -540,6 +546,13 @@ def _parse_value(
     raw = submit.value
     assert raw is not None  # contract: answered requires value
     kind = request.expected_value_type
+    if kind is ExpectedValueType.TEXT:
+        # `value` is the short answer (<=200); the full text, when longer, is in `note`.
+        if submit.unit is not None or submit.effective_from or submit.effective_to:
+            raise InvalidInput(
+                "a text answer carries no unit or period", safe_details={"field": "value"}
+            )
+        return raw.strip() or raw
     if kind is ExpectedValueType.MONEY:
         if not MONEY.fullmatch(raw):
             raise InvalidInput(
@@ -566,7 +579,9 @@ def _parse_value(
     raise InvalidInput("unsupported value type", safe_details={"field": "value"})
 
 
-def _canonical(value: Decimal | EntitlementGroup | Propulsion) -> str:
+def _canonical(value: Decimal | EntitlementGroup | Propulsion | str) -> str:
+    if isinstance(value, str) and not isinstance(value, EntitlementGroup | Propulsion):
+        return value
     return format(value, "f") if isinstance(value, Decimal) else value.value
 
 

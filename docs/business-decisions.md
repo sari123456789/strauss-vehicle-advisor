@@ -927,3 +927,17 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
   operations on real PostgreSQL. It checks the invariants afterwards and never mocks the database.
 
 ---
+
+## 22. General questions to the representative (requested 2026-10-22, pending review)
+
+- **What:** a new request type `general.question` with `expectedValueType = text`. The employee asks
+  an open company-car question in the chat; a representative claims it and answers in text; the
+  chat relays the answer. Only questions about company cars, car benefits or their effect on pay
+  are sent; unrelated questions are declined by the advisor and never reach a representative.
+- **Never a calculation input:** the answer service skips fact application for this type, and the
+  planner/readiness ignore open general questions, so they never block or change a calculation.
+- **Storage:** the short answer is in `value` (≤200, existing column and CHECK); the full text is
+  in the existing `note` (≤1000). `AnswerView.text` exposes it for this type only.
+- **Privacy:** the chat masks digits in the question before sending it.
+- **Data:** migration `0006_general_questions` widens the `field_code` and `expected_value_type`
+  CHECKs with one value each. Existing rows and values are unchanged.

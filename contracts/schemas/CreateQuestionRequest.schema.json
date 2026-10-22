@@ -7,7 +7,8 @@
         "occupation.waiverPolicy",
         "employee.entitlementGroup",
         "currentArrangement.propulsion",
-        "currentArrangement.vehicle"
+        "currentArrangement.vehicle",
+        "general.question"
       ],
       "title": "RepresentativeFieldCode",
       "type": "string"

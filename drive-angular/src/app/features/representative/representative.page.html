@@ -103,7 +103,9 @@
                 <option value="cannot_determine">לא ניתן לקבוע</option>
               </select>
             </label>
-            @if (draft.outcome === 'answered' && valueAllowed(q)) {
+            @if (q.expectedValueType === 'text') {
+              <label>התשובה לעובד<textarea name="note" [(ngModel)]="draft.note" rows="5" maxlength="1000" required placeholder="כתבו כאן את התשובה. העובד יקבל אותה בצ'אט כמו שהיא."></textarea></label>
+            } @else if (draft.outcome === 'answered' && valueAllowed(q)) {
               @switch (q.expectedValueType) {
                 @case ('money') {<label>סכום חודשי (₪)<input name="value" inputmode="decimal" dir="ltr" [pattern]="moneyPattern" [(ngModel)]="draft.value" required placeholder="350" /></label>}
                 @case ('entitlement_group') {<label>קבוצת זכאות<select name="value" [(ngModel)]="draft.value" required>@for (g of groups; track g) {<option [value]="g">{{ g }}</option>}</select></label>}
@@ -114,7 +116,7 @@
                 <label>בתוקף עד (אופציונלי)<input name="to" type="date" [(ngModel)]="draft.effectiveTo" /></label>
               </div>
             }
-            <label>הערה לעובד (אופציונלי)<textarea name="note" [(ngModel)]="draft.note" rows="3" placeholder="כתבו הערה לעובד…"></textarea></label>
+            @if (q.expectedValueType !== 'text') {<label>הערה פנימית (אופציונלי)<textarea name="note" [(ngModel)]="draft.note" rows="3" placeholder="כתבו הערה לעובד…"></textarea></label>}
             <button class="primary full" [disabled]="store.loading()">שליחת תשובה ➤</button>
             <button class="outline full" type="button" [disabled]="store.loading()" (click)="release(q)">שחרור הפנייה לנציגים אחרים</button>
           </form>

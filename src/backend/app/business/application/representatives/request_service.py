@@ -44,15 +44,21 @@ class RepresentativeRequestService:
             status=RequestStatus(found.status.value),
             field_code=RepresentativeFieldCode(found.field_code.value),
             option_key=found.option_key,
-            answer=None if answer is None else answer_view(answer),
+            answer=None
+            if answer is None
+            else answer_view(
+                answer,
+                text_answer=found.field_code.value == RepresentativeFieldCode.GENERAL_QUESTION.value,
+            ),
             created_at=found.created_at,
             updated_at=found.updated_at,
         )
         return Outcome(view, case_version=case.version)
 
 
-def answer_view(answer: RepresentativeAnswer) -> AnswerView:
-    """The persisted answer as the shared contract shows it (the note stays internal)."""
+def answer_view(answer: RepresentativeAnswer, *, text_answer: bool = False) -> AnswerView:
+    """The persisted answer as the shared contract shows it. The note stays internal, except for
+    a general question, where it is the representative's full text answer (`text`)."""
     return AnswerView(
         outcome=AnswerOutcome(answer.outcome.value),
         value=answer.value,
@@ -63,4 +69,5 @@ def answer_view(answer: RepresentativeAnswer) -> AnswerView:
         application=None
         if answer.application is None
         else AnswerApplication(answer.application.value),
+        text=(answer.note or answer.value) if text_answer else None,
     )

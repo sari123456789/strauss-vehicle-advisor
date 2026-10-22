@@ -185,7 +185,10 @@ class ScenarioPlanner:
                 pinned, profile, catalogue, set(confirmation_required), open_requests
             )
         pending = tuple(
-            r for r in open_requests if r.option_key is None or r.option_key in set(option_keys)
+            r
+            for r in open_requests
+            if (r.option_key is None or r.option_key in set(option_keys))
+            and r.field_code is not RepresentativeFieldCode.GENERAL_QUESTION  # never a calc input
         )
         return Plan(profile, tuple(options), baseline, pending)
 
