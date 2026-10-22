@@ -120,6 +120,16 @@ class VehicleContext(ContractModel):
     registration_year: str | None = None
 
 
+class RequestEmployeeView(ContractModel):
+    """Who the request is about, for the handling representative (decision 23). Never salary,
+    payroll or other profile values."""
+
+    display_name: str | None = None
+    employee_code: str | None = None
+    occupation: str | None = None
+    current_vehicle: str | None = None
+
+
 class RepresentativeRequestView(ContractModel):
     """Representative-visible, minimal context only (no employee profile or salary).
 
@@ -143,6 +153,7 @@ class RepresentativeRequestView(ContractModel):
     """Display name of the current (or last) handler; never login or subject_id."""
     claimed_at: datetime | None = None
     assignment_version: int | None = None
+    employee: RequestEmployeeView | None = None
     can_claim: bool = False
     can_answer: bool = False
     can_release: bool = False

@@ -36,12 +36,13 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>מס׳ פנייה</th><th>נושא הפנייה</th><th>מועד פתיחה</th><th>סטטוס</th><th>נציג מטפל</th><th>פעולה</th></tr>
+          <tr><th>מס׳ פנייה</th><th>שם עובד</th><th>נושא הפנייה</th><th>מועד פתיחה</th><th>סטטוס</th><th>נציג מטפל</th><th>פעולה</th></tr>
         </thead>
         <tbody>
           @for (q of store.inquiries(); track q.requestId) {
             <tr [class.is-selected]="store.selectedId() === q.requestId" (click)="open(q)">
               <td class="ref">#{{ ref(q) }}</td>
+              <td><b>{{ q.employee?.displayName ?? '—' }}</b>@if (q.employee?.occupation) {<small>{{ q.employee?.occupation }}</small>}</td>
               <td>
                 <b>{{ fieldCode[q.fieldCode] }}</b>
                 @if (q.vehicle?.commercialName) {<small>{{ q.vehicle?.commercialName }}</small>}
@@ -59,7 +60,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="empty">@if (store.loading()) {טוענים…} @else {אין פניות בתצוגה הזו.}</td></tr>
+            <tr><td colspan="7" class="empty">@if (store.loading()) {טוענים…} @else {אין פניות בתצוגה הזו.}</td></tr>
           }
         </tbody>
       </table>
@@ -72,6 +73,16 @@
         <h2>פרטי הפנייה #{{ ref(q) }}</h2>
         <button class="text-button" type="button" (click)="store.select(null)">חזרה לרשימה ›</button>
       </header>
+      @if (q.employee; as e) {
+        <div class="employee">
+          <span class="employee__icon" aria-hidden="true">👤</span>
+          <div>
+            <b>{{ e.displayName ?? 'עובד/ת' }}</b>
+            <small>@if (e.employeeCode) {קוד עובד {{ e.employeeCode }}}@if (e.occupation) { · {{ e.occupation }}}</small>
+            @if (e.currentVehicle) {<small>רכב נוכחי: {{ e.currentVehicle }}</small>}
+          </div>
+        </div>
+      }
       <div class="detail__who">
         <span class="badge" [attr.data-state]="handling(q)">{{ handlingLabel(q) }}</span>
         @if (handling(q) === 'assigned_to_other') {<small>מטפל/ת: {{ q.handlerDisplayName }}</small>}

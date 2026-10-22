@@ -41,6 +41,12 @@ export type RepresentativeRequestView = Omit<B['RepresentativeRequestView'], 'fi
   handlerDisplayName?: string | null;
   handlingStatus?: HandlingStatus | null;
   updatedAt?: string | null;
+  employee?: {
+    displayName?: string | null;
+    employeeCode?: string | null;
+    occupation?: string | null;
+    currentVehicle?: string | null;
+  } | null;
 };
 export interface RepresentativeSummary {
   total: number;

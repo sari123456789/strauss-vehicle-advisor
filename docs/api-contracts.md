@@ -225,4 +225,4 @@ token of an active `representative`. Other roles get `403 FORBIDDEN` and anonymo
 - A committed answer writes its `representative.answered` outbox event and completes its assignment
   in the same transaction.
 
-**Privacy:** the views never contain the employee's identity, salary, profile, case ID or conversation ID.
+**Privacy:** the views never contain the employee's salary, payroll values, case ID or conversation ID. Since decision 23 they include `employee` (display name, employee code, occupation, current car) so the representative knows who asks.

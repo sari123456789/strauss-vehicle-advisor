@@ -443,3 +443,29 @@ blockquote {
   margin: 0;
   border: 0;
 }
+
+.employee {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ececef;
+  border-radius: 12px;
+}
+
+.employee__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 34px;
+  block-size: 34px;
+  border-radius: 50%;
+  background: #fbf1e8;
+}
+
+.employee small {
+  display: block;
+  color: #666;
+  font-size: 13px;
+}

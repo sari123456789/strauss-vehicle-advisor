@@ -108,6 +108,7 @@ from app.contracts.representatives import (
     AssignmentFilter,
     HandlingStatus,
     RepresentativeRequestView,
+    RequestEmployeeView,
     VehicleContext,
 )
 from app.contracts.representatives import ExpectedValueType as ContractValueType
@@ -297,6 +298,52 @@ class RepresentativeAnswerService:
             can_claim=can_claim,
             can_answer=can_answer,
             can_release=can_release,
+            employee=await self._employee(uow, request, catalogue),
+        )
+
+    async def _employee(
+        self,
+        uow: BusinessUnitOfWork,
+        request: RepresentativeRequest,
+        catalogue: dict[str, CatalogueVehicle],
+    ) -> RequestEmployeeView | None:
+        """Name, employee code, occupation and current car of the asking employee. No salary
+        or other payroll value is read into the view."""
+        account = await uow.users.get(request.created_by)
+        if account is None:
+            return None
+        occupation = None
+        vehicle = None
+        try:
+            profile = await load_profile(uow, request.created_by)
+        except Exception:  # a profile is optional context; the request stays readable
+            profile = None
+        if profile is not None:
+            if profile.occupation_id.is_usable and profile.occupation_id.value:
+                occupation_id = profile.occupation_id.value
+                release = await self._reference_data.latest_release()
+                policy = (
+                    None
+                    if release is None
+                    else await self._reference_data.get_occupation(
+                        release.catalogue_version_id, occupation_id
+                    )
+                )
+                occupation = policy.name_he if policy is not None else occupation_id
+            current = profile.current_arrangement.vehicle
+            ref = current.value if current.is_usable else None
+            if ref is not None and ref.catalogue_id is not None:
+                found = catalogue.get(ref.catalogue_id)
+                vehicle = (
+                    " ".join(p for p in (found.manufacturer_name, found.commercial_name) if p)
+                    if found is not None
+                    else ref.catalogue_id
+                )
+        return RequestEmployeeView(
+            display_name=account.display_name,
+            employee_code=account.login,
+            occupation=occupation,
+            current_vehicle=vehicle,
         )
 
     async def _group(self, uow: BusinessUnitOfWork, case_id: UUID) -> EntitlementGroup | None:

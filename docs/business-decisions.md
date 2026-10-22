@@ -941,3 +941,12 @@ change and a migration. Such answers remain rejected (`field_code_not_answerable
 - **Privacy:** the chat masks digits in the question before sending it.
 - **Data:** migration `0006_general_questions` widens the `field_code` and `expected_value_type`
   CHECKs with one value each. Existing rows and values are unchanged.
+
+## 23. Employee details in representative requests (requested 2026-10-22, pending review)
+
+- **What:** `RepresentativeRequestView.employee` shows the representative who asks: display name,
+  employee code (login), occupation name and current car. This narrows D11 (minimal context):
+  representatives still never see salary, payroll values, other profile fields, case or
+  conversation IDs.
+- **Source:** the request's `created_by` account and that employee's saved profile, read when the
+  view is built; nothing new is stored on the request.
