@@ -381,6 +381,48 @@ tbody tr:hover {
     min-height: 0;
     min-block-size: 0;
     align-items: stretch;
+    // Wider conversation: history 280 · chat 920 · profile 330 at the reference width.
+    grid-template-columns: minmax(180px, 280fr) minmax(0, 920fr) minmax(220px, 330fr);
+    padding: 8px 12px;
+    gap: 10px;
+  }
+
+  // Legacy pins the side columns to their content height (align-self: start), which pushed
+  // their bottoms below the screen; stretch them to the row so their own scroll is used.
+  .workspace > .progress,
+  .workspace > .conversation,
+  .workspace > .summary {
+    align-self: stretch;
+  }
+
+  // Room for the chat: compact journey steps and heading on this page only.
+  app-root:has(.workspace) dr-journey-steps .steps {
+    padding-block: 4px;
+  }
+
+  app-root:has(.workspace) dr-journey-steps a {
+    padding-block: 4px;
+  }
+
+  app-root:has(.workspace) dr-journey-steps .steps__text small {
+    display: none;
+  }
+
+  .workspace > .conversation {
+    padding-block: 12px;
+  }
+
+  .workspace > .conversation .heading {
+    margin-bottom: 8px;
+  }
+
+  .workspace > .conversation .heading h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .workspace > .conversation .heading p {
+    display: none;
   }
 
   .workspace > .progress,
@@ -627,7 +669,7 @@ tbody tr:hover {
 // Between 1100px and the reference width the fixed column minimums squeeze the conversation.
 @media (min-width: 1100.02px) and (max-width: 1400px) {
   .workspace {
-    grid-template-columns: minmax(170px, 260fr) minmax(0, 812fr) minmax(200px, 300fr);
+    grid-template-columns: minmax(160px, 240fr) minmax(0, 920fr) minmax(200px, 290fr);
   }
 }
 
