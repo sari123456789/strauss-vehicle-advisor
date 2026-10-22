@@ -509,7 +509,6 @@ async def compute(
     include_current: bool,
     kind: RunKind,
     updates: dict[str, Any],
-    question: str,
     employee_request: bool = True,
 ) -> ComparisonResult | None:
     """Readiness gate, then one comparison for every ready option (partial results allowed).
@@ -653,9 +652,8 @@ async def compute(
         )
     if pending_labels:
         rt.reply(he.pending_text(pending_labels), "representative_waiting")
-    values, descriptions = comparison_placeholders(result, labels)
-    if values:
-        rt.compose = ComposeRequest("comparison", question, values, descriptions)
+    # No automatic explanation: the result stands on its own; the advisor explains only when the
+    # employee asks ("למה?", "תסביר"), through the explain_result intent.
     return result
 
 
@@ -821,7 +819,6 @@ async def _act(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any
             include_current=include_current and rt.vehicle_question is None,
             kind=kind,
             updates=updates,
-            question=str(turn.get("text") or ""),
         )
         return
     if intent is Intent.EXPLAIN_RESULT:
@@ -984,7 +981,6 @@ async def _handle_answer(
         include_current=task["includeCurrent"],
         kind=RunKind(task["kind"]),
         updates=updates,
-        question="",
         employee_request=False,
     )
     return updates
