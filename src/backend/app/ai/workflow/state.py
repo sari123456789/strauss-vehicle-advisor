@@ -56,6 +56,8 @@ class ActiveGoal(TypedDict):
     optionKeys: NotRequired[list[str]]
     """The options the employee explicitly selected (absent for list/all-option goals and in
     goals checkpointed before this field existed). A resumed goal compares exactly these."""
+    propulsion: NotRequired[list[str]]
+    """A propulsion filter of an all-cars goal ("electric cars"), kept when the goal resumes."""
 
 
 class PendingTask(TypedDict):

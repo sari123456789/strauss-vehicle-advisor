@@ -40,6 +40,8 @@ from app.ai.infrastructure.llm.usage import Clock, DenialKind, UsageTracker
 logger = logging.getLogger("app.ai.llm")
 
 DEFAULT_MAX_SHORT_WAIT_SECONDS = 5.0
+TRANSIENT_RETRY_SECONDS = 1.0
+"""Pause before the single retry after a timeout or a temporary provider error."""
 
 
 class SystemClock:
@@ -111,7 +113,11 @@ class QuotaGuardedLlm:
             )
         except TimeoutError:
             self._tracker.record_error(key, self._clock.now(), "timeout")
-            return LlmResult(LlmOutcome.TIMEOUT, diagnostic_code="timeout"), None
+            # A slow or overloaded provider often answers a second request: retry once.
+            return (
+                LlmResult(LlmOutcome.TIMEOUT, diagnostic_code="timeout"),
+                TRANSIENT_RETRY_SECONDS,
+            )
         except ProviderError as error:
             return self._provider_failure(error)
         except Exception as error:  # an unexpected SDK failure must not crash the turn
@@ -155,9 +161,14 @@ class QuotaGuardedLlm:
             self._tracker.record_not_free_tier(key, now)
             return LlmResult(LlmOutcome.BLOCKED_BY_POLICY, diagnostic_code=error.code), None
         self._tracker.record_error(key, now, error.code)
+        # Timeouts and temporary unavailability (e.g. HTTP 503) are retried once.
         if kind is ProviderErrorKind.TIMEOUT:
-            return LlmResult(LlmOutcome.TIMEOUT, diagnostic_code=error.code), None
-        return LlmResult(LlmOutcome.UNAVAILABLE, diagnostic_code=error.code), None
+            return LlmResult(
+                LlmOutcome.TIMEOUT, diagnostic_code=error.code
+            ), TRANSIENT_RETRY_SECONDS
+        return LlmResult(
+            LlmOutcome.UNAVAILABLE, diagnostic_code=error.code
+        ), TRANSIENT_RETRY_SECONDS
 
     def _log(self, task: LlmTask[Any], result: LlmResult[Any]) -> None:
         logger.info(

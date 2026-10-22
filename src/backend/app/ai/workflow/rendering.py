@@ -33,6 +33,18 @@ def comparison_placeholders(
         if scenario.delta is not None:
             values[f"delta:{scenario.option_key}"] = shekels(scenario.delta, signed=True)
             descriptions[f"delta:{scenario.option_key}"] = f"ההפרש בנטו עבור {label} לעומת היום"
+    with_delta = [
+        s
+        for s in result.alternatives
+        if s.status is ScenarioStatus.CALCULATED and s.delta is not None
+    ]
+    if len(with_delta) > 1:
+        # Point the explanation at the most worthwhile car, not an arbitrary one.
+        best = max(with_delta, key=lambda s: int(s.delta.display))
+        keep = {f"delta:{best.option_key}", "net:current"}
+        # The model sees only the best car's difference, so it cannot single out another car.
+        descriptions = {k: v for k, v in descriptions.items() if k in keep}
+        descriptions[f"delta:{best.option_key}"] += " (הרכב המשתלם ביותר)"
     return values, descriptions
 
 
