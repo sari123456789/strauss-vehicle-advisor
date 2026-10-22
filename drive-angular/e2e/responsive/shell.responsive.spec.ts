@@ -9,7 +9,7 @@ const NEW_SCREENS = [
 ];
 
 /** Legacy demo screens: only the new header is asserted; their bodies are replaced later. */
-const LEGACY_SCREENS = ['/how-it-works', '/sign-in', '/catalog', '/profile', '/advisor', '/comparison', '/calculation', '/history', '/representative'];
+const LEGACY_SCREENS = ['/how-it-works', '/sign-in', '/catalog', '/advisor', '/comparison', '/calculation', '/history', '/representative'];
 
 for (const viewport of VIEWPORTS) {
   test.describe(`${viewport.width}×${viewport.height}`, () => {

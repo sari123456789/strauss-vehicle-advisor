@@ -52,18 +52,17 @@ test.describe('payslip import (real stack)', () => {
     const [baseChoice, baseShown] = before.baseGross.value === '15000.00' ? ['182.00 ₪', '182.00 ₪'] : ['15,000.00 ₪', '15,000.00 ₪'];
     const [pensionTyped, pensionShown] = before.pensionEmployeeRate.value === '0.06' ? ['7', '0.07'] : ['6', '0.06'];
 
-    // 1-2. Real login (employees land on the advisor), then the profile page with the real salary facts.
+    // 1-2. Real login (employees land on the advisor), whose side panel shows the real salary facts.
     await page.goto('/#/sign-in');
     await page.getByTestId('login').fill(login);
     await page.getByTestId('password').fill(password);
     await page.getByTestId('sign-in').click();
     await expect(page).toHaveURL(/#\/advisor/);
-    await page.goto('/#/profile');
     const section = page.getByTestId('real-profile');
     await expect(section.locator('[data-field="payroll.baseGross"]')).toBeVisible();
 
     // 3-4. Upload the synthetic Hebrew PDF; the backend extracts a reviewable draft.
-    await page.getByTestId('open-payslip-import').click();
+    await page.getByTestId('chat-open-payslip-import').click();
     await page.getByTestId('payslip-file').setInputFiles(FIXTURE);
     const base = page.locator('li.payslip-field[data-field="payroll.baseGross"]');
     await expect(base).toHaveAttribute('data-status', 'conflict');
@@ -89,8 +88,8 @@ test.describe('payslip import (real stack)', () => {
     expect(approveBody.fields.sort()).toEqual(['payroll.baseGross', 'payroll.pensionEmployeeRate']);
 
     // 8. The profile shown is reloaded from the server.
-    await expect(section.locator('[data-field="payroll.baseGross"] td.value')).toContainText(baseShown);
-    await expect(section.locator('[data-field="payroll.pensionEmployeeRate"] td.value')).toHaveText(pensionShown);
+    await expect(section.locator('[data-field="payroll.baseGross"] .value')).toContainText(baseShown);
+    await expect(section.locator('[data-field="payroll.pensionEmployeeRate"] .value')).toHaveText(pensionShown);
     expect(await profileVersion(login)).toBe(versionBefore + 1);
 
     // 9. A second identical approval replays the result and changes nothing.

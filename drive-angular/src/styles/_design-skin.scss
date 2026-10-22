@@ -538,6 +538,65 @@ tbody tr:hover {
   text-align: end;
 }
 
+.summary-fields dd.value {
+  margin-inline-start: auto;
+}
+
+.field-edit {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  margin: -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8d93;
+  cursor: pointer;
+}
+
+.field-edit svg {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+.field-edit:hover,
+.field-edit:focus-visible {
+  background: #f2ebe3;
+  color: #8c5f37;
+}
+
+.summary-fields > div.editing {
+  flex-wrap: wrap;
+}
+
+.summary-fields dd.field-editor {
+  flex-basis: 100%;
+  text-align: start;
+}
+
+.field-editor form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.field-editor input {
+  flex: 1 1 120px;
+  min-block-size: 36px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.field-editor .primary {
+  min-block-size: 36px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
 .summary-fields .missing dd {
   font-weight: 400;
   color: #a06a35;

@@ -39,7 +39,7 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly fieldStatus = FIELD_STATUS;
   /** All profile fields for the side panel; missing ones are shown as not yet known. */
   readonly profileRows = computed(() => profileRows(this.profile.profile()));
-  /** The payslip import panel (same reusable component as the profile page). */
+  /** The payslip import panel (reusable component). */
   readonly payslipOpen = signal(false);
   /** Sent here from the comparison page because the current state could not be calculated. */
   readonly needsCurrent = inject(ComparisonsStore).needsCurrent;
@@ -62,6 +62,9 @@ export class AdvisorPage implements OnInit, OnDestroy {
   /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
   readonly panelCards = signal<OptionItem[] | null>(null);
   text = '';
+  /** The profile field being edited in the side panel; the new value goes to the advisor. */
+  readonly editing = signal<string | null>(null);
+  editValue = '';
 
   async ngOnInit(): Promise<void> {
     void this.profile.load();
@@ -87,6 +90,20 @@ export class AdvisorPage implements OnInit, OnDestroy {
       void this.profile.load();
       void this.catalog.load();
     });
+  }
+
+  startEdit(label: string): void {
+    this.editing.set(label);
+    this.editValue = '';
+  }
+
+  /** Profile updates keep the advisor's checks and provenance: the edit is sent as a message. */
+  submitEdit(label: string): void {
+    const value = this.editValue.trim();
+    if (!value) return;
+    this.editing.set(null);
+    this.text = `עדכון לפרטים שלי — ${label}: ${value}`;
+    this.send();
   }
 
   async startNew(): Promise<void> {
