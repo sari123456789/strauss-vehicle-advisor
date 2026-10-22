@@ -34,7 +34,9 @@ from app.ai.workflow.state import ConversationState, TurnPayload, TurnRuntime
 from app.contracts.business_port import BusinessToolsPort
 from app.contracts.tool_context import ToolContext
 
-DEFAULT_MAX_LLM_CALLS = 2
+DEFAULT_MAX_LLM_CALLS = 3
+"""Architecture §15: at most 3 model calls per input. An interpretation retried once still
+leaves a call for the reply to a general question."""
 RECURSION_LIMIT = 25
 
 

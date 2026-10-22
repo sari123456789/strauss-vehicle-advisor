@@ -141,7 +141,7 @@ class ComposeRequest:
 class TurnRuntime:
     tools: BusinessToolGateway
     llm: LlmPort
-    max_llm_calls: int = 2
+    max_llm_calls: int = 3
     compose_with_llm: bool = True
     llm_calls: int = 0
     case: CaseContext | None = None
@@ -175,7 +175,7 @@ class TurnRuntime:
         self.replies.append(Reply(text, kind, dict(payload)))
 
     async def call_llm(self, task: LlmTask[OutputT]) -> LlmResult[OutputT]:
-        """At most `max_llm_calls` model calls per turn (architecture §15 allows 3)."""
+        """At most `max_llm_calls` model calls per turn (architecture §15: 3)."""
         if self.llm_calls >= self.max_llm_calls:
             return LlmResult(LlmOutcome.BLOCKED_BY_POLICY, diagnostic_code="turn_llm_budget")
         self.llm_calls += 1

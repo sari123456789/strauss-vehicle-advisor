@@ -375,9 +375,11 @@ async def test_interpretation_asks_for_catalogue_spelling_of_hebrew_car_names() 
 
 async def test_comparison_explanation_may_not_refer_the_employee_to_anyone() -> None:
     runner, _, llm = make()
-    llm.interpret(calculate("ATTO 3"))
+    llm.interpret(calculate("ATTO 3"), interpretation(Intent.EXPLAIN_RESULT))
     llm.compose("זה הנטו המשוער.")
     await say(runner, "כמה נטו עם ATTO 3?")
+    assert not llm.calls(LlmTaskKind.COMPOSE)  # no automatic explanation under the result
+    await say(runner, "למה?")  # explained only when the employee asks
     system = llm.calls(LlmTaskKind.COMPOSE)[0].system_instruction
     assert "Never invite the employee to contact anyone" in system
     assert "How the estimated net is calculated" in system and "gender-neutral" in system
