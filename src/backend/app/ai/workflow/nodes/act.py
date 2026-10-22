@@ -728,7 +728,16 @@ async def _handle_answer(
             requestId=request_id,
         )
         return updates
-    rt.reply(he.representative_answer_text(label), "representative_answer", requestId=request_id)
+    rt.reply(
+        he.representative_answer_text(
+            label,
+            task["fieldCode"],
+            view.answer,
+            recalculated=task["optionKey"] is not None or task["includeCurrent"],
+        ),
+        "representative_answer",
+        requestId=request_id,
+    )
     if task["optionKey"] is not None:
         selection = Selection(mode=SelectionMode.EXPLICIT, option_keys=[task["optionKey"]])
     elif task["includeCurrent"]:
