@@ -270,17 +270,18 @@ def build_auth_service(settings: Settings, services: BusinessServices) -> AuthSe
 
 
 def build_llm(env: dict[str, str] | None = None) -> LlmPort:
-    """The active LLM profile (`STRAUSS_AI_LLM_*`); disabled when no profile is configured.
+    """The LLM over the configured profiles (`STRAUSS_AI_LLM_*`); disabled when none is configured.
 
-    Logs the provider and model only, never the key.
+    Logs the active profile, provider, model and the failover order, never a key.
     """
     llm_settings = load_llm_settings(env)
     profile = llm_settings.active
     logger.info(
-        "llm_configured profile=%s provider=%s model=%s",
+        "llm_configured profile=%s provider=%s model=%s chain=%s",
         llm_settings.active_profile,
         profile.provider,
         profile.model,
+        ",".join(p.name for p in llm_settings.failover_chain()),
     )
     return build_llm_port(llm_settings)
 
