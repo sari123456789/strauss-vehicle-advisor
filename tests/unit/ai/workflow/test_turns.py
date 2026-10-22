@@ -1223,3 +1223,15 @@ async def test_details_are_correct_with_nothing_saved_to_confirm_says_so() -> No
     outcome = await say(runner, "הפרטים נכונים")
     assert "confirm_profile_fields" not in port.tools()
     assert he.NOTHING_TO_CONFIRM in text_of(outcome)
+
+
+async def test_a_retried_interpretation_still_leaves_a_call_for_the_reply() -> None:
+    runner, _, llm = make()
+    llm.script(LlmTaskKind.INTERPRET, failure(LlmOutcome.INVALID_OUTPUT))
+    llm.interpret(interpretation(Intent.GENERAL_QUESTION))
+    llm.compose("נקודות זיכוי מקטינות את מס ההכנסה, ולכן מעלות את הנטו.")
+    outcome = await say(runner, "מה זה נקודות זיכוי?")
+    assert outcome.llm_calls == 3  # interpret, one retry, then the answer itself
+    assert "נקודות זיכוי מקטינות את מס ההכנסה" in text_of(outcome)
+    assert he.GENERAL_FALLBACK not in text_of(outcome)
+    assert_employee_safe(outcome)
