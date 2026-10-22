@@ -752,3 +752,17 @@ a.primary.disabled {
   opacity: 0.45;
   pointer-events: none;
 }
+
+// Representative desk: header and desk share one screen; the page itself does not scroll.
+@media (min-width: 1100.02px) {
+  app-root:has(.rep) {
+    block-size: 100dvh;
+    overflow: hidden;
+  }
+
+  app-root:has(.rep) main {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+  }
+}
