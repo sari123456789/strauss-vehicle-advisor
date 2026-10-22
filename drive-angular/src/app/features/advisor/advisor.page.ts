@@ -145,6 +145,24 @@ export class AdvisorPage implements OnInit, OnDestroy {
     this.panelCards.set(cards);
   }
 
+  /**
+   * The selected vehicles go to the advisor as a message, so the chat asks only what it still
+   * needs (e.g. one confirmation of saved details) and shows the difference from today itself.
+   */
+  compareInChat(): void {
+    const options = this.catalog.selectedOptions();
+    if (!options.length || this.store.busy()) return;
+    const names = options.filter(o => o.optionKey !== 'waiver').map(o => o.commercialName || optionLabel(o));
+    if (options.some(o => o.optionKey === 'waiver')) names.push('ויתור על הרכב');
+    this.text =
+      names.length === 1
+        ? `אני רוצה לראות כמה ישתנה לי הנטו לעומת היום עם ${names[0]}`
+        : `אני רוצה לראות כמה ישתנה לי הנטו לעומת היום בכל אחת מהאפשרויות: ${names.join(', ')}`;
+    this.panelCards.set(null);
+    this.catalog.clear();
+    this.send();
+  }
+
   private vehicleName(catalogueId: string | null | undefined): string | null {
     if (!catalogueId) return null;
     const option = this.catalog.options().find(o => o.catalogueId === catalogueId);
