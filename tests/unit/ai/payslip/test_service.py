@@ -9,11 +9,16 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.ai.application.payslip.errors import PayslipError, PayslipErrorCode
-from app.ai.application.payslip.extraction import AiFieldMapping, PayslipInterpretation
+from app.ai.application.payslip.extraction import (
+    AiFieldMapping,
+    PayslipInterpretation,
+    ScannedTranscription,
+)
 from app.ai.application.payslip.models import (
     ApproveCommand,
     Correction,
     DocumentIssue,
+    DocumentText,
     DraftStatus,
     ExtractionMode,
     FieldStatus,
@@ -196,6 +201,40 @@ async def test_unsupported_documents_are_rejected(name: str, code: PayslipErrorC
     with pytest.raises(PayslipError) as raised:
         await h.upload(name)
     assert _code(raised) is code
+
+
+class BrowserPrintReader(PypdfTextReader):
+    """A screenshot printed to PDF: the only text is the browser's header and URL."""
+
+    def read(self, data: bytes, config: PayslipImportConfig) -> DocumentText:
+        lines = (
+            "18:12 ,22.10.2026 files (1374×1145)",
+            "https://app.example.org/api/files?u=https%3A%2F%2Fstorage%2Fv1%2Fobject 1/1",
+        )
+        return DocumentText(pages=(lines,), byte_size=len(data))
+
+
+async def test_image_printed_from_a_browser_is_not_read_as_text() -> None:
+    h = Harness()
+    h.service._reader = BrowserPrintReader()
+    with pytest.raises(PayslipError) as raised:
+        await h.upload()
+    assert _code(raised) is PayslipErrorCode.SCANNED_UNSUPPORTED
+
+
+async def test_image_printed_from_a_browser_is_transcribed_when_allowed() -> None:
+    h = Harness(llm_enabled=True)
+    h.service._reader = BrowserPrintReader()
+    h.llm.script(
+        LlmTaskKind.INTERPRET,
+        ok(ScannedTranscription(lines=["12,000.00 שכר בסיס", "2.25 נקודות זיכוי"])),
+        failure(LlmOutcome.UNAVAILABLE),  # the field mapping falls back to the label rules
+    )
+    draft = await h.upload()
+    assert DocumentIssue.SCANNED_TRANSCRIBED in draft.document_issues
+    base = draft.field_for(F.BASE_GROSS)
+    assert base is not None and base.value == Decimal("12000.00")
+    assert base.status is not FieldStatus.EXTRACTED  # values read from an image need review
 
 
 async def test_upload_requires_the_callers_own_conversation_and_employee_role() -> None:

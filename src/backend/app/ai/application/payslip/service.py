@@ -135,6 +135,13 @@ class PayslipImportService:
             document = await self._transcribe(data)  # raises the same error when it cannot
             scanned = True
         candidates = build_candidates(document)
+        if not scanned and not any(c.keyword_fields for c in candidates):
+            # Text, but no payslip label anywhere: an image with only a browser's print header,
+            # date and URL around it (a screenshot printed to PDF). Read it as a scanned payslip.
+            logger.info("payslip text has no payslip labels; reading it as an image")
+            document = await self._transcribe(data)
+            scanned = True
+            candidates = build_candidates(document)
         interpretation, issues = await self._interpret(candidates)
         fields = build_fields(candidates, interpretation)
         if scanned:
