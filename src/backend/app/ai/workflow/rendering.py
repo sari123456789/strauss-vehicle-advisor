@@ -63,6 +63,7 @@ def render_grounded(text: str, values: dict[str, str]) -> str | None:
 # --- Voice: the model rewrites a turn's template replies ---------------------------------------
 
 _NUMBER = re.compile(r"(?<![A-Za-z\-])[+\-−]?\d[\d,]*(?:\.\d+)?(?:\s?(?:₪|%))?")
+_BULLET_LABEL = re.compile(r"^•\s*([^:\n]+):", re.MULTILINE)
 _NAME_WITH_DIGITS = re.compile(r"[A-Za-z][A-Za-z\-]*\d[A-Za-z0-9\-]*")
 """Car names such as "MG4" or "CAR-06": kept as written, never turned into placeholders."""
 
@@ -94,6 +95,12 @@ def render_voiced(
     names = _PLACEHOLDER.findall(text)
     if not required <= set(names) or any(name not in values for name in names):
         return None
+    # Every listed item ("• MG4: ...") must keep its exact name.
+    if any(label.strip() not in text for label in _BULLET_LABEL.findall(draft)):
+        return None
+    drafted = {label.strip() for label in _BULLET_LABEL.findall(draft)}
+    if any(label.strip() not in drafted for label in _BULLET_LABEL.findall(text)):
+        return None  # a list item the code never wrote
     allowed = set(_NAME_WITH_DIGITS.findall(_PLACEHOLDER.sub(" ", draft)))
     outside = _PLACEHOLDER.sub(" ", text)
     if any(n not in allowed for n in _NAME_WITH_DIGITS.findall(outside)):

@@ -249,16 +249,23 @@ async def _explain_not_listed(
 ) -> None:
     """A named vehicle that is not among the eligible options: not in the catalogue, not
     eligible, or eligibility unknown because information is missing."""
-    found = await rt.tools.resolve_vehicle(
-        ResolveVehicleRequest(
-            purpose=ResolvePurpose.ALTERNATIVE, query=VehicleQuery(commercial_name=name[:80])
-        )
-    )
-    data = found.data
     in_catalogue = []
-    if found.status is not EnvelopeStatus.ERROR and data is not None:
-        if data.status is not ResolveStatus.NOT_FOUND:
-            in_catalogue = [c for c in data.candidates if c.catalogue_id]
+    # The employee often adds the maker ("TESLA MODEL 3"); the catalogue's commercial name is
+    # the model alone ("MODEL 3"), so try without the first word too.
+    words = name.split()
+    queries = [name] + ([" ".join(words[1:])] if len(words) > 1 else [])
+    for query in queries:
+        found = await rt.tools.resolve_vehicle(
+            ResolveVehicleRequest(
+                purpose=ResolvePurpose.ALTERNATIVE, query=VehicleQuery(commercial_name=query[:80])
+            )
+        )
+        data = found.data
+        if found.status is not EnvelopeStatus.ERROR and data is not None:
+            if data.status is not ResolveStatus.NOT_FOUND:
+                in_catalogue = [c for c in data.candidates if c.catalogue_id]
+        if in_catalogue:
+            break
     if not in_catalogue:
         rt.reply(he.vehicle_not_in_catalogue_text(name), "info")
         return
@@ -400,21 +407,46 @@ async def _list_options(state: ConversationState, rt: TurnRuntime, updates: dict
         return
     data = envelope.data
     eligible = [i for i in data.items if i.eligibility is EligibilityStatus.ELIGIBLE]
-    # A car the employee named ("do you have ATTO 3, am I eligible?"): answer it directly.
-    for ref in rt.interpretation.option_refs:
-        if ref.kind != "name":
-            continue
-        named = [i for i in data.items if _name_matches(ref.value, i)]
-        if any(i.eligibility is EligibilityStatus.ELIGIBLE for i in named):
-            rt.reply(he.named_car_eligible_text(he.option_label(named[0])), "info")
-        elif named:
-            rt.reply(he.named_car_not_eligible_text(he.option_label(named[0])), "info")
-        else:
-            rt.reply(he.named_car_unknown_text(ref.value), "info")
     updates["displayed_options"] = [
         DisplayedOption(optionKey=i.option_key, label=he.option_label(i)) for i in eligible
     ]
     updates["result_set_id"] = str(data.result_set_id)
+    answered = False
+    # Giving up the car: say plainly whether this employee's occupation allows it.
+    if rt.interpretation.include_waiver:
+        waiver = [i for i in data.items if i.category is OptionCategory.WAIVER]
+        if waiver and waiver[0].eligibility is EligibilityStatus.ELIGIBLE:
+            rt.reply(he.WAIVER_ALLOWED, "info")
+        elif waiver and waiver[0].eligibility is EligibilityStatus.INELIGIBLE:
+            rt.reply(he.WAIVER_NOT_ALLOWED, "info")
+        answered = bool(waiver)
+    # A car the employee named ("do you have ATTO 3, am I eligible?"): answer it directly.
+    named_labels: list[str] = []
+    for ref in rt.interpretation.option_refs:
+        if ref.kind != "name":
+            continue
+        answered = True
+        named = [i for i in data.items if _name_matches(ref.value, i)]
+        if any(i.eligibility is EligibilityStatus.ELIGIBLE for i in named):
+            label = he.option_label(named[0])
+            named_labels.append(label)
+            rt.reply(he.named_car_eligible_text(label), "info")
+        elif named:
+            rt.reply(he.named_car_not_eligible_text(he.option_label(named[0])), "info")
+        else:
+            # Not among the listed options: not in the catalogue, or in another group.
+            await _explain_not_listed(
+                rt, ref.value, data.unchecked_categories, data.missing_information
+            )
+    if answered:
+        # A direct answer, then one next step; the full list stays behind the button only.
+        rt.reply(
+            he.offer_named_text(named_labels),
+            "options",
+            resultSetId=str(data.result_set_id),
+            optionKeys=[i.option_key for i in eligible],
+        )
+        return
     rt.reply(
         he.options_text(
             data.items,
@@ -735,6 +767,10 @@ async def _selection(
     include_waiver = rt.interpretation.include_waiver or bool(
         resume and resume.get("includeWaiver")
     )
+    if include_waiver and not rt.interpretation.all_options and not propulsion:
+        # "I want to give up the car": compare giving it up with today, not every car.
+        rt.labels.setdefault("waiver", "ויתור על רכב חברה")
+        return Selection(mode=SelectionMode.EXPLICIT, option_keys=["waiver"])
     result_set_id = state.get("result_set_id")
     if result_set_id and not rt.interpretation.all_options and not propulsion:
         return Selection(mode=SelectionMode.RESULT_SET, result_set_id=UUID(result_set_id))

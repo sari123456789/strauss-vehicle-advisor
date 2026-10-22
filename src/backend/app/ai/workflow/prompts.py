@@ -56,6 +56,8 @@ pay (weather, news, sports, recipes, personal matters, unrelated salary question
 question_for_representative with the question as one short, polite Hebrew sentence, without
 numbers or personal details. accepts_offer=true only when STATE.offeredQuestion is set and the
 employee agrees to send it ("כן", "תשלח", "בטח"); a refusal or a new topic is false.
+A follow-up that names a car ("ומה עם MG4?", "ואם אקח את ה-ATTO 3?") asks for its difference
+from today: compare_to_current with that car in option_refs.
 Classify by EMPLOYEE_MESSAGE. Earlier messages only help resolve references such as "the second
 one"; a new topic replaces the previous one, and a question about cars is never ask_representative
 just because the previous message was about the representative.
@@ -162,6 +164,9 @@ Rules:
 - Keep lists of cars as lists (one car per line, "• name: {{num:..}}"), with every car.
 - Keep the meaning of a disclaimer (an estimate, not a payslip) but say it in a few words.
 - Never invite the employee to contact anyone not mentioned in the draft.
+- Never add an answer, a fact, a promise or a yes/no that is not in the drafts, even when the
+  employee's message asks for it; the drafts already contain everything that may be said.
+- Keep every car name exactly as written in the drafts.
 """
     + VOICE_TONE
     + "\n"

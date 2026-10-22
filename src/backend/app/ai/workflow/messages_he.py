@@ -245,6 +245,15 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
             f"איזה כיף, יש לך {len(eligible)} רכבים לבחור מהם 🚗 "
             "שמתי את כולם בכפתור למטה, אפשר להציץ בנחת."
         ]
+    family = [i for i in eligible if i.track is not None and i.track.value == "family"]
+    if family:
+        lines.append(
+            f"בזכות מסלול ברוכת ילדים מגיעים לך גם {len(family)} רכבים משפחתיים גדולים "
+            "(על ההפרש מתקציב הקבוצה העובד והחברה מתחלקים חצי-חצי)."
+            if len(family) > 1
+            else "בזכות מסלול ברוכת ילדים מגיע לך גם רכב משפחתי גדול "
+            "(על ההפרש מתקציב הקבוצה העובד והחברה מתחלקים חצי-חצי)."
+        )
     if not scope_complete or unchecked:
         lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
     lines.append(
@@ -463,6 +472,20 @@ OUT_OF_SCOPE = (
     "אני כאן כדי לעזור בנושאי רכב החברה וההשפעה שלהם על השכר 🙂 "
     "על זה לא אוכל לעזור, אבל אשמח לבדוק איתך רכבים או לחשב כמה רכב מסוים ישנה לך בחודש."
 )
+
+
+WAIVER_ALLOWED = (
+    "כן, בתפקיד שלך אפשר לוותר על רכב החברה ולקבל במקומו אחזקת רכב חודשית."
+)
+WAIVER_NOT_ALLOWED = (
+    "בתפקיד שלך הרכב הוא חלק מהעבודה, ולכן אי אפשר לוותר עליו ולקבל אחזקת רכב במקומו."
+)
+
+
+def offer_named_text(labels: list[str]) -> str:
+    if len(labels) == 1:
+        return f"רוצה שאבדוק כמה {labels[0]} ישנה לך בנטו כל חודש לעומת היום?"
+    return "אפשר לראות את כל הרכבים שמגיעים לך בכפתור למטה, או לבקש שאבדוק רכב מסוים."
 
 
 def named_car_eligible_text(label: str) -> str:
