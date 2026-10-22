@@ -67,7 +67,9 @@ export class AdvisorPage implements OnInit, OnDestroy {
     void this.profile.load();
     const requested = this.route.snapshot.paramMap.get('conversationId');
     if (requested) await this.store.open(requested);
-    else await this.store.ensureActive().catch(() => undefined);
+    // Within the app (back from the catalogue or the comparison) the current conversation goes on;
+    // arriving at the chat afresh starts a new one.
+    else if (!this.store.active()) await this.store.startFresh().catch(() => undefined);
     void this.store.loadConversations();
     void this.catalog.load();
     this.store.watch();
