@@ -206,7 +206,7 @@ SERVICE_ENTRY_POINTS = {
     (
         "app.business.application.representatives.request_service",
         "RepresentativeRequestService",
-    ): {"get_representative_request": "ToolContext"},
+    ): {"get_representative_request": "ToolContext", "list_mine": "ActorRef"},
     ("app.business.application.comparisons.readiness_service", "ReadinessService"): {
         "check_calculation_readiness": "ToolContext",
     },

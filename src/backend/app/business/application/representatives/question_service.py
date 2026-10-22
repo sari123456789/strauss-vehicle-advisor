@@ -185,6 +185,8 @@ class RepresentativeQuestionService:
                     )
                 profile = await load_profile(uow, actor.subject_id)
                 snapshot = subject_snapshot(field, request.option_key, profile)
+                if field is RepresentativeFieldCode.GENERAL_QUESTION:
+                    snapshot = {**snapshot, "source": request.source}
                 stored, created = await uow.representative_requests.add_or_get_open(
                     RepresentativeRequest(
                         request_id=uuid4(),

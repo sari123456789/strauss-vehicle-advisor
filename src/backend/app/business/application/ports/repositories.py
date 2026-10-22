@@ -279,6 +279,10 @@ class RepresentativeRequestRepository(Protocol):
         """Unscoped, unlocked read (representative side, after role authorization)."""
         ...
 
+    async def list_for_creator(self, created_by: UUID) -> tuple[RepresentativeRequest, ...]:
+        """The requests one employee asked, newest first (the employee's own view)."""
+        ...
+
     async def lock(self, request_id: UUID) -> RepresentativeRequest | None:
         """Read `FOR UPDATE`; only while the request's case is already locked."""
         ...

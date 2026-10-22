@@ -42,6 +42,7 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID, uuid4
 
 from app.business.application.errors import (
@@ -299,6 +300,7 @@ class RepresentativeAnswerService:
             can_answer=can_answer,
             can_release=can_release,
             employee=await self._employee(uow, request, catalogue),
+            source=request_source(request),
         )
 
     async def _employee(
@@ -570,6 +572,11 @@ class RepresentativeAnswerService:
 
 
 # --- helpers -----------------------------------------------------------------------------
+
+
+def request_source(request: RepresentativeRequest) -> Literal["chat", "form"]:
+    """Where the employee asked; only general questions can come from the form."""
+    return "form" if request.subject_snapshot.get("source") == "form" else "chat"
 
 
 def _parse_value(

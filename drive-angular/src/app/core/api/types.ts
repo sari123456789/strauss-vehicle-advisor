@@ -41,6 +41,7 @@ export type RepresentativeRequestView = Omit<B['RepresentativeRequestView'], 'fi
   handlerDisplayName?: string | null;
   handlingStatus?: HandlingStatus | null;
   updatedAt?: string | null;
+  source?: 'chat' | 'form';
   employee?: {
     displayName?: string | null;
     employeeCode?: string | null;
@@ -61,6 +62,16 @@ export interface ClaimResult {
   assignmentId: string;
   assignmentVersion: number;
   claimedAt: string;
+}
+export interface MyRequestView {
+  requestId: string;
+  status: 'open' | 'answered' | 'cannot_determine' | 'cancelled';
+  fieldCode: RepresentativeFieldCode;
+  questionText: string;
+  source?: 'chat' | 'form';
+  createdAt: string;
+  updatedAt?: string | null;
+  answer?: (AnswerView & {text?: string | null}) | null;
 }
 export type AssignmentFilter = 'all' | 'unclaimed' | 'mine' | 'others';
 export type RepresentativeFieldCode = B['RepresentativeFieldCode'] | 'general.question';

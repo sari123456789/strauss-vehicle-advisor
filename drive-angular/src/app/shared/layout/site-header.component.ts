@@ -40,6 +40,7 @@ export class SiteHeaderComponent {
     {path: '/advisor', label: 'התחלה'},
     {path: '/profile', label: 'הפרטים שלי'},
     {path: '/history', label: 'ההשוואות שלי'},
+    {path: '/requests', label: 'פנייה לנציג'},
   ];
   private readonly representativeLinks: NavLink[] = [
     {path: '/representative', label: 'מרכז הפניות'},

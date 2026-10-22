@@ -14,6 +14,7 @@ import type {
   EmployeeProfileView,
   EnvelopeOf,
   ListOptionsResult,
+  MyRequestView,
   OptionCategory,
   RepresentativeFieldCode,
   RepresentativeRequestView,
@@ -72,6 +73,7 @@ export class BusinessApi {
     fieldCode: RepresentativeFieldCode,
     optionKey: string | null,
     questionText: string,
+    source: 'chat' | 'form' = 'chat',
   ): Promise<EnvelopeOf<CreateQuestionResult>> {
     return firstValueFrom(
       this.http.post<EnvelopeOf<CreateQuestionResult>>(`${this.base}/cases/${context.caseId}/representative-requests`, {
@@ -80,8 +82,13 @@ export class BusinessApi {
         questionText,
         idempotencyKey: newId(),
         expectedCaseVersion: context.caseVersion,
+        source,
       }),
     );
+  }
+
+  myRequests(): Promise<EnvelopeOf<MyRequestView[]>> {
+    return firstValueFrom(this.http.get<EnvelopeOf<MyRequestView[]>>(`${this.base}/me/representative-requests`));
   }
 
   // --- representative role ----------------------------------------------------------------

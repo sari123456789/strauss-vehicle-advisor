@@ -14,12 +14,13 @@ from app.contracts.representatives import (
     AnswerApplication,
     AnswerOutcome,
     AnswerView,
+    MyRequestView,
     RepresentativeFieldCode,
     RepresentativeRequestLookup,
     RequestStatus,
     RequestStatusView,
 )
-from app.contracts.tool_context import ToolContext
+from app.contracts.tool_context import ActorRef, ToolContext
 
 
 class RepresentativeRequestService:
@@ -28,6 +29,30 @@ class RepresentativeRequestService:
     ) -> None:
         self._unit_of_work = unit_of_work
         self._policy = policy
+
+    async def list_mine(self, actor: ActorRef) -> list[MyRequestView]:
+        """The signed-in employee's own requests and answers, newest first."""
+        with translate_errors():
+            async with self._unit_of_work() as uow:
+                employee = await self._policy.employee(uow, actor)
+                requests = await uow.representative_requests.list_for_creator(employee.subject_id)
+                views: list[MyRequestView] = []
+                for found in requests:
+                    answer = await uow.representative_answers.get(found.request_id)
+                    general = found.field_code.value == RepresentativeFieldCode.GENERAL_QUESTION.value
+                    views.append(
+                        MyRequestView(
+                            request_id=found.request_id,
+                            status=RequestStatus(found.status.value),
+                            field_code=RepresentativeFieldCode(found.field_code.value),
+                            question_text=found.question_text,
+                            source="form" if found.subject_snapshot.get("source") == "form" else "chat",
+                            created_at=found.created_at,
+                            updated_at=found.updated_at,
+                            answer=None if answer is None else answer_view(answer, text_answer=general),
+                        )
+                    )
+        return views
 
     async def get_representative_request(
         self, ctx: ToolContext, request: RepresentativeRequestLookup

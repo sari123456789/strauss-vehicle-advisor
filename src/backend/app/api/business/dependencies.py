@@ -21,6 +21,7 @@ from app.business.application.errors import BusinessError
 from app.business.application.identity.auth_service import AuthService
 from app.business.application.profiles.profile_service import EmployeeProfileService
 from app.business.application.representatives.answer_service import RepresentativeAnswerService
+from app.business.application.representatives.request_service import RepresentativeRequestService
 from app.business.application.representatives.assignment_service import AssignmentService
 from app.contracts.business_port import BusinessToolsPort
 from app.contracts.common import Envelope, EnvelopeStatus, ErrorCode
@@ -52,6 +53,8 @@ class BusinessApi:
     """Representative inbox and answers (B3b); the routes answer 503 when it is not wired."""
     assignments: AssignmentService | None = None
     """Representative claim/release/summary; the routes answer 503 when it is not wired."""
+    requests: RepresentativeRequestService | None = None
+    """The employee's own representative requests (`GET /me/representative-requests`)."""
 
 
 def business_api(request: Request) -> BusinessApi:

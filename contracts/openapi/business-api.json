@@ -928,6 +928,15 @@
             "minLength": 1,
             "title": "Questiontext",
             "type": "string"
+          },
+          "source": {
+            "default": "chat",
+            "enum": [
+              "chat",
+              "form"
+            ],
+            "title": "Source",
+            "type": "string"
           }
         },
         "required": [
@@ -2887,6 +2896,101 @@
         "title": "Envelope[UpdateInputsResult]",
         "type": "object"
       },
+      "Envelope_list_MyRequestView__": {
+        "additionalProperties": false,
+        "properties": {
+          "caseVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caseversion"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MyRequestView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "profileVersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileversion"
+          },
+          "sourceVersions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnvelopeStatus"
+          },
+          "traceId": {
+            "title": "Traceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "traceId"
+        ],
+        "title": "Envelope[list[MyRequestView]]",
+        "type": "object"
+      },
       "Envelope_list_RepresentativeRequestView__": {
         "additionalProperties": false,
         "properties": {
@@ -3338,6 +3442,74 @@
           "display"
         ],
         "title": "MoneyAmount",
+        "type": "object"
+      },
+      "MyRequestView": {
+        "additionalProperties": false,
+        "description": "One of the signed-in employee's own representative requests, with its answer.",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "fieldCode": {
+            "$ref": "#/components/schemas/RepresentativeFieldCode"
+          },
+          "questionText": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Questiontext",
+            "type": "string"
+          },
+          "requestId": {
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          },
+          "source": {
+            "default": "chat",
+            "enum": [
+              "chat",
+              "form"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RequestStatus"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "requestId",
+          "status",
+          "fieldCode",
+          "questionText",
+          "createdAt"
+        ],
+        "title": "MyRequestView",
         "type": "object"
       },
       "OccupationCandidate": {
@@ -4391,6 +4563,15 @@
             "minimum": 0.0,
             "title": "Requestversion",
             "type": "integer"
+          },
+          "source": {
+            "default": "chat",
+            "enum": [
+              "chat",
+              "form"
+            ],
+            "title": "Source",
+            "type": "string"
           },
           "status": {
             "$ref": "#/components/schemas/RequestStatus"
@@ -6791,6 +6972,33 @@
           }
         ],
         "summary": "My Profile",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/me/representative-requests": {
+      "get": {
+        "description": "The employee's own requests to a representative (chat and form), with their answers.",
+        "operationId": "my_representative_requests_api_v1_me_representative_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_MyRequestView__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Representative Requests",
         "tags": [
           "profile"
         ]

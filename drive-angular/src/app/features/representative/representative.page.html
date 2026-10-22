@@ -41,7 +41,7 @@
         <tbody>
           @for (q of store.inquiries(); track q.requestId) {
             <tr [class.is-selected]="store.selectedId() === q.requestId" (click)="open(q)">
-              <td class="ref">#{{ ref(q) }}</td>
+              <td class="ref">#{{ ref(q) }}<small class="src" [attr.data-src]="q.source ?? 'chat'">{{ sourceLabel(q) }}</small></td>
               <td><b>{{ q.employee?.displayName ?? '—' }}</b>@if (q.employee?.occupation) {<small>{{ q.employee?.occupation }}</small>}</td>
               <td>
                 <b>{{ fieldCode[q.fieldCode] }}</b>
@@ -83,6 +83,7 @@
           </div>
         </div>
       }
+      <p class="detail__src">{{ q.source === 'form' ? '📝 הפנייה נשלחה מטופס הפנייה לנציג' : '💬 הפנייה נשלחה מתוך השיחה עם היועץ' }}</p>
       <div class="detail__who">
         <span class="badge" [attr.data-state]="handling(q)">{{ handlingLabel(q) }}</span>
         @if (handling(q) === 'assigned_to_other') {<small>מטפל/ת: {{ q.handlerDisplayName }}</small>}
@@ -140,7 +141,7 @@
 
       <h3>היסטוריית סטטוס</h3>
       <ol class="history">
-        <li><time>{{ q.createdAt | date: 'dd.MM HH:mm' }}</time><b>נפתחה</b><small>הפנייה נפתחה מהשיחה של העובד</small></li>
+        <li><time>{{ q.createdAt | date: 'dd.MM HH:mm' }}</time><b>נפתחה</b><small>{{ q.source === 'form' ? 'נפתחה מטופס הפנייה לנציג' : 'נפתחה מתוך השיחה עם היועץ' }}</small></li>
         @if (q.claimedAt) {<li><time>{{ q.claimedAt | date: 'dd.MM HH:mm' }}</time><b>נלקחה לטיפול</b><small>{{ handler(q) }}</small></li>}
         @if (q.status !== 'open' && q.updatedAt) {<li><time>{{ q.updatedAt | date: 'dd.MM HH:mm' }}</time><b>{{ requestStatus[q.status] }}</b></li>}
       </ol>
