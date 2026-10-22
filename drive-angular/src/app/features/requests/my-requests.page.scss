@@ -10,7 +10,7 @@
 
 .requests__head h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
 }
 
@@ -22,8 +22,9 @@
 .ask {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: 8px;
+  max-inline-size: 560px;
+  padding: 14px 16px;
   border: 1px solid #e4e6eb;
   border-radius: 17px;
   background: #fff;
@@ -34,11 +35,33 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin: 0;
+  font-size: 14px;
   font-weight: 600;
+}
+
+// Compact controls: the global form styles are sized for the full-page forms.
+.ask select,
+.ask textarea {
+  min-block-size: 0;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+
+.ask select {
+  block-size: 40px;
+}
+
+.ask textarea {
+  resize: vertical;
 }
 
 .ask .primary {
   align-self: flex-start;
+  min-block-size: 40px;
+  padding: 8px 20px;
+  font-size: 15px;
 }
 
 .hint {

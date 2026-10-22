@@ -12,7 +12,7 @@
       </select>
     </label>
     <label>השאלה שלכם
-      <textarea name="text" [(ngModel)]="text" rows="4" maxlength="900" required placeholder="למשל: האם אפשר להחליף רכב באמצע השנה?"></textarea>
+      <textarea name="text" [(ngModel)]="text" rows="3" maxlength="900" required placeholder="למשל: האם אפשר להחליף רכב באמצע השנה?"></textarea>
     </label>
     <p class="hint">בלי פרטים אישיים או סכומי שכר — הנציג רואה את השם, קוד העובד והרכב הנוכחי שלכם.</p>
     @if (error(); as e) {<div class="notice amber" role="alert">{{ e }}</div>}
