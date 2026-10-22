@@ -10,6 +10,7 @@ from app.ai.workflow.extraction import Clarification, ClarificationCode
 from app.contracts.catalogue import EligibilityStatus, OptionItem
 from app.contracts.common import ErrorCode, FieldPath, IssueCode, Propulsion
 from app.contracts.comparisons import ComparisonResult, MoneyAmount, ScenarioStatus
+from app.contracts.representatives import AnswerView
 
 FIELD_LABELS: dict[str, str] = {
     FieldPath.BASE_GROSS: "שכר הבסיס החודשי ברוטו",
@@ -260,8 +261,48 @@ def representative_created_text(label: str) -> str:
     return f"שלחתי לנציג התחבורה שאלה לגבי {label}. אפשר להמשיך כרגיל, ואעדכן כאן כשתגיע תשובה."
 
 
-def representative_answer_text(label: str) -> str:
-    return f"הגיעה תשובה מנציג התחבורה לגבי {label} 🎉"
+def representative_answer_text(
+    label: str,
+    field_code: str | None = None,
+    answer: AnswerView | None = None,
+    *,
+    recalculated: bool = False,
+) -> str:
+    """The representative's answer in plain words: what was answered, from when, and whether
+    it counts for this calculation month. The value is the representative's, never computed."""
+    lines = [f"הגיעה תשובה מנציג התחבורה לגבי {label} 🎉"]
+    value = answer.value if answer is not None else None
+    if value:
+        if field_code == "alternative.participation":
+            amount = f"{int(float(value)):,} ₪" if value.replace(".", "", 1).isdigit() else value
+            lines.append(f"דמי ההשתתפות החודשיים הם {amount}.")
+        elif field_code == "employee.entitlementGroup":
+            lines.append(f"קבוצת הזכאות שלך היא {value}.")
+        elif field_code == "currentArrangement.propulsion":
+            try:
+                lines.append(f"סוג ההנעה של הרכב שלך: {PROPULSION_LABELS[Propulsion(value)]}.")
+            except ValueError:
+                lines.append(f"סוג ההנעה של הרכב שלך: {value}.")
+        elif field_code == "currentArrangement.vehicle":
+            lines.append("הנציג השלים את פרטי הרכב הנוכחי שלך.")
+        else:
+            lines.append(f"התשובה: {value}.")
+    if answer is not None and (answer.effective_from or answer.effective_to):
+        start = answer.effective_from.strftime("%d.%m.%Y") if answer.effective_from else None
+        end = answer.effective_to.strftime("%d.%m.%Y") if answer.effective_to else None
+        if start and end:
+            lines.append(f"זה בתוקף מ-{start} עד {end}.")
+        elif start:
+            lines.append(f"זה בתוקף החל מ-{start}.")
+        else:
+            lines.append(f"זה בתוקף עד {end}.")
+    if answer is not None and answer.application is not None and answer.application.value == "not_applicable":
+        lines.append("שימו לב: התשובה לא חלה על חודש החישוב של השיחה הזו, אז החישוב לא משתנה.")
+    elif recalculated:
+        lines.append("עדכנתי את החישוב לפי התשובה 👇")
+    else:
+        lines.append("רוצה שנבדוק עכשיו כמה זה ישנה לך בנטו כל חודש? 😊")
+    return "\n".join(lines)
 
 
 def representative_undetermined_text(label: str) -> str:
