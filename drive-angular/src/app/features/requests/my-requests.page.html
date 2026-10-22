@@ -1,0 +1,39 @@
+<section class="requests">
+  <header class="requests__head">
+    <h1>פנייה לנציג התחבורה</h1>
+    <p>שאלה על רכב החברה שהיועץ לא יכול לענות עליה? כתבו כאן, ונציג יחזור אליכם. התשובה תופיע כאן וגם בשיחה עם היועץ.</p>
+  </header>
+
+  <form class="ask" (ngSubmit)="send()">
+    <label>נושא
+      <select name="topic" [(ngModel)]="topic" required>
+        <option value="" disabled>בחרו נושא</option>
+        @for (t of topics; track t) {<option [value]="t">{{ t }}</option>}
+      </select>
+    </label>
+    <label>השאלה שלכם
+      <textarea name="text" [(ngModel)]="text" rows="4" maxlength="900" required placeholder="למשל: האם אפשר להחליף רכב באמצע השנה?"></textarea>
+    </label>
+    <p class="hint">בלי פרטים אישיים או סכומי שכר — הנציג רואה את השם, קוד העובד והרכב הנוכחי שלכם.</p>
+    @if (error(); as e) {<div class="notice amber" role="alert">{{ e }}</div>}
+    @if (sent()) {<div class="notice positive" role="status">הפנייה נשלחה 📨 נעדכן אתכם כאן ובשיחה כשתגיע תשובה.</div>}
+    <button class="primary" [disabled]="sending() || !topic || text.trim().length < 5">{{ sending() ? 'שולחים…' : 'שליחה לנציג ➤' }}</button>
+  </form>
+
+  <h2>הפניות שלי</h2>
+  @if (loading() && !requests().length) {<p class="muted" role="status">טוענים…</p>}
+  <ul class="list">
+    @for (r of requests(); track r.requestId) {
+      <li class="item" [attr.data-status]="r.status">
+        <div class="item__top">
+          <b>{{ r.fieldCode === 'general.question' ? r.questionText : fieldCode[r.fieldCode] }}</b>
+          <span class="badge" [attr.data-status]="r.status">{{ status[r.status] }}</span>
+        </div>
+        <small>{{ r.createdAt | date: 'dd.MM.yyyy HH:mm' }} · {{ r.source === 'form' ? 'נשלחה מהטופס' : 'נשלחה מהשיחה' }}</small>
+        @if (answerText(r); as a) {<p class="answer"><b>תשובת הנציג:</b> {{ a }}</p>}
+      </li>
+    } @empty {
+      @if (!loading()) {<li class="empty">עוד לא נשלחו פניות. אפשר גם <a routerLink="/advisor">לשאול את היועץ בשיחה</a>.</li>}
+    }
+  </ul>
+</section>

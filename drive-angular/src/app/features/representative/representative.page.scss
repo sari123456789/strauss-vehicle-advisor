@@ -481,3 +481,17 @@ blockquote {
     overscroll-behavior: contain;
   }
 }
+
+.src {
+  display: block;
+  margin-top: 2px;
+  color: #777;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.detail__src {
+  margin: 10px 0 0;
+  color: #555;
+  font-size: 13px;
+}

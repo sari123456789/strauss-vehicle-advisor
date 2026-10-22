@@ -47,6 +47,15 @@
       "minLength": 1,
       "title": "Questiontext",
       "type": "string"
+    },
+    "source": {
+      "default": "chat",
+      "enum": [
+        "chat",
+        "form"
+      ],
+      "title": "Source",
+      "type": "string"
     }
   },
   "required": [

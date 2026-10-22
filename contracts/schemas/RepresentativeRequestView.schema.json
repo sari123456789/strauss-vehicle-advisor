@@ -273,6 +273,15 @@
       "title": "Requestversion",
       "type": "integer"
     },
+    "source": {
+      "default": "chat",
+      "enum": [
+        "chat",
+        "form"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
     "status": {
       "$ref": "#/$defs/RequestStatus"
     },

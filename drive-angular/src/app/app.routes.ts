@@ -25,6 +25,7 @@ export const routes: Routes = [
     canActivate: [employeeGuard],
     loadComponent: () => import('./features/comparisons/calculation.page').then(m => m.CalculationPage),
   },
+  {path: 'requests', canActivate: [employeeGuard], loadComponent: () => import('./features/requests/my-requests.page').then(m => m.MyRequestsPage)},
   {path: 'history', canActivate: [employeeGuard], loadComponent: () => import('./features/comparisons/history.page').then(m => m.HistoryPage)},
   {
     path: 'representative',

@@ -69,12 +69,17 @@ class AnswerApplication(StrEnum):
 QuestionText = Annotated[str, StringConstraints(min_length=1, max_length=1000)]
 
 
+RequestSource = Literal["chat", "form"]
+"""Where the employee asked: the advisor chat or the stand-alone request form."""
+
+
 class CreateQuestionRequest(ContractModel):
     field_code: RepresentativeFieldCode
     option_key: OptionKeyStr | None = None
     question_text: QuestionText
     idempotency_key: UUID
     expected_case_version: int = Field(ge=0)
+    source: RequestSource = "chat"
 
 
 class CreateQuestionResult(ContractModel):
@@ -154,6 +159,7 @@ class RepresentativeRequestView(ContractModel):
     claimed_at: datetime | None = None
     assignment_version: int | None = None
     employee: RequestEmployeeView | None = None
+    source: RequestSource = "chat"
     can_claim: bool = False
     can_answer: bool = False
     can_release: bool = False
@@ -233,3 +239,16 @@ class RepresentativeAnsweredEvent(ContractModel):
     alternative_id: UUID | None = None
     request_version: int = Field(ge=0)
     case_version_after: int = Field(ge=0)
+
+
+class MyRequestView(ContractModel):
+    """One of the signed-in employee's own representative requests, with its answer."""
+
+    request_id: UUID
+    status: RequestStatus
+    field_code: RepresentativeFieldCode
+    question_text: QuestionText
+    source: RequestSource = "chat"
+    created_at: datetime
+    updated_at: datetime | None = None
+    answer: AnswerView | None = None

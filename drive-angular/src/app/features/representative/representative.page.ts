@@ -80,6 +80,10 @@ export class RepresentativePage implements OnInit, OnDestroy {
     return HANDLING[this.handling(request)];
   }
 
+  sourceLabel(request: RepresentativeRequestView): string {
+    return request.source === 'form' ? '📝 טופס' : "💬 צ'אט";
+  }
+
   handler(request: RepresentativeRequestView): string {
     if (this.handling(request) === 'assigned_to_me') return 'אני';
     return request.handlerDisplayName ?? '—';

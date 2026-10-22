@@ -200,6 +200,16 @@ class SqlRepresentativeRequestRepository:
         rows = await self._session.execute(statement.order_by(REQUESTS.c.created_at, REQUESTS.c.id))
         return tuple(_request(r) for r in rows)
 
+    async def list_for_creator(self, created_by: UUID) -> tuple[RepresentativeRequest, ...]:
+        statement = (
+            select(REQUESTS)
+            .where(REQUESTS.c.created_by == created_by)
+            .order_by(REQUESTS.c.created_at.desc(), REQUESTS.c.id.desc())
+            .limit(100)
+        )
+        rows = await self._session.execute(statement)
+        return tuple(_request(r) for r in rows)
+
     async def update(self, request: RepresentativeRequest) -> RepresentativeRequest:
         statement = (
             update(REQUESTS)

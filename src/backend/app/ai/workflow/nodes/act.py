@@ -841,7 +841,14 @@ async def handle_answer(state: ConversationState, runtime: Runtime[TurnRuntime])
         return {}
     task = state.get("pending_tasks", {}).get(request_id)
     if task is None:
-        return {}
+        # Not asked through the chat (e.g. the stand-alone request form): a general question's
+        # answer is still relayed here, since this conversation is bound to the request's case.
+        task = PendingTask(fieldCode=GENERAL_FIELD, optionKey=None, includeCurrent=False, kind="regular")
+        lookup = await rt.tools.get_representative_request(
+            RepresentativeRequestLookup(request_id=UUID(request_id))
+        )
+        if lookup.data is None or lookup.data.field_code.value != GENERAL_FIELD:
+            return {}
     updates: dict[str, Any] = {}
     try:
         updates = await _handle_answer(state, rt, request_id, task)
