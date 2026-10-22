@@ -42,7 +42,6 @@ export class SiteHeaderComponent {
     {path: '/history', label: 'ההשוואות שלי'},
   ];
   private readonly representativeLinks: NavLink[] = [
-    {path: '/how-it-works', label: 'איך זה עובד'},
     {path: '/representative', label: 'מרכז הפניות'},
   ];
   protected readonly links = computed(() => {
