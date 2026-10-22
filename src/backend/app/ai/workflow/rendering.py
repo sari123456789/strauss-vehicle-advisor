@@ -58,3 +58,47 @@ def render_grounded(text: str, values: dict[str, str]) -> str | None:
         return None
     rendered = _PLACEHOLDER.sub(lambda match: values[match.group(1)], text).strip()
     return rendered or None
+
+
+# --- Voice: the model rewrites a turn's template replies ---------------------------------------
+
+_NUMBER = re.compile(r"(?<![A-Za-z\-])[+\-−]?\d[\d,]*(?:\.\d+)?(?:\s?(?:₪|%))?")
+_NAME_WITH_DIGITS = re.compile(r"[A-Za-z][A-Za-z\-]*\d[A-Za-z0-9\-]*")
+"""Car names such as "MG4" or "CAR-06": kept as written, never turned into placeholders."""
+
+
+def to_draft(text: str) -> tuple[str, dict[str, str], set[str]]:
+    """A template reply with every number replaced by a placeholder ({{num:n1}}, ...).
+
+    Returns (draft, values, required): amounts in shekels are required in the rewrite, other
+    numbers (years, model names such as "ATTO 3") may be kept or dropped by the model."""
+    values: dict[str, str] = {}
+    required: set[str] = set()
+
+    def swap(match: re.Match[str]) -> str:
+        name = f"num:n{len(values) + 1}"
+        values[name] = match.group(0)
+        if "₪" in match.group(0):
+            required.add(name)
+        return "{{" + name + "}}"
+
+    return _NUMBER.sub(swap, text), values, required
+
+
+def render_voiced(
+    text: str, values: dict[str, str], required: set[str], draft: str
+) -> str | None:
+    """The rewritten reply with real values, or None when it is not safe: an unknown
+    placeholder, an invented digit, or a required amount left out. Digits are allowed only
+    inside car names that the draft itself contains (e.g. "MG4")."""
+    names = _PLACEHOLDER.findall(text)
+    if not required <= set(names) or any(name not in values for name in names):
+        return None
+    allowed = set(_NAME_WITH_DIGITS.findall(_PLACEHOLDER.sub(" ", draft)))
+    outside = _PLACEHOLDER.sub(" ", text)
+    if any(n not in allowed for n in _NAME_WITH_DIGITS.findall(outside)):
+        return None
+    rest = _NAME_WITH_DIGITS.sub(" ", outside)
+    if _DIGIT.search(rest) or "{{" in rest or "}}" in rest:
+        return None
+    return _PLACEHOLDER.sub(lambda match: values[match.group(1)], text).strip() or None

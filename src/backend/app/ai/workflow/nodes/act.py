@@ -523,6 +523,10 @@ async def compute(
     alternative (agent spec §2.5 and §6).
     """
     labels = _labels(state, rt)
+    # Product decision (2026-10-22): the chat's purpose is the monthly DIFFERENCE from today, so
+    # every calculation includes the current arrangement and nothing is shown until the baseline
+    # is ready (no net-only results). This narrows agent spec §2.5/§6.
+    include_current = True
     # Readiness uses the same fact basis as the comparison it prepares (E2: `kind`).
     readiness_env = await rt.tools.check_calculation_readiness(
         ReadinessRequest(
@@ -579,7 +583,7 @@ async def compute(
         )
         updates["salary_confirmation_asked"] = True
         return None
-    if not readiness.ready_scenario_ids:
+    if not readiness.ready_scenario_ids or readiness.baseline_ready is not True:
         if missing:
             await _ask_missing(state, rt, missing, updates)
         elif to_confirm:

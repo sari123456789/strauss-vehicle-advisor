@@ -6,7 +6,7 @@ the list actually displayed to the employee.
 """
 
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -99,6 +99,11 @@ class TurnInterpretation(_Strict):
     confirmed_fields: list[FactField] = Field(default_factory=list, max_length=16)
     """Saved facts the employee explicitly says are still correct. Code confirms only facts
     the advisor asked about; an empty list with `confirm_facts` means all of them."""
+
+
+class VoicedReplies(_Strict):
+    texts: list[Annotated[str, Field(max_length=2000)]] = Field(max_length=12)
+    """One rewritten Hebrew text per draft, in the same order; numbers only as {{placeholders}}."""
 
 
 class ComposedText(_Strict):

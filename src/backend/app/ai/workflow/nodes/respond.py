@@ -5,15 +5,18 @@ only through placeholders; if its text is not grounded, or the model is unavaila
 explanation is simply omitted (or replaced by a fixed fallback for general questions).
 """
 
+import logging
+import re
 from typing import Any
 
 from langgraph.runtime import Runtime
 
 from app.ai.application.ports.llm import LlmMessage, LlmTask, LlmTaskKind
 from app.ai.application.ports.response_staging import StagedMessage
-from app.ai.workflow.models import ComposedText
-from app.ai.workflow.prompts import COMPOSE_SYSTEM, GENERAL_SYSTEM, as_data
-from app.ai.workflow.rendering import render_grounded
+from app.ai.workflow import messages_he as he
+from app.ai.workflow.models import ComposedText, VoicedReplies
+from app.ai.workflow.prompts import COMPOSE_SYSTEM, GENERAL_SYSTEM, VOICE_SYSTEM, as_data
+from app.ai.workflow.rendering import render_grounded, render_voiced, to_draft
 from app.ai.workflow.state import (
     MAX_PROCESSED_INPUTS,
     ConversationState,
@@ -29,11 +32,86 @@ def _readable(text: str) -> bool:
     return all(not ch.isalpha() or "\u0590" <= ch <= "\u05ff" or ch.isascii() for ch in text)
 
 
+logger = logging.getLogger(__name__)
+
+_RECENT_FOR_VOICE = 6
+_DIGITS_IN_RECENT = re.compile(r"\d")
+
+
 async def compose(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
     rt = runtime.context
     request = rt.compose
-    if request is None:
+    if request is not None and request.kind == "general":
+        # A general question: the model writes the answer itself (unchanged behaviour).
+        await _compose_general(rt, request)
         return {}
+    if rt.compose_with_llm and rt.replies and await _voice(state, rt, request):
+        return {}
+    if request is not None:
+        await _compose_general(rt, request)  # the voice was unavailable: old explanation path
+    return {}
+
+
+async def _voice(state: ConversationState, rt: TurnRuntime, request: Any) -> bool:
+    """Rewrite this turn's template replies in the advisor's tone, in one model call.
+
+    The code decided what to say and every number; the model only words it. A reply whose
+    rewrite is not safe (invented digit, missing amount, unknown placeholder) keeps its template.
+    Returns False when the model was not used at all, so the caller can fall back."""
+    drafts = [to_draft(reply.text) for reply in rt.replies]
+    turn = state.get("turn") or {}
+    recent = [
+        {
+            "role": "assistant" if m.get("role") == "assistant" else "employee",
+            "text": _DIGITS_IN_RECENT.sub("#", m.get("text", ""))[:400],
+        }
+        for m in (turn.get("recentMessages") or [])[-_RECENT_FOR_VOICE:]
+    ]
+    data: dict[str, Any] = {
+        "employee_message": str(turn.get("text") or ""),
+        "RECENT": recent,
+        "drafts": [draft for draft, _values, _required in drafts],
+    }
+    if request is not None and request.kind == "comparison":
+        data["may_add_one_short_reason"] = (
+            "After a result you may add one short sentence on what mainly drives the difference "
+            "(the car's value of use raises the tax; the monthly participation compared with "
+            "today), inside the result's text, never as a separate text."
+        )
+    result = await rt.call_llm(
+        LlmTask(
+            kind=LlmTaskKind.COMPOSE,
+            system_instruction=VOICE_SYSTEM,
+            messages=(LlmMessage("user", as_data(data)),),
+            output_type=VoicedReplies,
+            max_output_tokens=1500,
+        )
+    )
+    if not result.ok or result.value is None or len(result.value.texts) != len(rt.replies):
+        logger.info(
+            "voice unavailable outcome=%s texts=%s replies=%d",
+            result.outcome.value,
+            None if result.value is None else len(result.value.texts),
+            len(rt.replies),
+        )
+        return False
+    kept: list[str] = []
+    for reply, (draft, values, required), text in zip(
+        rt.replies, drafts, result.value.texts, strict=True
+    ):
+        voiced = render_voiced(text, values, required, draft) if _readable(text) else None
+        if voiced and "תלוש" in reply.text and "תלוש" not in voiced:
+            # The estimate disclaimer is a requirement, not a style choice: keep it.
+            voiced = f"{voiced}\n{he.SHORT_DISCLAIMER}"
+        if voiced:
+            reply.text = voiced
+        else:
+            kept.append(reply.kind)
+    logger.info("voice applied=%d kept=%s", len(rt.replies) - len(kept), kept)
+    return True
+
+
+async def _compose_general(rt: TurnRuntime, request: Any) -> None:
     text: str | None = None
     if rt.compose_with_llm:
         data: dict[str, Any]
@@ -58,7 +136,6 @@ async def compose(state: ConversationState, runtime: Runtime[TurnRuntime]) -> di
         rt.reply(text, "explanation")
     elif request.fallback is not None:
         rt.reply(request.fallback, "info")
-    return {}
 
 
 async def finalize(state: ConversationState, runtime: Runtime[TurnRuntime]) -> dict[str, Any]:
