@@ -26,9 +26,10 @@ ask_representative (only when THIS message asks to contact or ask the transporta
 representative; put the detail they should provide in unknown_fields when it is named),
 general_question (concept questions such as credit points or how net pay is calculated in
 general, questions about the advisor or why it answered or showed something - e.g. "why did you
-show me options if we did not calculate?" is general_question, not explain_result - and asking
-which car to choose once STATE.displayedOptions is not empty),
+show me options if we did not calculate?" is general_question, not explain_result),
 smalltalk, unclear.
+Which car is best, most worth it, cheapest or leaves the most net ("איזה רכב הכי שווה לי",
+"מה הכי משתלם") is compare_to_current with all_options=true (or the named cars as option_refs).
 Classify by EMPLOYEE_MESSAGE. Earlier messages only help resolve references such as "the second
 one"; a new topic replaces the previous one, and a question about cars is never ask_representative
 just because the previous message was about the representative.

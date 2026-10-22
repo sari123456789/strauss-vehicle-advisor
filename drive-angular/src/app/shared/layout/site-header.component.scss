@@ -2,7 +2,7 @@
 
 // Inline navigation needs more room than the shared lg breakpoint once the logo sits beside DRIVE:
 // narrower widths left the nav too close to the brand. Below this width the menu button is used.
-$nav-inline: 1200px;
+$nav-inline: 1400px;
 
 :host {
   display: block;
@@ -308,6 +308,12 @@ $nav-inline: 1200px;
     justify-content: flex-start;
     gap: 34px;
     padding-inline-start: calc(var(--gutter-inline-start) + 150px);
+    // Reserve the left side for the sign-out button and the DRIVE logo (+ tagline when shown).
+    padding-inline-end: calc(var(--gutter-inline-end) + 470px);
+  }
+
+  :host .site-nav__link {
+    white-space: nowrap;
   }
 
   :host .site-nav__link {
@@ -322,8 +328,21 @@ $nav-inline: 1200px;
 }
 
 // Narrow desktops: drop the tagline so the nav and the DRIVE logo never overlap.
-@media (min-width: 1024px) and (max-width: 1499.98px) {
+@media (min-width: 1024px) and (max-width: 1799.98px) {
   :host .brand__tag {
     display: none;
+  }
+}
+
+@media (min-width: 1800px) {
+  :host .site-nav {
+    padding-inline-end: calc(var(--gutter-inline-end) + 760px);
+  }
+}
+
+// Below the inline-nav width the menu button sits beside sign-out: move the DRIVE logo past both.
+@media (min-width: 1024px) and (max-width: 1399.98px) {
+  :host .brand__text {
+    left: calc(var(--gutter-inline-end) + 300px);
   }
 }

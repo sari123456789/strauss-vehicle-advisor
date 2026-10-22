@@ -10,6 +10,7 @@ from app.ai.workflow.extraction import Clarification, ClarificationCode
 from app.contracts.catalogue import EligibilityStatus, OptionItem
 from app.contracts.common import ErrorCode, FieldPath, IssueCode, Propulsion
 from app.contracts.comparisons import ComparisonResult, MoneyAmount, ScenarioStatus
+from app.contracts.representatives import AnswerView
 
 FIELD_LABELS: dict[str, str] = {
     FieldPath.BASE_GROSS: "שכר הבסיס החודשי ברוטו",
@@ -169,20 +170,34 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
             "אם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
         )
     # The vehicles themselves are shown in the chat's side panel, not listed in the message.
-    count = "רכב אחד" if len(eligible) == 1 else f"{len(eligible)} רכבים"
-    lines = [f"מצאתי {count} שמגיעים לך — אפשר לראות אותם בכפתור למטה."]
+    if len(eligible) == 1:
+        lines = ["יש רכב אחד שמתאים לך 🚗 שמתי אותו בכפתור למטה, אפשר להציץ."]
+    else:
+        lines = [
+            f"איזה כיף, יש לך {len(eligible)} רכבים לבחור מהם 🚗 "
+            "שמתי את כולם בכפתור למטה, אפשר להציץ בנחת."
+        ]
     if not scope_complete or unchecked:
-        lines.append("שימו לב: חלק מהמסלולים עוד לא נבדקו, כי חסר לי מידע עליהם.")
-    lines.append("על איזה מהם לחשב את הנטו? אפשר לבחור אחד, כמה, או את כולם.")
+        lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
+    lines.append('רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
     return "\n".join(lines)
 
 
 _STATUS_TEXT = {
     ScenarioStatus.INELIGIBLE: "לא זמין לפי קבוצת הזכאות או הכללים",
     ScenarioStatus.NEEDS_INFORMATION: "חסר עוד מידע כדי לחשב",
-    ScenarioStatus.UNSUPPORTED: "לא נתמך בחישוב ההדגמה",
+    ScenarioStatus.UNSUPPORTED: "עוד לא נתמך בחישוב",
     ScenarioStatus.FAILED: "החישוב לא הושלם",
 }
+
+
+def _delta_phrase(delta: MoneyAmount) -> str:
+    value = int(delta.display)
+    if value > 0:
+        return f"יישארו לך {shekels(delta)} יותר"
+    if value < 0:
+        return f"יישארו לך {shekels(delta)[1:]} פחות"
+    return "אין שינוי"
 
 
 def comparison_text(
@@ -191,32 +206,43 @@ def comparison_text(
     """Amounts from the Business result only. The full disclaimer is shown once per
     conversation; later results repeat a short reminder."""
     lines = []
-    if result.current is not None and result.current.net is not None:
-        lines.append(f"היום הנטו המשוער שלך הוא בערך {shekels(result.current.net)} בחודש.")
-    elif result.current is not None:
-        lines.append("את הנטו של היום לא הצלחתי לחשב, אז אין כאן השוואה למצב הנוכחי.")
+    if result.current is not None and result.current.net is None:
+        lines.append("את המצב של היום לא הצלחתי לחשב, אז אין כאן עדיין הפרש.")
     calculated = [
         s
         for s in result.alternatives
         if s.status is ScenarioStatus.CALCULATED and s.net is not None
     ]
-    single = len(result.alternatives) == 1 and len(calculated) == 1
-    for scenario in result.alternatives:
-        label = labels.get(scenario.option_key, scenario.option_key)
-        if scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
-            delta = (
-                f" ({shekels(scenario.delta, signed=True)} לעומת היום)"
-                if scenario.delta is not None
-                else ""
-            )
-            if single:
-                lines.append(
-                    f"עם {label} הנטו המשוער שלך יוצא בערך {shekels(scenario.net)} בחודש{delta}."
-                )
+    with_delta = [s for s in calculated if s.delta is not None]
+    # The point of the advisor is the monthly difference from today, so it leads every line;
+    # the net itself is only secondary context.
+    if len(result.alternatives) == 1 and len(with_delta) == 1:
+        s = with_delta[0]
+        lines.append(
+            f"עם {labels.get(s.option_key, s.option_key)}: {_delta_phrase(s.delta)} בחודש לעומת היום "
+            f"(נטו משוער {shekels(s.net)})."
+        )
+    else:
+        if with_delta:
+            lines.append("ההפרש בנטו החודשי שלך לעומת היום:")
+        ordered = sorted(
+            result.alternatives,
+            key=lambda s: -int(s.delta.display) if s.delta is not None else 10**9,
+        )
+        for scenario in ordered:
+            label = labels.get(scenario.option_key, scenario.option_key)
+            if scenario.status is ScenarioStatus.CALCULATED and scenario.delta is not None:
+                lines.append(f"• {label}: {shekels(scenario.delta, signed=True)} בחודש")
+            elif scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
+                lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}")
             else:
-                lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}{delta}")
-        else:
-            lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
+                lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
+        if len(with_delta) > 1:
+            best = max(with_delta, key=lambda s: int(s.delta.display))
+            lines.append(
+                f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
+                f"{_delta_phrase(best.delta)} בחודש לעומת היום."
+            )
     if result.kind.value == "hypothetical":
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
@@ -235,8 +261,48 @@ def representative_created_text(label: str) -> str:
     return f"שלחתי לנציג התחבורה שאלה לגבי {label}. אפשר להמשיך כרגיל, ואעדכן כאן כשתגיע תשובה."
 
 
-def representative_answer_text(label: str) -> str:
-    return f"הגיעה תשובה מנציג התחבורה לגבי {label} 🎉"
+def representative_answer_text(
+    label: str,
+    field_code: str | None = None,
+    answer: AnswerView | None = None,
+    *,
+    recalculated: bool = False,
+) -> str:
+    """The representative's answer in plain words: what was answered, from when, and whether
+    it counts for this calculation month. The value is the representative's, never computed."""
+    lines = [f"הגיעה תשובה מנציג התחבורה לגבי {label} 🎉"]
+    value = answer.value if answer is not None else None
+    if value:
+        if field_code == "alternative.participation":
+            amount = f"{int(float(value)):,} ₪" if value.replace(".", "", 1).isdigit() else value
+            lines.append(f"דמי ההשתתפות החודשיים הם {amount}.")
+        elif field_code == "employee.entitlementGroup":
+            lines.append(f"קבוצת הזכאות שלך היא {value}.")
+        elif field_code == "currentArrangement.propulsion":
+            try:
+                lines.append(f"סוג ההנעה של הרכב שלך: {PROPULSION_LABELS[Propulsion(value)]}.")
+            except ValueError:
+                lines.append(f"סוג ההנעה של הרכב שלך: {value}.")
+        elif field_code == "currentArrangement.vehicle":
+            lines.append("הנציג השלים את פרטי הרכב הנוכחי שלך.")
+        else:
+            lines.append(f"התשובה: {value}.")
+    if answer is not None and (answer.effective_from or answer.effective_to):
+        start = answer.effective_from.strftime("%d.%m.%Y") if answer.effective_from else None
+        end = answer.effective_to.strftime("%d.%m.%Y") if answer.effective_to else None
+        if start and end:
+            lines.append(f"זה בתוקף מ-{start} עד {end}.")
+        elif start:
+            lines.append(f"זה בתוקף החל מ-{start}.")
+        else:
+            lines.append(f"זה בתוקף עד {end}.")
+    if answer is not None and answer.application is not None and answer.application.value == "not_applicable":
+        lines.append("שימו לב: התשובה לא חלה על חודש החישוב של השיחה הזו, אז החישוב לא משתנה.")
+    elif recalculated:
+        lines.append("עדכנתי את החישוב לפי התשובה 👇")
+    else:
+        lines.append("רוצה שנבדוק עכשיו כמה זה ישנה לך בנטו כל חודש? 😊")
+    return "\n".join(lines)
 
 
 def representative_undetermined_text(label: str) -> str:
@@ -267,12 +333,12 @@ def history_text(
     return f"{header}:\n{body}"
 
 
-NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. רוצה שנחשב נטו לרכב מסוים?"
+NO_RESULTS_YET = "עדיין לא ביצענו חישוב בשיחה הזו. רוצה שנבדוק כמה רכב מסוים ישנה לך בחודש?"
 NOTHING_TO_CONFIRM = "אין כרגע פרטים שמחכים לאישור. במה אפשר לעזור?"
 CANCELLED = "בסדר גמור, עצרתי. אפשר להתחיל משהו חדש מתי שרוצים."
 UNCLEAR = 'ייתכן שלא הבנתי נכון. אפשר לנסח אחרת? למשל: "אילו רכבים מתאימים לי?"'
 HELP = (
-    "היי! 👋 אני כאן כדי לעזור לבחור רכב חברה ולראות כמה יישאר לך נטו. "
+    "היי! 👋 אני כאן כדי לעזור לבחור רכב חברה ולראות כמה זה ישנה לך בנטו כל חודש לעומת היום. "
     "רוצה שנתחיל מהרכבים שמגיעים לך?"
 )
 GENERAL_FALLBACK = (
@@ -283,7 +349,7 @@ ASK_WHICH_VEHICLE = "לאיזה רכב התכוונת? אפשר לכתוב את 
 BUDGET_EXCEEDED = "זה קצת הרבה בבת אחת 🙂 אפשר לפצל לשאלות קטנות יותר?"
 LLM_RATE_LIMITED = "יש עכשיו עומס קטן. אפשר לנסות שוב בעוד רגע?"
 LLM_QUOTA_EXHAUSTED = (
-    "העוזר החכם לא זמין כרגע. בינתיים אפשר להמשיך במסכי הקטלוג וההשוואות, או לחזור מאוחר יותר."
+    "אני לוקח הפסקה קטנה 🙂 בינתיים אפשר להציץ בקטלוג ובהשוואות, ונחזור לדבר עוד מעט."
 )
 LLM_UNAVAILABLE = "משהו השתבש אצלי בהבנת ההודעה. אפשר לנסות שוב?"
 SAME_AS_BEFORE_IGNORED = "התשובה הזו כבר טופלה."

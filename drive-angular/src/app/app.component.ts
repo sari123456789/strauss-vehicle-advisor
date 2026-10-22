@@ -1,14 +1,15 @@
-import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
-import {NavigationEnd, Router, RouterLink, RouterOutlet} from '@angular/router';
+import {NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet} from '@angular/router';
 import {SessionService} from './core/auth/session.service';
 import {filter, map} from 'rxjs';
 import {SiteFooterComponent} from './shared/layout/site-footer.component';
 import {SiteHeaderComponent} from './shared/layout/site-header.component';
+import {JourneyStepsComponent} from './shared/layout/journey-steps.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, SiteHeaderComponent, SiteFooterComponent],
+  imports: [RouterOutlet, RouterLink, JourneyStepsComponent, SiteHeaderComponent, SiteFooterComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +25,34 @@ export class AppComponent {
     {initialValue: ''},
   );
   protected readonly isHome = computed(() => this.url() === '/');
+  /** Navigation in progress (a guard may wait for the server); `slow` after a few seconds. */
+  protected readonly navigating = signal(false);
+  protected readonly slow = signal(false);
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart) {
+        this.navigating.set(true);
+        this.slowTimer = setTimeout(() => this.slow.set(true), 2500);
+      } else if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
+        if (this.slowTimer) clearTimeout(this.slowTimer);
+        this.navigating.set(false);
+        this.slow.set(false);
+      }
+    });
+  }
+  /** Step of the employee journey shown under the header, or -1 off the journey pages. */
+  protected readonly step = computed(() => {
+    if (!this.session.isEmployee()) return -1;
+    const url = this.url();
+    if (url.startsWith('/advisor')) return 0;
+    if (url.startsWith('/catalog')) return 1;
+    if (url.startsWith('/comparison') || url.startsWith('/calculation')) return 2;
+    return -1;
+  });
+  /** The chat is a full workspace: no site footer under it. */
+  protected readonly isChat = computed(() => this.url().startsWith('/advisor'));
   /** "Back to the chat" button: for a signed-in employee on every page except the chat itself. */
   protected readonly showChatButton = computed(
     () => this.session.isEmployee() && !this.url().startsWith('/advisor') && !this.url().startsWith('/sign-in'),

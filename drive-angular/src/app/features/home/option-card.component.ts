@@ -26,7 +26,7 @@ export type OptionCardVariant = 'current' | 'electric' | 'waiver';
           <svg class="card__hint-arrow" viewBox="0 0 24 28" aria-hidden="true" focusable="false">
             <path d="M12 26V3M3 12l9-9 9 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span class="card__hint-label">השוואת נטו</span>
+          <span class="card__hint-label">ההפרש החודשי</span>
         </span>
       } @else {
         <svg class="card__chevron" viewBox="0 0 12 22" aria-hidden="true" focusable="false">

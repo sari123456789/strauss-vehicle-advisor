@@ -1,11 +1,13 @@
 import {Component, OnInit, computed, inject} from '@angular/core';
-import {RouterLink} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 import {ELIGIBILITY_REASON, FIELD_PATH, SCENARIO_STATUS, optionLabel} from '../../core/api/labels';
 import type {ScenarioResult} from '../../core/api/types';
 import {MoneyPipe} from '../../shared/format/money.pipe';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {PageHeadingComponent} from '../../shared/ui/page-heading.component';
 import {CatalogStore} from '../catalog/state/catalog.store';
+import {ProfileStore} from '../profile/state/profile.store';
+import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 import {ComparisonsStore} from './state/comparisons.store';
 
 /**
@@ -20,16 +22,45 @@ export class ComparisonPage implements OnInit {
   readonly statuses = SCENARIO_STATUS;
   readonly reasons = ELIGIBILITY_REASON;
   readonly fieldPath = FIELD_PATH;
-  readonly result = this.store.result;
+  private readonly router = inject(Router);
+  private readonly profile = inject(ProfileStore);
+  /** Photo of the employee's current car, when it is a catalogue vehicle. */
+  readonly currentImage = computed(() =>
+    vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
+  );
+  /** Shown only with the current state calculated: the page is about the difference from today. */
+  readonly result = computed(() => {
+    const r = this.store.result();
+    return r?.current?.net ? r : null;
+  });
   readonly labels = computed(() => new Map(this.catalog.options().map(o => [o.optionKey, optionLabel(o)])));
 
   async ngOnInit(): Promise<void> {
     if (!this.catalog.options().length) await this.catalog.load();
+    if (!this.profile.profile()) void this.profile.load();
     await this.run();
   }
 
-  run(): Promise<void> {
-    return this.store.compare(this.catalog.selected());
+  async run(): Promise<void> {
+    await this.store.compare(this.catalog.selected());
+    const r = this.store.result();
+    // Without the current state there is no difference to show: confirm the details in the chat first.
+    if (r && !r.current?.net) {
+      this.store.needsCurrent.set(true);
+      await this.router.navigate(['/advisor']);
+    }
+  }
+
+  deltaWords(display: string): string {
+    const value = Number(display);
+    if (value > 0) return 'יישאר לך יותר בכל חודש';
+    if (value < 0) return 'יישאר לך פחות בכל חודש';
+    return 'בלי שינוי בנטו';
+  }
+
+  imageOf(alternative: ScenarioResult): string | null {
+    const option = this.catalog.options().find(o => o.optionKey === alternative.optionKey);
+    return vehicleImageUrl(option?.catalogueId);
   }
 
   label(alternative: ScenarioResult): string {
