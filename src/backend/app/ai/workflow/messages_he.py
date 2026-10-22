@@ -333,6 +333,14 @@ def representative_undetermined_text(label: str) -> str:
     )
 
 
+def not_saved_text(fields: list[str]) -> str:
+    """Safety net: a value given inside a conditional sentence was calculated, not saved."""
+    return (
+        f"לא עדכנתי את {labels_text(fields)} בפרטים השמורים שלך. "
+        "אם צריך לעדכן, אפשר פשוט לכתוב לי."
+    )
+
+
 def updated_text(fields: list[str], *, hypothetical: bool, stale_runs: bool) -> str:
     labels = ", ".join(field_label(f) for f in fields)
     if hypothetical:

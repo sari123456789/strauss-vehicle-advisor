@@ -45,6 +45,9 @@ class ExtractionOutcome:
     """Current-car descriptions that need `resolve_vehicle` before they can be written."""
     occupation_queries: dict[FactMode, str] = field(default_factory=dict)
     """Occupation descriptions that need `resolve_occupation` before they can be written."""
+    not_saved: list[str] = field(default_factory=list)
+    """Fields the model marked as actual inside a conditional sentence ("ואם השכר שלי השתנה ל-…?").
+    They are calculated case-locally and never written to the shared profile (safety net)."""
 
 
 MONEY_FIELDS = frozenset(
@@ -69,6 +72,35 @@ _THOUSAND = re.compile(r"^(\d+(?:\.\d+)?)\s*(אלף|k)$", re.IGNORECASE)
 _PLAIN_NUMBER = re.compile(r"^\d+(?:\.\d+)?$")
 _CATALOGUE_ID = re.compile(r"^[A-Z]{2,5}-\d{2,4}$")
 _GROUP_LETTERS = {group.value: group for group in EntitlementGroup}
+_SALARY_FACTS = frozenset(
+    {
+        FactField.BASE_GROSS,
+        FactField.COMMISSIONS_GROSS,
+        FactField.BONUS_GROSS,
+        FactField.PENSION_EMPLOYEE_RATE,
+        FactField.STUDY_FUND_EMPLOYEE_RATE,
+        FactField.CREDIT_POINTS,
+    }
+)
+"""Salary facts the conditional safety net guards. Other facts are left to the model: the
+current car in "אם אחליף מהקורולה ל-ATTO 3" is a real fact inside a conditional sentence."""
+_CONDITIONAL_WORDS = frozenset({"אם", "ואם", "שאם", "נניח", "ונניח", "נגיד", "ונגיד"})
+_CONDITIONAL_PREFIXES = ("בהנחה", "ובהנחה", "במקרה", "ובמקרה", "במידה", "ובמידה")
+_SENTENCE_END = re.compile(r"[.!?\n]")
+_WORD_EDGES = ",;:\"'()־-"
+
+
+def _in_condition(message: str, quote: str) -> bool:
+    """True when the sentence leading up to the quoted fact is conditional ("ואם השכר שלי השתנה
+    ל-20000?"). Only the sentence up to the quote counts, so "השכר שלי עלה ל-20000, אם זה משנה"
+    or a later "אם אקח ATTO 3…" is not conditional. Without the quote, the whole message counts."""
+    if not message:
+        return False
+    position = message.find(quote) if quote else -1
+    head = message if position < 0 else message[: position + len(quote)]
+    sentence = _SENTENCE_END.split(head)[-1] if position >= 0 else message
+    words = [word.strip(_WORD_EDGES) for word in sentence.split()]
+    return any(w in _CONDITIONAL_WORDS or w.startswith(_CONDITIONAL_PREFIXES) for w in words)
 
 
 def _clean_number(raw: str) -> str:
@@ -156,11 +188,22 @@ def _clarify_value(fact: ProposedFact, path: FieldPath, raw: str) -> Clarificati
     return None
 
 
-def normalize_facts(facts: list[ProposedFact]) -> ExtractionOutcome:
+def normalize_facts(facts: list[ProposedFact], message: str = "") -> ExtractionOutcome:
+    """`message` is the employee's text: an "actual" fact inside a conditional sentence is
+    never written to the shared profile; it is calculated case-locally and reported as not
+    saved (a safety net for a model misclassification)."""
     outcome = ExtractionOutcome()
     staged: dict[tuple[FactMode, FieldPath], SetChange] = {}
     conflicted: set[tuple[FactMode, FieldPath]] = set()
-    for fact in facts:
+    for proposed in facts:
+        fact = proposed
+        if (
+            proposed.mode is FactMode.ACTUAL
+            and proposed.field in _SALARY_FACTS
+            and _in_condition(message, proposed.quote)
+        ):
+            fact = proposed.model_copy(update={"mode": FactMode.HYPOTHETICAL})
+            outcome.not_saved.append(proposed.field.value)
         if fact.field is FactField.SALARY_UNSPECIFIED:
             code = (
                 ClarificationCode.NET_NOT_GROSS
