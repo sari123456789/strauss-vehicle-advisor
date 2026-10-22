@@ -469,3 +469,15 @@ blockquote {
   color: #666;
   font-size: 13px;
 }
+
+// Desktop: the detail panel stays in view and scrolls on its own, so a long request
+// never stretches the page.
+@media (min-width: 1100.02px) {
+  .rep__detail {
+    position: sticky;
+    inset-block-start: 16px;
+    max-block-size: calc(100vh - 120px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
