@@ -47,6 +47,62 @@
       "title": "RepresentativeFieldCode",
       "type": "string"
     },
+    "RequestEmployeeView": {
+      "additionalProperties": false,
+      "description": "Who the request is about, for the handling representative (decision 23). Never salary,\npayroll or other profile values.",
+      "properties": {
+        "currentVehicle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currentvehicle"
+        },
+        "displayName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Displayname"
+        },
+        "employeeCode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Employeecode"
+        },
+        "occupation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Occupation"
+        }
+      },
+      "title": "RequestEmployeeView",
+      "type": "object"
+    },
     "RequestStatus": {
       "enum": [
         "open",
@@ -149,6 +205,17 @@
       "format": "date-time",
       "title": "Createdat",
       "type": "string"
+    },
+    "employee": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RequestEmployeeView"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "entitlementGroup": {
       "anyOf": [

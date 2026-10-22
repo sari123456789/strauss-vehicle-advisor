@@ -4329,6 +4329,16 @@
             "title": "Createdat",
             "type": "string"
           },
+          "employee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestEmployeeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "entitlementGroup": {
             "anyOf": [
               {
@@ -4463,6 +4473,58 @@
           "cancelled"
         ],
         "title": "RepresentativeSummary",
+        "type": "object"
+      },
+      "RequestEmployeeView": {
+        "additionalProperties": false,
+        "description": "Who the request is about, for the handling representative (decision 23). Never salary,\npayroll or other profile values.",
+        "properties": {
+          "currentVehicle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentvehicle"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "employeeCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employeecode"
+          },
+          "occupation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation"
+          }
+        },
+        "title": "RequestEmployeeView",
         "type": "object"
       },
       "RequestStatus": {
