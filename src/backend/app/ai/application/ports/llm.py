@@ -29,6 +29,9 @@ class LlmTaskKind(StrEnum):
 class LlmMessage:
     role: Literal["user", "assistant"]
     text: str
+    attachment: bytes | None = None
+    """Optional document sent with the text (e.g. a scanned payslip PDF); in memory only."""
+    attachment_mime_type: str | None = None
 
 
 @dataclass(frozen=True)

@@ -27,7 +27,11 @@ from app.ai.application.errors import ConversationError
 from app.ai.application.payslip.candidates import build_candidates
 from app.ai.application.payslip.drafting import build_fields, contract_value
 from app.ai.application.payslip.errors import PayslipError, PayslipErrorCode
-from app.ai.application.payslip.extraction import PayslipInterpretation, interpretation_task
+from app.ai.application.payslip.extraction import (
+    PayslipInterpretation,
+    interpretation_task,
+    transcription_task,
+)
 from app.ai.application.payslip.models import (
     APPROVABLE,
     PAYSLIP_FIELDS,
@@ -122,9 +126,26 @@ class PayslipImportService:
             raise PayslipError(PayslipErrorCode.EMPTY_FILE)
         if len(data) > self.config.max_bytes:
             raise PayslipError(PayslipErrorCode.FILE_TOO_LARGE)
-        document = await self._read(data)
+        scanned = False
+        try:
+            document = await self._read(data)
+        except PayslipError as error:
+            if error.code is not PayslipErrorCode.SCANNED_UNSUPPORTED:
+                raise
+            document = await self._transcribe(data)  # raises the same error when it cannot
+            scanned = True
         candidates = build_candidates(document)
         interpretation, issues = await self._interpret(candidates)
+        fields = build_fields(candidates, interpretation)
+        if scanned:
+            # Values read from an image are never final: the employee checks each one.
+            fields = tuple(
+                replace(f, status=FieldStatus.NEEDS_REVIEW)
+                if f.status is FieldStatus.EXTRACTED
+                else f
+                for f in fields
+            )
+            issues = (*issues, DocumentIssue.SCANNED_TRANSCRIBED)
         now = self._clock.now()
         draft = PayslipDraft(
             draft_id=uuid4(),
@@ -138,7 +159,7 @@ class PayslipImportService:
             if interpretation is not None
             else ExtractionMode.RULES_ONLY,
             page_count=document.page_count,
-            fields=build_fields(candidates, interpretation),
+            fields=fields,
             document_issues=issues,
         )
         await self._store.add(draft, now=now, config=self.config)
@@ -171,6 +192,22 @@ class PayslipImportService:
         except Exception as error:  # a parser bug must not leak details or crash the route
             logger.warning("payslip extraction failed type=%s", type(error).__name__)
             raise PayslipError(PayslipErrorCode.MALFORMED_PDF) from None
+
+    async def _transcribe(self, data: bytes) -> DocumentText:
+        """A scanned (image-only) payslip: the AI copies its printed lines, which then go
+        through the same label rules as a text PDF. Without the AI it stays unsupported."""
+        if self._llm is None or not self.config.external_llm_enabled:
+            raise PayslipError(PayslipErrorCode.SCANNED_UNSUPPORTED)
+        result = await self._llm.generate(transcription_task(data))
+        if not result.ok or result.value is None or not result.value.is_payslip:
+            outcome = result.outcome.value if not result.ok else "not_a_payslip"
+            logger.info("payslip transcription unavailable outcome=%s", outcome)
+            raise PayslipError(PayslipErrorCode.SCANNED_UNSUPPORTED)
+        lines = tuple(line.strip() for line in result.value.lines if line.strip())
+        if not lines:
+            raise PayslipError(PayslipErrorCode.SCANNED_UNSUPPORTED)
+        logger.info("payslip transcribed lines=%d bytes=%d", len(lines), len(data))
+        return DocumentText(pages=(lines,), byte_size=len(data))
 
     async def _interpret(
         self, candidates: Sequence[Candidate]

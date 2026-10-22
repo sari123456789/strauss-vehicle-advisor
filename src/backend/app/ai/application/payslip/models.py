@@ -152,6 +152,8 @@ class DocumentIssue(StrEnum):
     AI_UNAVAILABLE = "ai_unavailable"
     AI_DISABLED = "ai_disabled"
     NO_CANDIDATES = "no_candidates"
+    SCANNED_TRANSCRIBED = "scanned_transcribed"
+    """A scanned payslip read by the AI; every proposed value needs the employee's review."""
 
 
 @dataclass(frozen=True, slots=True)

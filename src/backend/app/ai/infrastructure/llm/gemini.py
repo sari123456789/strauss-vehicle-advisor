@@ -133,7 +133,17 @@ class GeminiProviderClient:
         contents = [
             types.Content(
                 role="model" if message.role == "assistant" else "user",
-                parts=[types.Part(text=message.text)],
+                parts=[types.Part(text=message.text)]
+                + (
+                    [
+                        types.Part.from_bytes(
+                            data=message.attachment,
+                            mime_type=message.attachment_mime_type or "application/pdf",
+                        )
+                    ]
+                    if message.attachment is not None
+                    else []
+                ),
             )
             for message in messages
         ]

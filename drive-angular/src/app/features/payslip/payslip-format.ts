@@ -44,6 +44,7 @@ export const ISSUE_LABELS: Partial<Record<string, string>> = {
 export const DOCUMENT_ISSUE_LABELS: Partial<Record<string, string>> = {
   suspicious_content: 'בקובץ נמצא טקסט חריג, ולכן כל הערכים מוצגים לבדיקתך.',
   no_candidates: 'לא נמצאו בתלוש נתוני שכר שאפשר לזהות.',
+  scanned_transcribed: 'התלוש סרוק, ולכן קראנו אותו מהתמונה. כדאי לבדוק כל ערך לפני האישור.',
 };
 
 /** Moves the decimal point of a non-negative decimal string, exactly (no floats). */
