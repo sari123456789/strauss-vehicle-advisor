@@ -53,12 +53,14 @@ export class ComparisonsStore {
   async loadHistory(): Promise<void> {
     await this.run(async () => {
       await this.conversations.loadConversations();
+      // In parallel; one unreadable case (e.g. removed) must not hide every other comparison.
+      const withCase = this.conversations.conversations().filter(c => c.caseId);
+      const results = await Promise.allSettled(withCase.map(c => this.api.caseContext(c.caseId!)));
       const rows: HistoryRow[] = [];
-      for (const conversation of this.conversations.conversations()) {
-        if (!conversation.caseId) continue;
-        const envelope = await this.api.caseContext(conversation.caseId);
-        for (const run of envelope.data?.recentRuns ?? []) rows.push({conversation, run});
-      }
+      results.forEach((result, index) => {
+        if (result.status !== 'fulfilled') return;
+        for (const run of result.value.data?.recentRuns ?? []) rows.push({conversation: withCase[index], run});
+      });
       rows.sort((a, b) => b.run.createdAt.localeCompare(a.run.createdAt));
       this.history.set(rows);
     });

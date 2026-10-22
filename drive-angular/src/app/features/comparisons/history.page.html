@@ -1,1 +1,39 @@
-<section class="container"><drive-heading title="הבחירות שבדקת, במקום אחד." subtitle="אפשר לחזור לכל שיחה ולכל חישוב ולהמשיך מאותה נקודה."/><a class="primary" routerLink="/catalog">+ השוואה חדשה</a>@if(store.loading()){<p class="muted" role="status">טוענים את ההיסטוריה…</p>}@if(store.error();as error){<div class="notice amber" role="alert"><span>{{error}}</span><button class="outline" type="button" (click)="store.loadHistory()">ניסיון נוסף</button></div>}<div class="table-wrap"><table><thead><tr><th>תאריך</th><th>סוג</th><th>סטטוס</th><th>פעולה</th></tr></thead><tbody>@for(row of store.history();track row.run.runId){<tr><td>{{date(row.run.createdAt)}}</td><td>{{row.run.kind==='hypothetical'?'תרחיש "מה אם"':'חישוב לפי הנתונים בפועל'}}</td><td><span [class.positive]="row.run.freshness==='current'" class="gold">{{row.run.freshness==='current'?'עדכני':'נתונים השתנו מאז'}}</span></td><td><a class="outline" routerLink="/calculation" [queryParams]="{case: row.conversation.caseId, run: row.run.runId}">פירוט ←</a> <a class="outline" [routerLink]="['/advisor', row.conversation.conversationId]">לשיחה ←</a></td></tr>}@empty{@if(!store.loading()){<tr><td colspan="4" class="empty">עוד אין חישובים שמורים. כל השוואה נשמרת אוטומטית.</td></tr>}}</tbody></table></div></section>
+<section class="history">
+  <header class="history__head">
+    <div>
+      <h1>ההשוואות שלי</h1>
+      <p>כל חישוב נשמר אוטומטית. אפשר לחזור לפירוט או להמשיך את השיחה.</p>
+    </div>
+    <a class="primary" routerLink="/catalog">+ השוואה חדשה</a>
+  </header>
+
+  @if (store.error(); as error) {
+    <div class="notice amber" role="alert"><span>{{ error }}</span><button class="outline" type="button" (click)="store.loadHistory()">ניסיון נוסף</button></div>
+  }
+  @if (store.loading() && !store.history().length) {<p class="muted" role="status">טוענים…</p>}
+
+  @for (group of groups(); track group.label) {
+    <h2>{{ group.label }}</h2>
+    <ul class="runs">
+      @for (row of group.rows; track row.run.runId) {
+        <li class="run">
+          <span class="run__time">{{ time(row.run.createdAt) }}</span>
+          <span class="run__kind">{{ row.run.kind === 'hypothetical' ? 'בדיקת "מה אם"' : 'השוואה לפי הנתונים שלי' }}</span>
+          <span class="chip" [class.chip--stale]="row.run.freshness !== 'current'">{{ row.run.freshness === 'current' ? 'עדכני' : 'הנתונים השתנו מאז' }}</span>
+          <span class="run__actions">
+            <a routerLink="/calculation" [queryParams]="{case: row.conversation.caseId, run: row.run.runId}">פירוט</a>
+            <a [routerLink]="['/advisor', row.conversation.conversationId]">לשיחה</a>
+          </span>
+        </li>
+      }
+    </ul>
+  } @empty {
+    @if (!store.loading()) {
+      <div class="empty">
+        <b>עוד אין השוואות שמורות</b>
+        <p>בחרו רכבים ובדקו כמה כל אחד ישנה לכם בחודש — ההשוואה תישמר כאן.</p>
+        <a class="primary" routerLink="/catalog">לבחירת רכבים ←</a>
+      </div>
+    }
+  }
+</section>
