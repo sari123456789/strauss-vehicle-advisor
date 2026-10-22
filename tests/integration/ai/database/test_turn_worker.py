@@ -147,7 +147,7 @@ async def test_a_queued_message_is_processed_and_published(
     assert _status(migrated_ai_db, sent.input_id) == (COMPLETED, 1, None)
     history = await runtime.conversations.history(actor, view.conversation_id)
     assert [m.role for m in history][:2] == ["user", "assistant"]
-    assert history[1].kind == "options" and "ATTO 3" in history[1].text
+    assert history[1].kind == "options" and "vehicle:CAR-10" in history[1].payload["optionKeys"]
     assert all(m.input_id == sent.input_id for m in history)
     assert await runtime.worker.run_once() is None  # nothing left
 

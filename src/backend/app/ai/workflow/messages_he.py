@@ -200,7 +200,10 @@ def options_text(items: list[OptionItem], *, scope_complete: bool, unchecked: li
         ]
     if not scope_complete or unchecked:
         lines.append("יש עוד כמה מסלולים שלא בדקתי, כי חסר לי עליהם קצת מידע.")
-    lines.append('רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊')
+    lines.append(
+        "רוצה שאבדוק כמה זה ישנה לך בנטו כל חודש לעומת היום? "
+        'אפשר לבחור רכב אחד, כמה, או פשוט לכתוב "כולם" 😊'
+    )
     return "\n".join(lines)
 
 
@@ -240,7 +243,8 @@ def comparison_text(
     if len(result.alternatives) == 1 and len(with_delta) == 1:
         s = with_delta[0]
         lines.append(
-            f"עם {labels.get(s.option_key, s.option_key)}: {_delta_phrase(s.delta)} בחודש לעומת היום "
+            f"עם {labels.get(s.option_key, s.option_key)}: "
+            f"{_delta_phrase(s.delta)} בחודש לעומת היום "
             f"(נטו משוער {shekels(s.net)})."
         )
     else:
@@ -317,7 +321,11 @@ def representative_answer_text(
             lines.append(f"זה בתוקף החל מ-{start}.")
         else:
             lines.append(f"זה בתוקף עד {end}.")
-    if answer is not None and answer.application is not None and answer.application.value == "not_applicable":
+    if (
+        answer is not None
+        and answer.application is not None
+        and answer.application.value == "not_applicable"
+    ):
         lines.append("שימו לב: התשובה לא חלה על חודש החישוב של השיחה הזו, אז החישוב לא משתנה.")
     elif recalculated:
         lines.append("עדכנתי את החישוב לפי התשובה 👇")
@@ -336,8 +344,7 @@ def representative_undetermined_text(label: str) -> str:
 def not_saved_text(fields: list[str]) -> str:
     """Safety net: a value given inside a conditional sentence was calculated, not saved."""
     return (
-        f"לא עדכנתי את {labels_text(fields)} בפרטים השמורים שלך. "
-        "אם צריך לעדכן, אפשר פשוט לכתוב לי."
+        f"לא עדכנתי את {labels_text(fields)} בפרטים השמורים שלך. אם צריך לעדכן, אפשר פשוט לכתוב לי."
     )
 
 
@@ -385,7 +392,7 @@ OFFER_DECLINED = "בסדר גמור, לא שלחתי. במה עוד אפשר ל�
 def offer_question_text(question: str) -> str:
     return (
         "על זה הכי טוב שיענה נציג התחבורה, כי זה תלוי בנהלים של החברה.\n"
-        f"לשלוח לו את השאלה: \"{question}\"?"
+        f'לשלוח לו את השאלה: "{question}"?'
     )
 
 

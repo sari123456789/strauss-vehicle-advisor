@@ -119,7 +119,9 @@ async def test_listing_vehicles_asks_no_salary_questions() -> None:
     llm.interpret(interpretation(Intent.LIST_OPTIONS))
     outcome = await say(runner, "איזה רכבים מתאימים לקבוצת הזכאות שלי?")
     assert port.tools() == ["get_conversation_context", "list_eligible_options"]
-    assert "ATTO 3" in text_of(outcome) and "MG4" in text_of(outcome)
+    # The names are on the cards behind the message's button, not in its text.
+    [options] = [m for m in outcome.messages if m.kind == "options"]
+    assert options.payload["optionKeys"] == ["vehicle:CAR-10", "vehicle:CAR-06"]
     assert "שכר" not in text_of(outcome)
     assert llm.calls(LlmTaskKind.COMPOSE) == []  # lists are rendered by templates
     state = await runner.conversation_state("thread-1")
@@ -170,7 +172,8 @@ async def test_net_calculation_amounts_come_from_the_tool_result() -> None:
     assert compare.include_current is True and compare.kind.value == "regular"
     assert compare.expected_case_version == 3 and compare.expected_profile_version == 5
     text = text_of(outcome)
-    assert "11,693 ₪" in text and "11,032 ₪" in text and "+661 ₪" in text
+    # The message names the car's net and the monthly difference (not today's net).
+    assert "11,693 ₪" in text and "+661 ₪" in text
     assert outcome.messages[-1].kind == "explanation"
     assert "לפי החישוב, +661 ₪ לעומת היום." in text
     assert outcome.llm_calls == 2
