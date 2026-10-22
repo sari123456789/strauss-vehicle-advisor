@@ -278,7 +278,10 @@ async def _explain_not_listed(
         if fields:
             rt.reply(he.ask_for_fields(fields[:2]), "question", fields=fields[:2])
         return
-    rt.reply(he.vehicle_not_eligible_text(labels), "info")
+    group = None
+    if rt.case is not None and rt.case.profile.entitlement_group.value is not None:
+        group = rt.case.profile.entitlement_group.value.value
+    rt.reply(he.vehicle_not_eligible_text(labels, group), "info")
 
 
 def _has_reason(issues: list[Issue], reason: str) -> bool:
@@ -379,6 +382,24 @@ def _saved_values(rt: TurnRuntime, fields: list[str]) -> dict[str, str]:
         if text:
             values[field] = text
     return values
+
+
+async def _catalogue_labels(rt: TurnRuntime) -> None:
+    """Catalogue names for this turn (e.g. "טויוטה יפן COROLLA CROSS" for CAR-09), once."""
+    if rt.case is None:
+        return
+    current = rt.case.profile.current_arrangement.vehicle.value
+    catalogue_id = getattr(current, "catalogue_id", None)
+    if not catalogue_id or f"vehicle:{catalogue_id}" in rt.labels:
+        return
+    listing = await rt.tools.list_eligible_options(
+        ListOptionsRequest(
+            categories=[OptionCategory.REGULAR, OptionCategory.FAMILY],
+            expected_case_version=rt.case_version,
+        )
+    )
+    for item in listing.data.items if listing.data is not None else []:
+        rt.labels.setdefault(item.option_key, he.option_label(item))
 
 
 def _labels_for_catalogue(rt: TurnRuntime) -> dict[str, str]:
@@ -587,6 +608,7 @@ async def compute(
     baseline that is not ready blocks only the difference from today, never the net of a ready
     alternative (agent spec §2.5 and §6).
     """
+    await _catalogue_labels(rt)  # names for the current car in a confirmation question
     labels = _labels(state, rt)
     # Product decision (2026-10-22): the chat's purpose is the monthly DIFFERENCE from today, so
     # every calculation includes the current arrangement and nothing is shown until the baseline
@@ -644,7 +666,7 @@ async def compute(
         )
         fields = list(dict.fromkeys([*saved_salary, *(to_confirm if include_current else [])]))
         _ask_confirmation(
-            state, rt, fields, updates, text=he.confirm_saved_text(fields, baseline_missing)
+            state, rt, fields, updates, text=he.confirm_saved_text(fields, baseline_missing, _saved_values(rt, fields))
         )
         updates["salary_confirmation_asked"] = True
         return None

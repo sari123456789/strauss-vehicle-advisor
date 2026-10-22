@@ -153,14 +153,31 @@ def saved_value_text(field: str, value: object, vehicle_label: str | None = None
     return f"{number:g}"
 
 
+_SHORT_LABELS = {
+    FieldPath.BASE_GROSS.value: "שכר בסיס ברוטו",
+    FieldPath.COMMISSIONS_GROSS.value: "עמלות",
+    FieldPath.BONUS_GROSS.value: "בונוס",
+    FieldPath.PENSION_EMPLOYEE_RATE.value: "הפרשה לפנסיה",
+    FieldPath.STUDY_FUND_EMPLOYEE_RATE.value: "קרן השתלמות",
+    FieldPath.CREDIT_POINTS.value: "נקודות זיכוי",
+    FieldPath.CURRENT_KIND.value: "סוג ההסדר",
+    FieldPath.CURRENT_VEHICLE.value: "הרכב הנוכחי",
+    FieldPath.CURRENT_PROPULSION.value: "סוג הנעה",
+    FieldPath.CURRENT_PARTICIPATION.value: "השתתפות חודשית ברכב",
+    FieldPath.CURRENT_ALLOWANCE.value: "אחזקת רכב חודשית",
+}
+"""Short names for the confirmation list (the full labels are for sentences)."""
+
+
 def confirm_request_text(fields: list[str], values: dict[str, str] | None = None) -> str:
     """The saved details to confirm, with their values, so the employee can check at a glance."""
     values = values or {}
     lines = ["לפני שנחשב, רק לוודא שהפרטים השמורים שלך עדיין נכונים:"]
     for field in fields:
+        label = _SHORT_LABELS.get(field, field_label(field))
         value = values.get(field)
-        lines.append(f"• {field_label(field)}: {value}" if value else f"• {field_label(field)}")
-    lines.append('אם הכול נכון, כתבו "כן" 🙂 אם משהו השתנה, פשוט כתבו את הערך החדש.')
+        lines.append(f"• {label}: {value}" if value else f"• {label}")
+    lines.append('אם הכול נכון, אפשר פשוט לכתוב "כן" 🙂 ואם משהו השתנה, לכתוב את הערך החדש.')
     return "\n".join(lines)
 
 
@@ -169,14 +186,12 @@ CONFIRM_AGAIN = (
 )
 
 
-def confirm_saved_text(fields: list[str], missing: list[str] | None = None) -> str:
+def confirm_saved_text(
+    fields: list[str], missing: list[str] | None = None, values: dict[str, str] | None = None
+) -> str:
     """The one confirmation per conversation before a calculation that rests on facts saved in
-    an earlier conversation. Names the facts only; their values are in the side panel."""
-    text = (
-        "לפני שאחשב, רק לוודא שהפרטים ששמרנו משיחה קודמת עדיין נכונים: "
-        f"{labels_text(fields)}. (הם מופיעים בחלונית הצד.) "
-        'אם הכול נכון, מספיק לכתוב "כן"; אם משהו השתנה, פשוט לכתוב את הערך הנכון.'
-    )
+    an earlier conversation: a short list with the saved values, easy to check at a glance."""
+    text = confirm_request_text(fields, values)
     if missing:
         text += " " + ask_for_fields(missing[:2])
     return text
@@ -574,12 +589,17 @@ def vehicle_not_in_catalogue_text(name: str) -> str:
     )
 
 
-def vehicle_not_eligible_text(labels: list[str]) -> str:
+def vehicle_not_eligible_text(labels: list[str], group: str | None = None) -> str:
     names = ", ".join(labels)
+    if group:
+        return (
+            f"{names} נמצא בקטלוג, אבל הוא לא מגיע לך: בקבוצת הזכאות שלך ({group}) אפשר לבחור "
+            f"רכב מקבוצה {group} או מקבוצה נמוכה ממנה. "
+            "רוצה שאראה לך את הרכבים שכן מגיעים לך?"
+        )
     return (
         f"{names} נמצא בקטלוג, אבל לפי הפרטים בפרופיל שלך הוא אינו בין החלופות שמגיעות לך. "
-        'רוצה לראות מה כן מגיע לך? אפשר לכתוב "אילו רכבים מתאימים לי?". '
-        "ואם משהו בפרופיל לא נכון, אפשר לתקן אותו כאן."
+        "רוצה שאראה לך את הרכבים שכן מגיעים לך?"
     )
 
 
