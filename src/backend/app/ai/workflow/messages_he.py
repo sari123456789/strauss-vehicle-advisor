@@ -337,9 +337,10 @@ def comparison_text(
     return "\n".join(lines)
 
 
-def ranking(result: ComparisonResult) -> list[dict[str, str]]:
-    """The calculated cars, best monthly difference first, for the cards behind a result with
-    several cars. Amounts are the engine's, formatted as in the text."""
+def ranking(result: ComparisonResult) -> list[str]:
+    """Option keys of the calculated cars, best monthly difference first, for the cards behind a
+    result with several cars. Only keys: a staged message payload never carries amounts, so the
+    cards read the differences from the stored run (`runId`)."""
     with_delta = [
         s
         for s in result.alternatives
@@ -348,11 +349,7 @@ def ranking(result: ComparisonResult) -> list[dict[str, str]]:
     if len(with_delta) < 2:
         return []
     ordered = sorted(with_delta, key=lambda s: -int(s.delta.display) if s.delta else 0)
-    return [
-        {"optionKey": s.option_key, "deltaText": shekels(s.delta, signed=True)}
-        for s in ordered
-        if s.delta is not None
-    ]
+    return [s.option_key for s in ordered]
 
 
 def pending_text(labels: list[str]) -> str:

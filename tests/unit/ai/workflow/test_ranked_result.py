@@ -29,11 +29,16 @@ def test_several_cars_get_a_short_summary_and_a_ranked_list() -> None:
     assert "סידרתי לך את 3 הרכבים" in text and "MG4" in text and "1,013" in text
     assert "ATTO 3" not in text and "PICANTO" not in text  # the full list is on the cards
     assert "בכפתור למטה" in text
-    assert he.ranking(result) == [
-        {"optionKey": "vehicle:CAR-06", "deltaText": "+1,013 ₪"},
-        {"optionKey": "vehicle:CAR-10", "deltaText": "+661 ₪"},
-        {"optionKey": "vehicle:CAR-01", "deltaText": "-286 ₪"},
-    ]
+    assert he.ranking(result) == ["vehicle:CAR-06", "vehicle:CAR-10", "vehicle:CAR-01"]
+
+
+def test_the_ranked_payload_can_be_staged() -> None:
+    """The reply must pass the staging rule (only allowed keys, no amounts), or the turn fails
+    with "we could not complete the reply" for every multi-car result."""
+    from app.ai.infrastructure.persistence.store import _check_staged_payload
+
+    result = _result(("vehicle:CAR-10", 661), ("vehicle:CAR-06", 1013))
+    _check_staged_payload({"runId": "x", "optionKeys": he.ranking(result)})
 
 
 def test_one_car_keeps_its_own_line_and_no_ranked_list() -> None:

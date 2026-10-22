@@ -1,6 +1,7 @@
 import {Component, OnDestroy, OnInit, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
+import {BusinessApi} from '../../core/api/business.api';
 import {FIELD_STATUS} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
@@ -18,7 +19,7 @@ import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 /** Cars of a ranked result, in order, with their monthly difference from today. */
 interface Ranked {
   cards: OptionItem[];
-  deltas: Record<string, string>;
+  runId: string | null;
 }
 
 /** Message kinds that carry a Business comparison run the employee can open in detail. */
@@ -34,6 +35,7 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly profile = inject(ProfileStore);
   /** Catalogue options of the case: the data behind the vehicle cards in `options` messages. */
   readonly catalog = inject(CatalogStore);
+  private readonly businessApi = inject(BusinessApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly fieldStatus = FIELD_STATUS;
@@ -139,24 +141,40 @@ export class AdvisorPage implements OnInit, OnDestroy {
    * difference first, is on these cards (payload `ranked` from the advisor).
    */
   rankedOf(message: {kind: string; payload: Record<string, unknown>}): Ranked | null {
-    const ranked = message.payload['ranked'];
-    if (message.kind !== 'comparison' || !Array.isArray(ranked) || ranked.length < 2) return null;
+    const keys = message.payload['optionKeys'];
+    if (message.kind !== 'comparison' || !Array.isArray(keys) || keys.length < 2) return null;
     const byKey = new Map(this.catalog.options().map(o => [o.optionKey, o]));
-    const cards: OptionItem[] = [];
-    const deltas: Record<string, string> = {};
-    for (const item of ranked as {optionKey?: unknown; deltaText?: unknown}[]) {
-      const option = typeof item.optionKey === 'string' ? byKey.get(item.optionKey) : undefined;
-      if (!option) continue;
-      cards.push(option);
-      if (typeof item.deltaText === 'string') deltas[option.optionKey] = item.deltaText;
-    }
-    return cards.length ? {cards, deltas} : null;
+    const cards = keys.flatMap(key => {
+      const option = typeof key === 'string' ? byKey.get(key) : undefined;
+      return option ? [option] : [];
+    });
+    const runId = message.payload['runId'];
+    return cards.length ? {cards, runId: typeof runId === 'string' ? runId : null} : null;
   }
 
-  openRanked(ranked: Ranked): void {
-    this.panelDeltas.set(ranked.deltas);
+  /**
+   * Opens the ranked cards. The message carries only the order (a staged payload never holds
+   * amounts); each car's monthly difference is read from the stored run.
+   */
+  async openRanked(ranked: Ranked): Promise<void> {
+    this.panelDeltas.set({});
     this.panelTitle.set('הרכבים לפי ההשפעה על הנטו');
     this.panelCards.set(ranked.cards);
+    const caseId = this.store.active()?.caseId;
+    if (!ranked.runId || !caseId) return;
+    try {
+      const details = (await this.businessApi.comparisonDetails(caseId, ranked.runId)).data;
+      const deltas: Record<string, string> = {};
+      for (const a of details?.result.alternatives ?? []) {
+        if (!a.delta) continue;
+        const value = Number(a.delta.display);
+        const amount = `${Math.abs(value).toLocaleString('he-IL')} ₪`;
+        deltas[a.optionKey] = value > 0 ? `+${amount}` : value < 0 ? `-${amount}` : '0 ₪';
+      }
+      this.panelDeltas.set(deltas);
+    } catch {
+      // The cards still show, in order, without the differences.
+    }
   }
 
   /**

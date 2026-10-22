@@ -620,7 +620,7 @@ async def compute(
     text = he.comparison_text(result, labels, full_disclaimer=full)
     ranked = he.ranking(result)
     if ranked:
-        rt.reply(text, "comparison", runId=str(result.run_id), ranked=ranked)
+        rt.reply(text, "comparison", runId=str(result.run_id), optionKeys=ranked)
     else:
         rt.reply(text, "comparison", runId=str(result.run_id))
     updates["disclaimer_shown"] = True
