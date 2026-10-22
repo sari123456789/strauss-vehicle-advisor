@@ -281,7 +281,15 @@ def _ask_confirmation(
     """Ask only about the saved facts the current calculation needs (never a blanket check)."""
     awaiting = updates.get("awaiting_confirmation", state.get("awaiting_confirmation", []))
     updates["awaiting_confirmation"] = list(dict.fromkeys([*awaiting, *fields]))
-    rt.reply(text or he.confirm_request_text(fields), "confirmation_request", fields=fields)
+    if text is None and fields and set(fields) <= set(awaiting):
+        # Already asked with the full list: a short reminder instead of the same block again.
+        rt.reply(he.CONFIRM_AGAIN, "confirmation_request", fields=fields)
+        return
+    rt.reply(
+        text or he.confirm_request_text(fields, _saved_values(rt, fields)),
+        "confirmation_request",
+        fields=fields,
+    )
 
 
 def _saved_salary(rt: TurnRuntime) -> tuple[list[str], bool]:
@@ -310,6 +318,36 @@ def _saved_salary(rt: TurnRuntime) -> tuple[list[str], bool]:
     return saved, given
 
 
+def _saved_values(rt: TurnRuntime, fields: list[str]) -> dict[str, str]:
+    """Display values of saved profile fields, read from the case context (never computed)."""
+    if rt.case is None:
+        return {}
+    profile = rt.case.profile
+    values: dict[str, str] = {}
+    for field in fields:
+        group, _, name = field.partition(".")
+        snake = "".join(f"_{c.lower()}" if c.isupper() else c for c in name)
+        holder = profile.current_arrangement if group == "currentArrangement" else profile
+        stored = getattr(holder, snake, None)
+        value = getattr(stored, "value", None)
+        vehicle_label = None
+        if field == FieldPath.CURRENT_VEHICLE.value and value is not None:
+            catalogue_id = getattr(value, "catalogue_id", None)
+            vehicle_label = _labels_for_catalogue(rt).get(catalogue_id or "")
+        text = he.saved_value_text(field, value, vehicle_label)
+        if text:
+            values[field] = text
+    return values
+
+
+def _labels_for_catalogue(rt: TurnRuntime) -> dict[str, str]:
+    return {
+        key.removeprefix("vehicle:"): label
+        for key, label in rt.labels.items()
+        if key.startswith("vehicle:")
+    }
+
+
 async def _list_options(state: ConversationState, rt: TurnRuntime, updates: dict[str, Any]) -> None:
     assert rt.interpretation is not None
     categories = [OptionCategory.REGULAR, OptionCategory.FAMILY]
@@ -328,6 +366,17 @@ async def _list_options(state: ConversationState, rt: TurnRuntime, updates: dict
         return
     data = envelope.data
     eligible = [i for i in data.items if i.eligibility is EligibilityStatus.ELIGIBLE]
+    # A car the employee named ("do you have ATTO 3, am I eligible?"): answer it directly.
+    for ref in rt.interpretation.option_refs:
+        if ref.kind != "name":
+            continue
+        named = [i for i in data.items if _name_matches(ref.value, i)]
+        if any(i.eligibility is EligibilityStatus.ELIGIBLE for i in named):
+            rt.reply(he.named_car_eligible_text(he.option_label(named[0])), "info")
+        elif named:
+            rt.reply(he.named_car_not_eligible_text(he.option_label(named[0])), "info")
+        else:
+            rt.reply(he.named_car_unknown_text(ref.value), "info")
     updates["displayed_options"] = [
         DisplayedOption(optionKey=i.option_key, label=he.option_label(i)) for i in eligible
     ]

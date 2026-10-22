@@ -119,12 +119,55 @@ def labels_text(fields: Iterable[str]) -> str:
     return labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " ו" + labels[-1]
 
 
-def confirm_request_text(fields: list[str]) -> str:
-    return (
-        "לפני שאשווה למה שיש לך היום, רק לוודא שהפרטים האלה עדיין נכונים: "
-        f"{labels_text(fields)}. (הם מופיעים בחלונית הצד.) "
-        "אם משהו השתנה, פשוט לכתוב את הערך הנכון."
-    )
+_ARRANGEMENT_LABELS = {
+    "company_car": "רכב חברה",
+    "allowance": "אחזקת רכב",
+    "no_car_no_allowance": "ללא רכב וללא אחזקה",
+}
+_RATE_FIELDS = {FieldPath.PENSION_EMPLOYEE_RATE.value, FieldPath.STUDY_FUND_EMPLOYEE_RATE.value}
+_MONEY_SUFFIXES = ("Gross", "participation", "allowance", "familyDeduction")
+
+
+def saved_value_text(field: str, value: object, vehicle_label: str | None = None) -> str | None:
+    """A saved profile value in plain Hebrew for a confirmation question (never computed)."""
+    if value is None:
+        return None
+    if field == FieldPath.CURRENT_KIND.value:
+        return _ARRANGEMENT_LABELS.get(str(getattr(value, "value", value)))
+    if field == FieldPath.CURRENT_VEHICLE.value:
+        return vehicle_label or getattr(value, "catalogue_id", None)
+    if field == FieldPath.CURRENT_PROPULSION.value:
+        try:
+            return PROPULSION_LABELS[Propulsion(str(getattr(value, "value", value)))]
+        except ValueError:
+            return None
+    text = str(getattr(value, "value", value))
+    try:
+        number = float(text)
+    except ValueError:
+        return text
+    if field in _RATE_FIELDS:
+        return f"{number * 100:g}%"
+    if field.endswith(_MONEY_SUFFIXES):
+        return f"{number:,.0f} ₪"
+    return f"{number:g}"
+
+
+def confirm_request_text(fields: list[str], values: dict[str, str] | None = None) -> str:
+    """The saved details to confirm, with their values, so the employee can check at a glance."""
+    values = values or {}
+    lines = ["לפני שנחשב, רק לוודא שהפרטים השמורים שלך עדיין נכונים:"]
+    for field in fields:
+        value = values.get(field)
+        lines.append(f"• {field_label(field)}: {value}" if value else f"• {field_label(field)}")
+    lines.append('אם הכול נכון, כתבו "כן" 🙂 אם משהו השתנה, פשוט כתבו את הערך החדש.')
+    return "\n".join(lines)
+
+
+CONFIRM_AGAIN = (
+    'כדי להמשיך אני רק צריך אישור לפרטים שלמעלה — כתבו "כן" אם הכול נכון, '
+    "או את מה שהשתנה."
+)
 
 
 def confirm_saved_text(fields: list[str], missing: list[str] | None = None) -> str:
@@ -392,6 +435,18 @@ OUT_OF_SCOPE = (
     "אני כאן כדי לעזור בנושאי רכב החברה וההשפעה שלהם על השכר 🙂 "
     "על זה לא אוכל לעזור, אבל אשמח לבדוק איתך רכבים או לחשב כמה רכב מסוים ישנה לך בחודש."
 )
+def named_car_eligible_text(label: str) -> str:
+    return f"כן! {label} נמצא בקטלוג ומגיע לך 🎉"
+
+
+def named_car_not_eligible_text(label: str) -> str:
+    return f"{label} נמצא בקטלוג, אבל לפי הפרטים שלך הוא לא בקבוצה שמגיעה לך."
+
+
+def named_car_unknown_text(name: str) -> str:
+    return f"לא מצאתי את {name} בקטלוג הרכבים של החברה."
+
+
 GENERAL_ALREADY_SENT = "השאלה כבר אצל נציג התחבורה ✓ אכתוב לך כאן ברגע שתגיע תשובה."
 OFFER_DECLINED = "בסדר גמור, לא שלחתי. במה עוד אפשר לעזור?"
 
