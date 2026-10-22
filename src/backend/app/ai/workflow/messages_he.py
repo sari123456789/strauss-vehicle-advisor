@@ -165,8 +165,7 @@ def confirm_request_text(fields: list[str], values: dict[str, str] | None = None
 
 
 CONFIRM_AGAIN = (
-    'כדי להמשיך אני רק צריך אישור לפרטים שלמעלה — כתבו "כן" אם הכול נכון, '
-    "או את מה שהשתנה."
+    'כדי להמשיך אני רק צריך אישור לפרטים שלמעלה — כתבו "כן" אם הכול נכון, או את מה שהשתנה.'
 )
 
 
@@ -296,6 +295,20 @@ def comparison_text(
             f"{_delta_phrase(s.delta)} בחודש לעומת היום "
             f"(נטו משוער {shekels(s.net)})."
         )
+    elif len(with_delta) > 1:
+        # Several cars: a short, friendly summary; the full ranked list is on the cards
+        # opened from the message's button (payload `ranked`, see `ranking`).
+        best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
+        assert best.delta is not None  # with_delta holds only scenarios with a delta
+        lines.append(f"סידרתי לך את {len(with_delta)} הרכבים לפי כמה הם ישנו לך בנטו כל חודש 🚗")
+        lines.append(
+            f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
+            f"{_delta_phrase(best.delta)} בחודש לעומת היום."
+        )
+        missing = len(result.alternatives) - len(with_delta)
+        if missing:
+            lines.append(f"עוד {missing} רכבים לא הצלחתי לחשב.")
+        lines.append("את כל הרשימה המסודרת אפשר לראות בכפתור למטה.")
     else:
         if with_delta:
             lines.append("ההפרש בנטו החודשי שלך לעומת היום:")
@@ -322,6 +335,24 @@ def comparison_text(
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)
     return "\n".join(lines)
+
+
+def ranking(result: ComparisonResult) -> list[dict[str, str]]:
+    """The calculated cars, best monthly difference first, for the cards behind a result with
+    several cars. Amounts are the engine's, formatted as in the text."""
+    with_delta = [
+        s
+        for s in result.alternatives
+        if s.status is ScenarioStatus.CALCULATED and s.delta is not None
+    ]
+    if len(with_delta) < 2:
+        return []
+    ordered = sorted(with_delta, key=lambda s: -int(s.delta.display) if s.delta else 0)
+    return [
+        {"optionKey": s.option_key, "deltaText": shekels(s.delta, signed=True)}
+        for s in ordered
+        if s.delta is not None
+    ]
 
 
 def pending_text(labels: list[str]) -> str:
@@ -435,6 +466,8 @@ OUT_OF_SCOPE = (
     "אני כאן כדי לעזור בנושאי רכב החברה וההשפעה שלהם על השכר 🙂 "
     "על זה לא אוכל לעזור, אבל אשמח לבדוק איתך רכבים או לחשב כמה רכב מסוים ישנה לך בחודש."
 )
+
+
 def named_car_eligible_text(label: str) -> str:
     return f"כן! {label} נמצא בקטלוג ומגיע לך 🎉"
 

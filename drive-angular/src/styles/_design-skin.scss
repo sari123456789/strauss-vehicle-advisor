@@ -948,3 +948,28 @@ a.primary.disabled {
     min-block-size: 0;
   }
 }
+
+// Ranked result in the side panel: each car's monthly difference above its card.
+.panel-item__delta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #2c6b3a;
+}
+
+.panel-item__delta.negative {
+  color: #a33a2b;
+}
+
+.panel-item__delta span {
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  background: #f2ebe3;
+  color: #8c5f37;
+  font-size: 13px;
+}
