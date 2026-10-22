@@ -61,8 +61,10 @@ def test_upload_review_correct_and_approve(api: Api) -> None:
     draft = created.json()
     assert draft["status"] == "review" and draft["version"] == 1
     fields = {f["field"]: f for f in draft["fields"]}
-    assert fields["payroll.baseGross"]["status"] == "conflict"
-    assert set(fields["payroll.baseGross"]["alternatives"]) == {"15000.00", "82.42", "182.00"}
+    # Hourly rate and hours on the base line are not offered as the monthly base.
+    assert fields["payroll.baseGross"]["status"] == "needs_review"
+    assert fields["payroll.baseGross"]["value"] == "15000.00"
+    assert fields["payroll.baseGross"]["alternatives"] == []
     assert fields["payroll.baseGross"]["evidence"][0]["page"] == 1
     assert created.headers["Cache-Control"] == "no-store"
 

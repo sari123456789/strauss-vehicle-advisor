@@ -49,7 +49,7 @@ test.describe('payslip import (real stack)', () => {
     // Pick values that differ from the stored ones, so every run is a real (non no-op) update.
     const before = await profile(login);
     const versionBefore = before.profileVersion;
-    const [baseChoice, baseShown] = before.baseGross.value === '15000.00' ? ['182.00 ₪', '182.00 ₪'] : ['15,000.00 ₪', '15,000.00 ₪'];
+    const [baseTyped, baseShown] = before.baseGross.value === '15000.00' ? ['16000', '16,000.00 ₪'] : ['15000', '15,000.00 ₪'];
     const [pensionTyped, pensionShown] = before.pensionEmployeeRate.value === '0.06' ? ['7', '0.07'] : ['6', '0.06'];
 
     // 1-2. Real login (employees land on the advisor), whose side panel shows the real salary facts.
@@ -65,12 +65,15 @@ test.describe('payslip import (real stack)', () => {
     await page.getByTestId('chat-open-payslip-import').click();
     await page.getByTestId('payslip-file').setInputFiles(FIXTURE);
     const base = page.locator('li.payslip-field[data-field="payroll.baseGross"]');
-    await expect(base).toHaveAttribute('data-status', 'conflict');
+    await expect(base).toHaveAttribute('data-status', 'needs_review');
     await expect(base).toContainText('מקור: עמוד 1');
     expect(await profileVersion(login)).toBe(versionBefore); // nothing applied yet
 
-    // 5. Resolve: pick the printed base salary, type the pension rate as a percent.
-    await base.getByRole('button', {name: baseChoice}).click();
+    // 5. Correct the base salary (its line's hourly rate and hours are not offered) and type the
+    // pension rate as a percent.
+    await base.getByRole('button', {name: /תיקון|הזנת ערך/}).click();
+    await base.locator('input[inputmode="decimal"]').fill(baseTyped);
+    await base.getByRole('button', {name: 'שמירה'}).click();
     await expect(base).toHaveAttribute('data-status', 'corrected');
     const pension = page.locator('li.payslip-field[data-field="payroll.pensionEmployeeRate"]');
     await pension.getByRole('button', {name: /תיקון|הזנת ערך/}).click();

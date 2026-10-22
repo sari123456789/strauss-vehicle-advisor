@@ -31,6 +31,10 @@ from app.contracts.case_inputs import SetChange
 from app.contracts.common import FieldPath
 
 _HUNDRED = Decimal(100)
+_MIN_MONTHLY_BASE = Decimal(1000)
+"""A base-salary line also prints days, hours or an hourly rate ("שכר בסיס 1.00 12,000.00",
+"שכר יסוד 37.80 67.00 2,532.60"). When the line has an amount of at least this size, the
+smaller numbers are those quantities, not the monthly base, and are never offered."""
 
 
 def contract_value(field: FieldPath, value: Decimal) -> str:
@@ -55,6 +59,15 @@ def _to_profile_units(field: FieldPath, printed: Decimal) -> Decimal:
 
 def _printed_values(field: FieldPath, candidate: Candidate) -> tuple[Decimal, ...]:
     return candidate.percents if field in RATE_FIELDS else candidate.amounts
+
+
+def _is_quantity(field: FieldPath, value: Decimal, candidate: Candidate) -> bool:
+    """Days, hours or an hourly rate printed beside the monthly base (see `_MIN_MONTHLY_BASE`)."""
+    return (
+        field is FieldPath.BASE_GROSS
+        and value < _MIN_MONTHLY_BASE
+        and any(v >= _MIN_MONTHLY_BASE for v in candidate.amounts)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +109,8 @@ def _ai_value(
     printed = _printed_values(field, candidate)
     if mapping.value_index >= len(printed):
         return None
+    if _is_quantity(field, printed[mapping.value_index], candidate):
+        return None
     return candidate, _to_profile_units(field, printed[mapping.value_index])
 
 
@@ -114,7 +129,11 @@ def build_field(
         if issue is not None:
             blocked.append((candidate, issue))
             continue
-        values = tuple(_to_profile_units(field, v) for v in _printed_values(field, candidate))
+        values = tuple(
+            _to_profile_units(field, v)
+            for v in _printed_values(field, candidate)
+            if not _is_quantity(field, v, candidate)
+        )
         applicable.append(_Proposal(candidate, values))
 
     ai_hits: list[tuple[Candidate, Decimal, AiFieldMapping]] = []
