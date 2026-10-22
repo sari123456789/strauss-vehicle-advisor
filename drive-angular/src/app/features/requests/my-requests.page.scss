@@ -19,6 +19,33 @@
   color: #555;
 }
 
+.advisor-tip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  max-inline-size: 560px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid #ecd9c4;
+  border-radius: 14px;
+  background: #fcf7f1;
+}
+
+.advisor-tip p {
+  flex: 1 1 280px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.advisor-tip .primary {
+  min-block-size: 40px;
+  padding: 8px 18px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
 .ask {
   display: flex;
   flex-direction: column;
