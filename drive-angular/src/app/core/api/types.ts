@@ -77,7 +77,11 @@ export type AssignmentFilter = 'all' | 'unclaimed' | 'mine' | 'others';
 export type RepresentativeFieldCode = B['RepresentativeFieldCode'] | 'general.question';
 export type AnswerSubmit = B['AnswerSubmit'];
 export type AnswerView = B['AnswerView'];
-export type RunSummary = B['RunSummary'];
+export type RunSummary = B['RunSummary'] & {
+  optionCount?: number | null;
+  bestOptionKey?: string | null;
+  bestDelta?: string | null;
+};
 export type ErrorCode = B['ErrorCode'];
 
 export type EnvelopeOf<T> = {

@@ -4927,6 +4927,28 @@
       "RunSummary": {
         "additionalProperties": false,
         "properties": {
+          "bestDelta": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bestdelta"
+          },
+          "bestOptionKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bestoptionkey"
+          },
           "createdAt": {
             "format": "date-time",
             "title": "Createdat",
@@ -4937,6 +4959,17 @@
           },
           "kind": {
             "$ref": "#/components/schemas/RunKind"
+          },
+          "optionCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optioncount"
           },
           "runId": {
             "format": "uuid",

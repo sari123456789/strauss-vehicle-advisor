@@ -106,3 +106,18 @@ h2 {
 .empty p {
   color: #666;
 }
+
+.run__kind small {
+  color: #888;
+  font-weight: 400;
+}
+
+.run__delta {
+  color: #1f6b3a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.run__delta.neg {
+  color: #a33a2b;
+}
