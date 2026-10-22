@@ -50,6 +50,12 @@ class RunSummary(ContractModel):
     kind: RunKind
     created_at: datetime
     freshness: Freshness
+    option_count: int | None = None
+    """How many alternatives the run compared (from the stored result)."""
+    best_option_key: str | None = None
+    """The calculated alternative with the largest monthly difference from today."""
+    best_delta: str | None = None
+    """That alternative's monthly difference, the engine's whole-shekel `display` value."""
 
 
 class CaseContext(ContractModel):

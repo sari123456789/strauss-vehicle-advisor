@@ -18,7 +18,11 @@
       @for (row of group.rows; track row.run.runId) {
         <li class="run">
           <span class="run__time">{{ time(row.run.createdAt) }}</span>
-          <span class="run__kind">{{ row.run.kind === 'hypothetical' ? 'בדיקת "מה אם"' : 'השוואה לפי הנתונים שלי' }}</span>
+          <span class="run__kind">
+            {{ summary(row.run) ?? (row.run.kind === 'hypothetical' ? 'בדיקת "מה אם"' : 'השוואה לפי הנתונים שלי') }}
+            @if (row.run.kind === 'hypothetical' && summary(row.run)) {<small> · "מה אם"</small>}
+          </span>
+          @if (delta(row.run); as d) {<span class="run__delta" [class.neg]="d.startsWith('-')">{{ d }} בחודש</span>}
           <span class="chip" [class.chip--stale]="row.run.freshness !== 'current'">{{ row.run.freshness === 'current' ? 'עדכני' : 'הנתונים השתנו מאז' }}</span>
           <span class="run__actions">
             <a routerLink="/calculation" [queryParams]="{case: row.conversation.caseId, run: row.run.runId}">פירוט</a>

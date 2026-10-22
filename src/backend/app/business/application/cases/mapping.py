@@ -2,6 +2,7 @@
 missing facts stay `value: null, status: missing`.
 """
 
+from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -127,6 +128,36 @@ def request_summary(request: RepresentativeRequest) -> OpenRequestSummary:
     )
 
 
+def run_highlights(result: Any) -> dict[str, Any]:
+    """Read-only summary of a stored result for the history list: the number of alternatives
+    and the one with the largest monthly difference. Nothing is recalculated."""
+    alternatives = result.get("alternatives") if isinstance(result, Mapping) else None
+    if not isinstance(alternatives, Sequence) or isinstance(alternatives, str):
+        return {}
+    best_key: str | None = None
+    best: int | None = None
+    first_key: str | None = None
+    for alternative in alternatives:
+        if not isinstance(alternative, Mapping) or alternative.get("status") != "calculated":
+            continue
+        if first_key is None and isinstance(alternative.get("optionKey"), str):
+            first_key = alternative["optionKey"]
+        delta = alternative.get("delta")
+        display = delta.get("display") if isinstance(delta, Mapping) else None
+        try:
+            value = int(str(display))
+        except ValueError:
+            continue
+        if best is None or value > best:
+            best, best_key = value, alternative.get("optionKey")
+    return {
+        "option_count": len(alternatives),
+        # Without a difference (no current state) the first calculated car still names the run.
+        "best_option_key": best_key if isinstance(best_key, str) else first_key,
+        "best_delta": None if best is None else str(best),
+    }
+
+
 def case_context(
     case: ComparisonCase,
     latest_profile: EmployeeProfile,
@@ -158,6 +189,7 @@ def case_context(
                         "kind": run.kind.value,
                         "created_at": run.created_at,
                         "freshness": freshness,
+                        **run_highlights(run.result),
                     }
                 )
                 for run, freshness in runs
