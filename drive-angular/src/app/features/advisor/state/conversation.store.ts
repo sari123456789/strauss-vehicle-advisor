@@ -3,7 +3,7 @@ import {ConversationsApi} from '../../../core/api/conversations.api';
 import {hebrewError} from '../../../core/api/problem';
 import {FINAL_INPUT_STATES, type ConversationSummary, type MessageView} from '../../../core/api/types';
 
-const POLL_MS = 2000;
+const POLL_MS = 1000;
 const WATCH_MS = 5000;
 
 interface PendingTurn {

@@ -22,6 +22,9 @@ import {vehicleImageUrl} from './vehicle-images';
       }
       <span class="eyebrow">{{ kind() }}</span>
       <h2>{{ label() }}</h2>
+      @if (delta(); as d) {
+        <p class="vehicle__delta" [class.neg]="d.startsWith('-')"><bdi>{{ d }}</bdi> <small>בחודש לעומת היום</small></p>
+      }
       <dl>
         @if (option().group) {<dt>קבוצת זכאות</dt><dd>{{ option().group }}</dd>}
         @if (option().defaultParticipation) {<dt>השתתפות חודשית לפי הקטלוג</dt><dd><bdi>{{ option().defaultParticipation | money }}</bdi></dd>}
@@ -44,6 +47,8 @@ export class VehicleCardComponent {
   readonly selected = input(false);
   /** Smaller card for the chat strip (no reason lines). */
   readonly compact = input(false);
+  /** The monthly difference from today (engine display, e.g. "+1,359 ₪"), when calculated. */
+  readonly delta = input<string | null>(null);
   readonly toggle = output<string>();
 
   protected readonly eligibility = ELIGIBILITY;

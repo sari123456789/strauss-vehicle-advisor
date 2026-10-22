@@ -58,6 +58,7 @@ async def _voice(state: ConversationState, rt: TurnRuntime, request: Any) -> boo
     The code decided what to say and every number; the model only words it. A reply whose
     rewrite is not safe (invented digit, missing amount, unknown placeholder) keeps its template.
     Returns False when the model was not used at all, so the caller can fall back."""
+    logger.info("voice start replies=%d chars=%d", len(rt.replies), sum(len(r.text) for r in rt.replies))
     drafts = [to_draft(reply.text) for reply in rt.replies]
     turn = state.get("turn") or {}
     recent = [

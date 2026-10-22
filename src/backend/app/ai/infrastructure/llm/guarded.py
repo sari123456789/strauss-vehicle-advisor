@@ -42,6 +42,8 @@ logger = logging.getLogger("app.ai.llm")
 
 DEFAULT_MAX_SHORT_WAIT_SECONDS = 5.0
 TRANSIENT_RETRY_SECONDS = 1.0
+HEDGE_AFTER_SECONDS = 4.0
+"""Send a parallel duplicate when the provider has not answered within this time."""
 """Pause before the single retry after a timeout or a temporary provider error."""
 
 
@@ -67,6 +69,7 @@ class QuotaGuardedLlm:
         clock: Clock | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         max_short_wait_seconds: float = DEFAULT_MAX_SHORT_WAIT_SECONDS,
+        hedge_after_seconds: float = HEDGE_AFTER_SECONDS,
     ) -> None:
         self._profile = profile
         self._client = client
@@ -74,18 +77,46 @@ class QuotaGuardedLlm:
         self._clock = clock or SystemClock()
         self._sleep = sleep
         self._max_short_wait = max_short_wait_seconds
+        self._hedge_after = hedge_after_seconds
 
     async def generate(self, task: LlmTask[OutputT]) -> LlmResult[OutputT]:
         schema = provider_json_schema(task.output_type)
         result: LlmResult[OutputT] | None = None
         for attempt in range(2):
-            result, retry_wait = await self._attempt(task, schema)
+            result, retry_wait = await self._hedged_attempt(task, schema)
             if retry_wait is None or attempt == 1:
                 break
             await self._sleep(retry_wait)
         assert result is not None
         self._log(task, result)
         return result
+
+    async def _hedged_attempt(
+        self, task: LlmTask[OutputT], schema: dict[str, Any]
+    ) -> tuple[LlmResult[OutputT], float | None]:
+        """One request; if it is still running after `HEDGE_AFTER_SECONDS`, an identical second
+        request is sent in parallel and the first good answer wins (the other is cancelled).
+
+        The provider's latency varies widely (one call in a second, the same call in 40), so a
+        late duplicate usually answers long before the slow one. The local per-minute and daily
+        limits still apply to the duplicate, which is simply skipped when they would be exceeded.
+        """
+        first = asyncio.create_task(self._attempt(task, schema))
+        try:
+            return await asyncio.wait_for(asyncio.shield(first), timeout=self._hedge_after)
+        except TimeoutError:
+            pass
+        second = asyncio.create_task(self._attempt(task, schema))
+        done, pending = await asyncio.wait({first, second}, return_when=asyncio.FIRST_COMPLETED)
+        winner = done.pop()
+        outcome = winner.result()
+        if not outcome[0].ok and pending:
+            # The quicker one failed (or was not allowed): the other may still succeed.
+            other = await pending.pop()
+            return other if other[0].ok else outcome
+        for task_left in pending:
+            task_left.cancel()
+        return outcome
 
     async def _attempt(
         self, task: LlmTask[OutputT], schema: dict[str, Any]

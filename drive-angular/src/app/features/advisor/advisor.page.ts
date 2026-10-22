@@ -1,6 +1,8 @@
 import {Component, OnDestroy, OnInit, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {KeyValuePipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
+import {BusinessApi} from '../../core/api/business.api';
 import {FIELD_STATUS} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
@@ -20,7 +22,7 @@ const RUN_KINDS = new Set(['comparison', 'history']);
 
 @Component({
   standalone: true,
-  imports: [RouterLink, FormsModule, CarArtComponent, PageHeadingComponent, MoneyPipe, PayslipImportComponent, VehicleCardComponent],
+  imports: [RouterLink, FormsModule, KeyValuePipe, CarArtComponent, PageHeadingComponent, MoneyPipe, PayslipImportComponent, VehicleCardComponent],
   templateUrl: './advisor.page.html',
 })
 export class AdvisorPage implements OnInit, OnDestroy {
@@ -111,7 +113,7 @@ export class AdvisorPage implements OnInit, OnDestroy {
    */
   cardsOf(message: {kind: string; payload: Record<string, unknown>}): OptionItem[] {
     const keys = message.payload['optionKeys'];
-    if (message.kind !== 'options' || !Array.isArray(keys)) return [];
+    if ((message.kind !== 'options' && message.kind !== 'comparison') || !Array.isArray(keys)) return [];
     const byKey = new Map(this.catalog.options().map(o => [o.optionKey, o]));
     return keys.flatMap(key => {
       const option = typeof key === 'string' ? byKey.get(key) : undefined;
@@ -119,8 +121,33 @@ export class AdvisorPage implements OnInit, OnDestroy {
     });
   }
 
-  openVehicles(cards: OptionItem[]): void {
+  /** Differences shown on the cards of the open side panel (a comparison), or none. */
+  readonly panelDeltas = signal<Record<string, string>>({});
+  private readonly businessApi = inject(BusinessApi);
+
+  /**
+   * Opens the side panel. For a comparison the monthly differences are read from the stored
+   * run (amounts never travel in chat message payloads).
+   */
+  async openVehicles(cards: OptionItem[], message?: {kind: string; payload: Record<string, unknown>}): Promise<void> {
+    this.panelDeltas.set({});
     this.panelCards.set(cards);
+    const runId = message?.kind === 'comparison' ? message.payload['runId'] : null;
+    const caseId = this.store.active()?.caseId;
+    if (typeof runId !== 'string' || !caseId) return;
+    try {
+      const details = (await this.businessApi.comparisonDetails(caseId, runId)).data;
+      const deltas: Record<string, string> = {};
+      for (const a of details?.result.alternatives ?? []) {
+        if (!a.delta) continue;
+        const value = Number(a.delta.display);
+        const text = `${Math.abs(value).toLocaleString('he-IL')} ₪`;
+        deltas[a.optionKey] = value > 0 ? `+${text}` : value < 0 ? `-${text}` : `0 ₪`;
+      }
+      this.panelDeltas.set(deltas);
+    } catch {
+      // The cards still show without the differences.
+    }
   }
 
   /**

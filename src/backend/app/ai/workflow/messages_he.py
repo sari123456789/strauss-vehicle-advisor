@@ -272,6 +272,19 @@ def _delta_phrase(delta: MoneyAmount) -> str:
     return "אין שינוי"
 
 
+def comparison_cards(result: ComparisonResult) -> dict[str, object]:
+    """Payload for the chat's side panel: the calculated cars' keys, best difference first.
+    Amounts never travel in a message payload (staging rule); the panel reads them from the
+    stored run (`runId`)."""
+    rows = [
+        s
+        for s in result.alternatives
+        if s.status is ScenarioStatus.CALCULATED and s.delta is not None
+    ]
+    rows.sort(key=lambda s: -int(s.delta.display))
+    return {"optionKeys": [s.option_key for s in rows]}
+
+
 def comparison_text(
     result: ComparisonResult, labels: dict[str, str], *, full_disclaimer: bool = True
 ) -> str:
@@ -296,28 +309,22 @@ def comparison_text(
             f"{_delta_phrase(s.delta)} בחודש לעומת היום "
             f"(נטו משוער {shekels(s.net)})."
         )
-    else:
-        if with_delta:
-            lines.append("ההפרש בנטו החודשי שלך לעומת היום:")
-        ordered = sorted(
-            result.alternatives,
-            key=lambda s: -int(s.delta.display) if s.delta is not None else 10**9,
+    elif len(with_delta) > 1:
+        # Several cars: one friendly line with the best one; every car, with its photo and
+        # difference, is shown in the side panel (payload `optionKeys` / `deltas`).
+        best = max(with_delta, key=lambda s: int(s.delta.display))
+        lines.append(
+            f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
+            f"{_delta_phrase(best.delta)} בחודש לעומת היום."
         )
-        for scenario in ordered:
+        lines.append(f"בדקתי {len(with_delta)} רכבים, ואת כולם עם ההפרש אפשר לראות בצד 👉")
+    else:
+        for scenario in result.alternatives:
             label = labels.get(scenario.option_key, scenario.option_key)
-            if scenario.status is ScenarioStatus.CALCULATED and scenario.delta is not None:
-                lines.append(f"• {label}: {shekels(scenario.delta, signed=True)} בחודש")
-            elif scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
+            if scenario.status is ScenarioStatus.CALCULATED and scenario.net is not None:
                 lines.append(f"• {label}: נטו משוער {shekels(scenario.net)}")
             else:
                 lines.append(f"• {label}: {_STATUS_TEXT.get(scenario.status, 'לא חושב')}")
-        if len(with_delta) > 1:
-            best = max(with_delta, key=lambda s: int(s.delta.display) if s.delta else 0)
-            assert best.delta is not None  # with_delta holds only scenarios with a delta
-            lines.append(
-                f"הכי משתלם לך: {labels.get(best.option_key, best.option_key)} — "
-                f"{_delta_phrase(best.delta)} בחודש לעומת היום."
-            )
     if result.kind.value == "hypothetical":
         lines.append('זו רק בדיקת "מה אם", הפרטים השמורים שלך לא השתנו.')
     lines.append(DISCLAIMER if full_disclaimer else SHORT_DISCLAIMER)

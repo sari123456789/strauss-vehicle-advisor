@@ -948,3 +948,24 @@ a.primary.disabled {
     min-block-size: 0;
   }
 }
+
+// Comparison cards in the chat's side panel: the monthly difference is the headline.
+article.vehicle p.vehicle__delta {
+  display: flex;
+  flex-direction: column;
+  margin: 2px 0 12px;
+  line-height: 1.2;
+  color: #1f6b3a;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+article.vehicle p.vehicle__delta.neg {
+  color: #a33a2b;
+}
+
+article.vehicle p.vehicle__delta small {
+  color: #777;
+  font-size: 13px;
+  font-weight: 400;
+}
