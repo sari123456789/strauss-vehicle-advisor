@@ -1,13 +1,7 @@
 import {Component, OnDestroy, OnInit, computed, inject, signal} from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {FormsModule} from '@angular/forms';
-import {FIELD_STATUS, PROPULSION, optionLabel} from '../../core/api/labels';
-
-const ARRANGEMENT: Record<string, string> = {
-  company_car: 'רכב חברה',
-  allowance: 'אחזקת רכב',
-  no_car_no_allowance: 'ללא רכב וללא אחזקה',
-};
+import {FIELD_STATUS} from '../../core/api/labels';
 import type {OptionItem} from '../../core/api/types';
 import {CarArtComponent} from '../../shared/ui/car-art.component';
 import {MoneyPipe} from '../../shared/format/money.pipe';
@@ -18,7 +12,7 @@ import {PayslipImportComponent} from '../payslip/payslip-import.component';
 import {ProfileStore} from '../profile/state/profile.store';
 import {profileRows} from '../profile/profile-rows';
 import {ConversationStore} from './state/conversation.store';
-import {ComparisonsStore} from '../comparisons/state/comparisons.store';
+import {compareMessage} from './compare-message';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 
 /** Message kinds that carry a Business comparison run the employee can open in detail. */
@@ -41,24 +35,9 @@ export class AdvisorPage implements OnInit, OnDestroy {
   readonly profileRows = computed(() => profileRows(this.profile.profile()));
   /** The payslip import panel (reusable component). */
   readonly payslipOpen = signal(false);
-  /** Sent here from the comparison page because the current state could not be calculated. */
-  readonly needsCurrent = inject(ComparisonsStore).needsCurrent;
   readonly currentCarImage = computed(() =>
     vehicleImageUrl(this.profile.profile()?.currentArrangement.vehicle.value?.catalogueId),
   );
-  /** The saved current-car details the employee is asked to confirm, in plain words. */
-  readonly currentDetails = computed(() => {
-    const a = this.profile.profile()?.currentArrangement;
-    if (!a) return [];
-    const missing = 'לא ידוע';
-    const participation = a.participation.value;
-    return [
-      {label: 'סוג ההסדר', value: (a.kind.value && ARRANGEMENT[a.kind.value]) || missing},
-      {label: 'הרכב הנוכחי', value: this.vehicleName(a.vehicle.value?.catalogueId) ?? missing},
-      {label: 'סוג הנעה', value: (a.propulsion.value && PROPULSION[a.propulsion.value as keyof typeof PROPULSION]) || missing},
-      {label: 'השתתפות חודשית ברכב', value: participation ? `${Number(participation).toLocaleString('he-IL')} ₪` : missing},
-    ];
-  });
   /** Vehicles shown in the side panel, opened from an `options` message; null when closed. */
   readonly panelCards = signal<OptionItem[] | null>(null);
   text = '';
@@ -85,7 +64,6 @@ export class AdvisorPage implements OnInit, OnDestroy {
   send(): void {
     const text = this.text;
     this.text = '';
-    this.needsCurrent.set(false);
     void this.store.send(text).then(() => {
       void this.profile.load();
       void this.catalog.load();
@@ -150,23 +128,12 @@ export class AdvisorPage implements OnInit, OnDestroy {
    * needs (e.g. one confirmation of saved details) and shows the difference from today itself.
    */
   compareInChat(): void {
-    const options = this.catalog.selectedOptions();
-    if (!options.length || this.store.busy()) return;
-    const names = options.filter(o => o.optionKey !== 'waiver').map(o => o.commercialName || optionLabel(o));
-    if (options.some(o => o.optionKey === 'waiver')) names.push('ויתור על הרכב');
-    this.text =
-      names.length === 1
-        ? `אני רוצה לראות כמה ישתנה לי הנטו לעומת היום עם ${names[0]}`
-        : `אני רוצה לראות כמה ישתנה לי הנטו לעומת היום בכל אחת מהאפשרויות: ${names.join(', ')}`;
+    const message = compareMessage(this.catalog.selectedOptions());
+    if (!message || this.store.busy()) return;
+    this.text = message;
     this.panelCards.set(null);
     this.catalog.clear();
     this.send();
-  }
-
-  private vehicleName(catalogueId: string | null | undefined): string | null {
-    if (!catalogueId) return null;
-    const option = this.catalog.options().find(o => o.catalogueId === catalogueId);
-    return option ? optionLabel(option) : catalogueId;
   }
 
   runOf(message: {kind: string; payload: Record<string, unknown>}): string | null {

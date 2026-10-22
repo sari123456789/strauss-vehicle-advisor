@@ -149,7 +149,12 @@ def saved_facts_note(fields: list[str]) -> str:
 
 
 def confirmed_text(fields: list[str]) -> str:
-    return f"מעולה, רשמתי ש{labels_text(fields)} עדיין נכונים."
+    """Short and plain: the group of details, never a list of technical field names."""
+    if fields and all(f.startswith("currentArrangement.") for f in fields):
+        return "מעולה, רשמתי שפרטי הרכב הנוכחי שלך עדיין נכונים."
+    if fields and all(f.startswith("payroll.") for f in fields):
+        return "מעולה, רשמתי שפרטי השכר שלך עדיין נכונים."
+    return "מעולה, רשמתי שהפרטים שלך עדיין נכונים."
 
 
 def conflicts_text(fields: list[str]) -> str:

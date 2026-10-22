@@ -2,6 +2,7 @@
 
 import pytest
 
+from app.ai.workflow import messages_he as he
 from app.ai.workflow.extraction import ClarificationCode, normalize_facts, parse_money, parse_rate
 from app.ai.workflow.models import FactField, FactMode, ProposedFact
 from app.ai.workflow.rendering import render_grounded
@@ -174,3 +175,30 @@ def test_a_plain_statement_stays_an_actual_update(message: str, quote: str) -> N
     outcome = normalize_facts([fact(FactField.BASE_GROSS, "20000", quote=quote)], message)
     assert [c.field.value for c in outcome.actual] == ["payroll.baseGross"]
     assert outcome.not_saved == []
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        (
+            [
+                "currentArrangement.kind",
+                "currentArrangement.vehicle",
+                "currentArrangement.participation",
+            ],
+            "מעולה, רשמתי שפרטי הרכב הנוכחי שלך עדיין נכונים.",
+        ),
+        (
+            ["payroll.baseGross", "payroll.creditPoints"],
+            "מעולה, רשמתי שפרטי השכר שלך עדיין נכונים.",
+        ),
+        (
+            ["payroll.baseGross", "currentArrangement.vehicle"],
+            "מעולה, רשמתי שהפרטים שלך עדיין נכונים.",
+        ),
+    ],
+)
+def test_confirmation_reply_names_the_group_not_the_fields(
+    fields: list[str], expected: str
+) -> None:
+    assert he.confirmed_text(fields) == expected
