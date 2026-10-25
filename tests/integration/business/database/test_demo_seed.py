@@ -99,6 +99,8 @@ def test_seed_creates_accounts_and_profiles_with_demo_provenance(
         "e006",
         "rep01",
         "rep02",
+        "rep03",
+        "rep04",
         "ops01",
     }
 
@@ -175,7 +177,7 @@ def test_reseeding_is_idempotent_and_never_overwrites_profiles(
     run(change_e002())
     again = _seed(business_db)
     assert again.profiles_created == () and again.profiles_existing == EMPLOYEES
-    assert again.users_created == () and len(again.users_existing) == 9
+    assert again.users_created == () and len(again.users_existing) == 11
 
     async def check() -> None:
         async with persistence(business_db) as p:
