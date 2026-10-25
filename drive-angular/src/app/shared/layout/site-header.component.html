@@ -46,6 +46,7 @@
       <a class="menu-nav__link" [routerLink]="link.path" routerLinkActive="is-active" ariaCurrentWhenActive="page" (click)="closeMenu()">{{ link.label }}</a>
     }
   </nav>
+  @if (displayName(); as name) {<p class="menu-user">שלום, {{ name }}</p>}
   <div class="menu-actions">
     @if (signedIn()) {
       <button type="button" class="btn btn--outline" (click)="signOut()">יציאה</button>
