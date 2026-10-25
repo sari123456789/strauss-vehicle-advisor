@@ -368,3 +368,25 @@ $nav-inline: 1400px;
     padding-right: 8px;
   }
 }
+
+// The signed-in person's name beside sign-out.
+:host .site-header__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+:host .site-header__user svg {
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  :host .site-header__user {
+    font-size: 13px;
+  }
+}

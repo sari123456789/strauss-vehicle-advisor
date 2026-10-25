@@ -16,6 +16,12 @@
 
   <div class="site-header__actions">
     @if (signedIn()) {
+      @if (displayName(); as name) {
+        <span class="site-header__user" title="מחובר/ת">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c0-3.3 3.6-5.5 8-5.5s8 2.2 8 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          שלום, {{ name }}
+        </span>
+      }
       <button type="button" class="btn btn--outline site-header__auth" (click)="signOut()">יציאה</button>
     } @else {
       <a class="btn btn--outline site-header__auth" routerLink="/sign-in">כניסה למערכת</a>

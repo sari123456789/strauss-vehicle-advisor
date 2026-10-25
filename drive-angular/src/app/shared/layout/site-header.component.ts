@@ -28,6 +28,8 @@ export class SiteHeaderComponent {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   protected readonly signedIn = this.session.signedIn;
+  /** The signed-in person's name, shown beside the sign-out button. */
+  protected readonly displayName = this.session.displayName;
 
   // Anonymous visitors see the approved design's links (protected pages lead to sign-in).
   private readonly publicLinks: NavLink[] = [
