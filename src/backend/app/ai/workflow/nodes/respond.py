@@ -104,6 +104,9 @@ async def _voice(state: ConversationState, rt: TurnRuntime, request: Any) -> boo
         rt.replies, drafts, result.value.texts, strict=True
     ):
         voiced = render_voiced(text, values, required, draft) if _readable(text) else None
+        if voiced and "•" in reply.text:
+            # A list stays a list: each item on its own line, as the template wrote it.
+            voiced = re.sub(r"\s*•\s*", "\n• ", voiced).strip()
         if voiced and "תלוש" in reply.text and "תלוש" not in voiced:
             # The estimate disclaimer is a requirement, not a style choice: keep it.
             voiced = f"{voiced}\n{he.SHORT_DISCLAIMER}"

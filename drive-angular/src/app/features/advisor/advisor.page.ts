@@ -17,6 +17,20 @@ import {compareMessage} from './compare-message';
 import {vehicleImageUrl} from '../../shared/ui/vehicle-images';
 
 /** Cars of a ranked result, in order, with their monthly difference from today. */
+const START_SUGGESTIONS = ['אילו רכבים מגיעים לי?', 'איזה רכב הכי משתלם לי?', 'מה אם אעבור לרכב חשמלי?', 'מה אם אוותר על הרכב?'];
+const DEFAULT_SUGGESTIONS = ['אילו רכבים מגיעים לי?', 'איזה רכב הכי משתלם לי?'];
+const SUGGESTIONS_BY_KIND: Record<string, string[]> = {
+  confirmation_request: ['כן, הכל נכון'],
+  options: ['תבדוק את כולם', 'רק רכבים חשמליים', 'איזה רכב הכי משתלם לי?'],
+  comparison: ['למה זה ככה?', 'ומה אם אוותר על הרכב?', 'תראה לי רכבים חשמליים'],
+  question: ['כן, תשלח לנציג', 'לא, תודה'],
+  representative_answer: ['תחשב לי שוב את ההשוואה', 'אילו רכבים מגיעים לי?'],
+  confirmation: ['איזה רכב הכי משתלם לי?', 'אילו רכבים מגיעים לי?'],
+  update_confirmation: ['תחשב לי שוב', 'איזה רכב הכי משתלם לי?'],
+  clarification: [],
+  assistant_unavailable: [],
+};
+
 interface Ranked {
   cards: OptionItem[];
   runId: string | null;
@@ -70,6 +84,27 @@ export class AdvisorPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.store.unwatch();
+  }
+
+  /**
+   * Clickable next steps under the chat, chosen from the kind of the advisor's last reply
+   * (like many chat apps). A chip is sent as an ordinary employee message.
+   */
+  readonly suggestions = computed<string[]>(() => {
+    if (this.store.busy()) return [];
+    const messages = this.store.messages();
+    const last = [...messages].reverse().find(m => m.role !== 'user');
+    if (!messages.length || !last) return START_SUGGESTIONS;
+    // A question about missing details (it names fields) is answered in free text, not by a chip.
+    const fields = last.payload?.['fields'];
+    if (last.kind === 'question' && Array.isArray(fields) && fields.length) return [];
+    return SUGGESTIONS_BY_KIND[last.kind] ?? DEFAULT_SUGGESTIONS;
+  });
+
+  sendSuggestion(text: string): void {
+    if (this.store.busy()) return;
+    this.text = text;
+    this.send();
   }
 
   send(): void {
